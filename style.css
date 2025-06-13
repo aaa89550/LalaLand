@@ -1,0 +1,707 @@
+:root {
+  /* 大地色與海藍色主題色板 */
+  --earth-brown: #705a36;
+  --earth-beige: #f7f1e1;
+  --earth-sand: #e9dac1;
+  --sea-blue: #2877b9;
+  --sea-light: #b4d1e7;
+  --sea-dark: #16507a;
+  --accent-green: #a3c9ad;
+  --accent-coral: #ffb89a;
+  --white: #fff;
+  --gray: #4a4a4a;
+  --shadow: 0 4px 18px #2877b91a;
+}
+
+body {
+  font-family: 'Segoe UI', 'Noto Sans TC', Arial, sans-serif;
+  background: linear-gradient(135deg, var(--sea-light) 0%, var(--earth-sand) 100%);
+  min-height: 100vh;
+  margin: 0;
+  color: var(--gray);
+}
+
+/* 登入/註冊/匿名 */
+#login-page, #register-page, #anonymous-page {
+  width: 340px;
+  margin: 70px auto 0 auto;
+  background: var(--earth-beige);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+  padding: 38px 30px 30px 30px;
+  display: none;
+  border: 1.5px solid var(--sea-blue);
+}
+#login-page h2, #register-page h2, #anonymous-page h2 {
+  text-align:center;
+  color: var(--sea-dark);
+  margin-bottom: 16px;
+  letter-spacing: 2px;
+}
+input[type], button {
+  font-size: 16px;
+}
+input[type] {
+  border-radius: 8px;
+  border: 1.5px solid var(--sea-light);
+  padding: 11px;
+  outline: none;
+  transition: border-color 0.2s;
+  margin-bottom: 16px;
+  width: 100%;
+  background: var(--white);
+}
+input[type]:focus {
+  border-color: var(--sea-blue);
+}
+button {
+  background: var(--sea-blue);
+  color: var(--white);
+  border: none;
+  border-radius: 8px;
+  padding: 11px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+  margin-top: 9px;
+  letter-spacing: 1px;
+  box-shadow: 0 2px 8px #2877b91a;
+}
+button:hover {
+  background: var(--sea-dark);
+  color: var(--earth-sand);
+}
+.switch-auth {
+  background: none;
+  color: var(--sea-dark);
+  border: none;
+  text-decoration: underline;
+  cursor: pointer;
+  display:block;
+  margin:12px auto 0 auto;
+  font-size:14px;
+}
+.tab-btns {
+  display:flex;
+  gap:10px;
+  margin:26px auto 0 auto;
+  justify-content:center;
+}
+.tab-btn {
+  background: var(--earth-sand);
+  border-radius: 10px 10px 0 0;
+  border:none;
+  padding:10px 34px;
+  cursor:pointer;
+  font-weight:bold;
+  letter-spacing: 1.5px;
+  color: var(--sea-dark);
+  font-size:16px;
+  transition: background 0.2s, color 0.2s;
+  border-bottom: 2.5px solid transparent;
+}
+.tab-btn.active, .tab-btn:hover {
+  background: var(--sea-light);
+  color: var(--sea-blue);
+  border-bottom: 2.5px solid var(--sea-blue);
+}
+.avatar-preview {
+  display:block;
+  margin:18px auto 22px auto;
+  border-radius:50%;
+  width:92px;
+  height:92px;
+  object-fit:cover;
+  background: var(--sea-light);
+  box-shadow: 0 2px 14px #2877b91a;
+  border:4px solid var(--accent-green);
+}
+
+/* 主畫面 */
+#main {
+  display: none;
+  max-width: 1000px;
+  margin: 40px auto;
+  gap: 28px;
+  min-height: 600px;
+  display: flex;
+}
+
+/* 側邊欄 */
+#sidebar {
+  width: 240px;
+  background: var(--earth-beige);
+  padding: 26px 16px;
+  border-radius: 15px;
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  border: 1.5px solid var(--earth-brown);
+}
+#sidebar h3 {
+  color: var(--earth-brown);
+  margin-bottom: 12px;
+  letter-spacing: 1.7px;
+}
+#user-list {
+  list-style: none;
+  padding:0;
+  margin:0 0 12px 0;
+  flex:1;
+  overflow-y: auto;
+}
+#user-list li {
+  padding: 9px 5px 9px 8px;
+  margin-bottom: 3px;
+  border-radius: 7px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  transition: background 0.15s;
+  position: relative;
+  border-left: 4px solid transparent;
+}
+#user-list li.active, #user-list li:hover {
+  background: var(--sea-light);
+  border-left: 4px solid var(--sea-blue);
+}
+.side-avatar {
+  width:40px; height:40px; border-radius:50%; margin-right:13px;
+  border:2.5px solid var(--accent-green); background: #f5f7fa;
+  box-shadow: 0 1px 7px #2877b91a;
+}
+.notify-dot {
+  position:absolute;
+  right:12px; top:50%; transform:translateY(-50%);
+  color:var(--accent-coral); font-size:19px; font-weight:bold; 
+  display:none;
+}
+#group-chat-btn, #logout-btn {
+  width:100%; margin: 12px 0 0 0; padding: 11px;
+  background: var(--earth-brown);
+  color: var(--earth-sand);
+}
+#group-chat-btn {
+  background: var(--sea-blue);
+  color: var(--white);
+}
+#group-chat-btn:hover, #logout-btn:hover {
+  background: var(--sea-dark);
+  color: var(--accent-coral);
+}
+.tip {
+  font-size: 14px; color: var(--earth-brown); background: var(--sea-light);
+  border-radius: 7px; padding: 11px 15px; margin-bottom: 16px;
+  line-height: 1.7;
+  letter-spacing: 0.5px;
+}
+
+/* 內容區 */
+#content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: var(--white);
+  box-shadow: var(--shadow);
+  border-radius: 15px;
+  padding: 32px 28px 20px 28px;
+  border: 1.5px solid var(--sea-light);
+}
+#chat-title {
+  text-align: center;
+  margin-bottom: 14px;
+  color: var(--sea-dark);
+  letter-spacing: 2px;
+}
+#chat-tip {
+  text-align:center;
+  color: var(--sea-blue);
+  margin-bottom: 10px;
+  font-size: 15px;
+  letter-spacing: 1px;
+}
+#chat {
+  flex: 1;
+  height: 370px;
+  border:1.5px solid var(--earth-sand);
+  background: linear-gradient(120deg, var(--sea-light) 0%, var(--earth-sand) 100%);
+  overflow-y: auto;
+  padding:20px 10px 13px 10px;
+  border-radius:13px;
+  margin-bottom: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.msg {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  margin: 0 0 2px 0;
+}
+.msg.me {
+  flex-direction: row-reverse;
+}
+.userpic {
+  width:42px; height:42px; border-radius:50%; object-fit:cover;
+  box-shadow: 0 2px 6px #2877b91a;
+  background: #fff;
+  border: 2.5px solid var(--sea-blue);
+}
+.bubble {
+  border-radius: 18px;
+  padding: 11px 19px 10px 19px;
+  font-size: 15px;
+  max-width: 350px;
+  word-break: break-word;
+  background: var(--earth-sand);
+  color: var(--earth-brown);
+  position:relative;
+  box-shadow: 0 1px 8px #2877b91a;
+  border-bottom-right-radius: 8px;
+}
+.msg.me .bubble {
+  background: var(--sea-blue);
+  color: var(--white);
+  border-bottom-right-radius: 18px;
+  border-bottom-left-radius: 8px;
+}
+.user {
+  font-weight: bold;
+  color: var(--sea-dark);
+  margin-right: 8px;
+  font-size: 14px;
+}
+.timestamp {
+  color: #888; font-size: 11px; margin-left: 5px;
+}
+#input-area {
+  display: flex; gap: 13px; margin-top: 13px;
+}
+#msg {
+  flex: 1; padding: 11px; border: 1.5px solid var(--sea-light);
+  border-radius: 8px;
+  font-size: 16px;
+  background: #f8f4f8;
+  outline: none;
+  transition: border-color 0.2s;
+  background: var(--earth-beige);
+}
+#msg:focus { border-color: var(--sea-blue); }
+#send {
+  padding: 11px 28px; font-size: 17px;
+  background: var(--accent-green);
+  border-radius: 8px;
+  border: none;
+  color: var(--earth-brown);
+  font-weight: bold;
+}
+#send:hover { background: var(--sea-blue); color: var(--white);}
+::-webkit-scrollbar { width: 9px; background: var(--earth-beige);}
+::-webkit-scrollbar-thumb { background: var(--sea-light); border-radius: 5px; }
+
+/* 控制登入/註冊/匿名區域最大寬度、內部內容寬度 */
+#login-page, #register-page, #anonymous-page {
+  width: 340px;        /* 固定或最大寬度 */
+  max-width: 96vw;     /* 響應式，手機不超過螢幕 */
+  margin: 70px auto 0 auto;
+  /* 其他原本的樣式... */
+}
+
+/* 讓內部 input, button 寬度不超出外框，且左右留點空間 */
+#anonymous-page input,
+#anonymous-page button,
+#anonymous-page select {
+  width: 95%;
+  box-sizing: border-box;
+  margin-left: auto;
+  margin-right: auto;
+  display: block;
+}
+
+/* 適用所有登入/註冊/匿名頁面的 input、button */
+#login-page input,
+#register-page input,
+#login-page button,
+#register-page button {
+  width: 95%;
+  box-sizing: border-box;
+  margin-left: auto;
+  margin-right: auto;
+  display: block;
+}
+
+/* 修正 file input 列寬問題 */
+#anonymous-page input[type="file"] {
+  width: auto;
+  display: inline-block;
+}
+
+::-webkit-scrollbar { width: 9px; background: var(--earth-beige);}
+::-webkit-scrollbar-thumb { background: var(--sea-light); border-radius: 5px; }
+
+
+
+/* Modal 背景 */
+.modal {
+  display: none; /* 預設隱藏 */
+  position: fixed; z-index: 1000;
+  left: 0; top: 0; width: 100vw; height: 100vh;
+  background: rgba(0,0,0,0.35);
+  justify-content: center; align-items: center;
+}
+
+/* Modal 內容 */
+.modal-content {
+  background: var(--earth-beige, #fff);
+  border-radius: 12px;
+  padding: 32px 38px 28px 38px;
+  box-shadow: 0 4px 32px #0002;
+  min-width: 320px;
+  max-width: 96vw;
+  position: relative;
+}
+
+.close {
+  position: absolute; top: 15px; right: 18px;
+  font-size: 24px; cursor: pointer; color: #888;
+}
+.close:hover { color: #c00; }
+
+.msg {
+  display: flex;
+  align-items: flex-end;
+  margin-bottom: 10px;
+  gap: 8px;
+}
+
+.userpic {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  margin-right: 8px;
+  flex-shrink: 0;
+}
+
+.msg-main {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.user {
+  font-weight: bold;
+  color: var(--sea-dark);
+  font-size: 12px;
+  margin-right: 4px;
+}
+
+.bubble {
+  background: var(--earth-sand);
+  color: var(--earth-brown);
+  border-radius: 15px;
+  padding: 8px 14px;
+  font-size: 12px;
+  line-height: 1.2;
+  display: inline-block;
+  max-width: 380px;
+  word-break: break-word;
+}
+
+.timestamp {
+  font-size: 10px;
+  color: #888;
+  margin-left: 6px;
+}
+
+@media (min-width: 601px) {
+  #chat {
+    font-size: 12px;      /* 更小字體 */
+  }
+  .bubble {
+    font-size: 12px;      /* 更小字體 */
+    line-height: 1.15;    /* 更緊湊行距 */
+    padding: 7px 12px;
+    max-width: 540px;     /* 可視需要再放寬 */
+  }
+  .user {
+    font-size: 12px;
+    line-height: 1.15;
+  }
+  .timestamp {
+    font-size: 10px;
+    line-height: 1.1;
+  }
+}
+
+/* 防止 bubble 跟 user/timestamp 重疊 */
+.msg > div > .bubble {
+  margin-top: 6px;
+}
+
+/* 讓聊天室內容區塊可滾動且高度自適應（防止整頁被撐高） */
+#main {
+  height: 80vh;
+  max-height: 90vh;
+  min-height: 500px;
+}
+#content {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 0;
+  min-height: 0;
+}
+#chat {
+  flex: 1 1 0;
+  min-height: 0;
+  max-height: 100%;
+  overflow-y: auto;
+}
+
+/* 編輯個人資料（Modal）與內容樣式 */
+.modal {
+  display: none;
+  position: fixed; z-index: 1000;
+  left: 0; top: 0; width: 100vw; height: 100vh;
+  background: rgba(0,0,0,0.35);
+  justify-content: center; align-items: center;
+}
+.modal[style*="block"] { display: flex !important; }
+.modal-content {
+  background: #f7f1e1;
+  border-radius: 12px;
+  padding: 32px 38px 28px 38px;
+  box-shadow: 0 4px 32px #2877b91a;
+  min-width: 320px;
+  max-width: 96vw;
+  position: relative;
+  margin: auto;
+}
+.close {
+  position: absolute; top: 15px; right: 18px;
+  font-size: 24px; cursor: pointer; color: #888;
+}
+.close:hover { color: #c00; }
+
+#edit-avatar-preview {
+  width: 64px; height: 64px; border-radius:50%;
+  display: none;
+  object-fit: cover;
+  margin-bottom: 10px;
+  border: 3px solid var(--accent-green);
+  box-shadow: 0 2px 10px #2877b91a;
+}
+#edit-profile-form label {
+  display: block;
+  margin-bottom: 18px;
+  color: var(--sea-dark);
+  font-weight: bold;
+  letter-spacing: 1px;
+}
+#edit-profile-form input[type="text"],
+#edit-profile-form input[type="file"] {
+  width: 220px;
+  margin-bottom: 12px;
+}
+#edit-profile-form button[type="submit"] {
+  margin-top: 12px;
+  width: 100%;
+  padding: 10px 0;
+  background: var(--sea-blue);
+  color: var(--white);
+  font-weight: bold;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+}
+#edit-profile-form button[type="submit"]:hover {
+  background: var(--sea-dark);
+  color: var(--accent-coral);
+}
+@media (max-width: 500px) {
+  .modal-content {
+    padding: 18px 5vw 18px 5vw;
+    min-width: 0;
+    max-width: 98vw;
+  }
+  #edit-profile-form input[type="text"], #edit-profile-form input[type="file"] {
+    width: 90vw;
+    min-width: 0;
+    max-width: 100%;
+  }
+}
+
+#sidebar {
+  display: flex;
+}
+
+/* 預設桌機全部隱藏 */
+.mobile-sidebar-btn,
+.mobile-sidebar-drawer {
+  display: none;
+}
+
+/* RWD 手機版 */
+@media (max-width: 600px) {
+  body {
+    padding: 0 !important;
+    margin: 0 !important;
+    background: #f3f3f3;
+  }
+  #main {
+    flex-direction: column-reverse !important;
+    max-width: 100vw;
+    margin: 0;
+    gap: 0;
+    min-height: 100vh;
+    height: auto;
+  }
+   #sidebar {
+    display: none !important;
+  }
+  #content {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100vw !important;
+    box-sizing: border-box;
+    border-radius: 0 !important;
+    padding: 10px 2vw !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+  #content {
+    margin-bottom: 10px !important;
+    padding-top: 12px !important;
+    padding-bottom: 6px !important;
+  }
+  #chat {
+    min-height: 220px !important;
+    height: auto !important;
+    max-height: 60vh !important;
+    padding: 8px 2vw 8px 2vw !important;
+    border-radius: 6px !important;
+    font-size: 15px;
+    margin-bottom: 8px !important;
+    background: #fff;
+  }
+  .tip {
+    font-size: 12px !important;
+    padding: 6px 2vw !important;
+    margin-bottom: 8px !important;
+    border-radius: 4px !important;
+  }
+  #chat-title {
+    font-size: 20px !important;
+    margin-bottom: 6px !important;
+  }
+  #input-area {
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 8px;
+  }
+  #msg, #send {
+    width: 100% !important;
+    box-sizing: border-box;
+    font-size: 16px !important;
+    margin: 0 !important;
+  }
+  #msg {
+    padding: 8px 4px !important;
+  }
+  #send {
+    padding: 11px 0 !important;
+    margin-top: 4px !important;
+  }
+  .modal-content {
+    min-width: 0 !important;
+    width: 96vw !important;
+    padding: 16px 2vw !important;
+    border-radius: 10px !important;
+  }
+  button, .tab-btn {
+    width: 100% !important;
+    font-size: 17px !important;
+    margin: 6px 0 !important;
+    border-radius: 8px !important;
+    padding: 11px 0 !important;
+  }
+  input[type="text"], input[type="email"], input[type="password"], input[type="file"] {
+    width: 100% !important;
+    box-sizing: border-box;
+    font-size: 16px !important;
+    margin-bottom: 7px !important;
+    padding: 7px 5px !important;
+    border-radius: 6px;
+  }
+  .msg {
+    font-size: 15px !important;
+    margin: 8px 0 !important;
+    gap: 7px !important;
+  }
+  .bubble {
+    font-size: 14px !important;
+    padding: 9px 11px !important;
+    max-width: 96vw !important;
+  }
+  body {
+    padding: 0 !important;
+    margin: 0 !important;
+    background: #f3f3f3;
+  }
+  .mobile-sidebar-btn {
+    display: block !important;
+    position: top+left+fixed;
+    top: 12px; left: 12px;
+    z-index: 1001;
+    background: var(--sea-blue, #2877b9);
+    color: #fff;
+    border: none;
+    border-radius: 50px;
+    padding: 12px 12px 12px 12px;
+    font-size: 18px;
+    box-shadow: 0 2px 12px #2877b928;
+    cursor: pointer;
+    letter-spacing: 1.5px;
+  }
+  .mobile-sidebar-btn::before {
+    content: "☰";
+    position: absolute;
+    left: 14px;
+    top: 13px;
+    font-size: 18px;
+  }
+  .mobile-sidebar-drawer {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    width: 100vw; height: 100vh;
+    background: #fff;
+    z-index: 2000;
+    overflow-y: auto;
+    animation: slideInSidebar 0.22s;
+  }
+  .mobile-sidebar-drawer.open {
+    display: block;
+  }
+  @keyframes slideInSidebar {
+    from { transform: translateX(-100vw);}
+    to   { transform: translateX(0);}
+  }
+  .mobile-sidebar-content {
+    padding: 32px 20px 25px 20px;
+    position: relative;
+    min-height: 100vh;
+  }
+  .close-mobile-sidebar {
+    position: absolute;
+    top: 18px; right: 18px;
+    font-size: 30px;
+    background: none;
+    border: none;
+    color: var(--sea-blue, #2877b9);
+    cursor: pointer;
+    z-index: 2001;
+  }
+}
