@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <title>LalaLand Chat</title>
+  <style>
+    body { font-family: sans-serif; background: #f3f3f3; }
+    #chat { width: 90%; max-width: 600px; height: 300px; border: 1px solid #ccc; background: #fff; overflow-y: auto; margin: 20px auto; padding: 10px; }
+    #input-area { width: 90%; max-width: 600px; margin: 0 auto; display: flex; gap: 10px; }
+    #user, #msg { flex: 1; padding: 8px; border: 1px solid #aaa; border-radius: 4px; }
+    #send { padding: 8px 20px; }
+    .msg { margin: 4px 0; }
+    .user { font-weight: bold; color: #2c3e50; }
+    .text { color: #333; }
+    .timestamp { color: #aaa; font-size: 10px; margin-left: 6px; }
+  </style>
+</head>
+<body>
+  <h2 style="text-align:center;">女同志聊天室</h2>
+  <div id="chat"></div>
+  <div id="input-area">
+    <input id="user" placeholder="你的暱稱">
+    <input id="msg" placeholder="輸入訊息" onkeydown="if(event.key==='Enter') sendMessage()">
+    <button id="send" onclick="sendMessage()">送出</button>
+  </div>
+
+  <script type="module">
+    // 導入 Firebase SDK
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+    import { getDatabase, ref, push, onChildAdded, query, limitToLast } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+    // 你自己的 config
+    const firebaseConfig = {
+      apiKey: "AIzaSyAvBo6JLLJBQELLZkionvwfJ0n2yEd9gIA",
+      authDomain: "lalaland-chat.firebaseapp.com",
+      databaseURL: "https://lalaland-chat-default-rtdb.firebaseio.com",
+      projectId: "lalaland-chat",
+      storageBucket: "lalaland-chat.firebasestorage.app",
+      messagingSenderId: "549403176122",
+      appId: "1:549403176122:web:ed5d924150db1d97a66683",
+      measurementId: "G-VY1N27157G"
+    };
+    // 初始化
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    // 傳送訊息
+    window.sendMessage = function() {
+      const user = document.getElementById('user').value.trim();
+      const msg = document.getElementById('msg').value.trim();
+      if (!user || !msg) return alert("請輸入暱稱與訊息！");
+      push(ref(db, "messages"), {
+        user,
+        message: msg,
+        timestamp: Date.now()
+      });
+      document.getElementById('msg').value = "";
+    }
+
+    // 監聽訊息
+    const messagesQuery = query(ref(db, "messages"), limitToLast(50));
+    onChildAdded(messagesQuery, (snapshot) => {
+      const msg = snapshot.val();
+      const time = new Date(msg.timestamp).toLocaleTimeString();
+      const div = document.createElement("div");
+      div.className = "msg";
+      div.innerHTML = `<span class="user">${msg.user}</span>: <span class="text">${msg.message}</span><span class="timestamp">${time}</span>`;
+      document.getElementById("chat").appendChild(div);
+      document.getElementById("chat").scrollTop = document.getElementById("chat").scrollHeight;
+    });
+  </script>
+</body>
+</html>
