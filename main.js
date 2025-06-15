@@ -355,7 +355,6 @@ msgInput.addEventListener('keydown', e => { if (e.key === "Enter") sendMessage()
 function sendMessage() {
   if (!currentUser) return alert('請先登入');
   const text = msgInput.value.trim();
-  if (!text) return;
   const msg = {
     user: currentUser.nickname,
     avatar: currentUser.avatar,
