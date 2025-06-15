@@ -197,12 +197,14 @@ function loadUserList() {
 
   onValue(ref(db, 'users'), (snapshot) => {
     usersSnapshot = snapshot.val() || {};
+    console.log("所有 usersSnapshot:", usersSnapshot); // debug
     list.innerHTML = '';
     listMobile.innerHTML = '';
 
     const myFriends = usersSnapshot[currentUser.uid]?.friends || {};
 
     Object.values(usersSnapshot).forEach(user => {
+     console.log(user.uid, user.nickname, user.online);
       if (user.uid !== currentUser.uid && user.online) {
         // 桌機 sidebar
         const li = document.createElement('li');
@@ -347,24 +349,6 @@ function openGroupChat() {
 // 發送訊息
 const sendBtn = document.getElementById('send');
 const msgInput = document.getElementById('msg');
-const msg = {
-  user: currentUser.nickname,
-  avatar: currentUser.avatar,
-  from: currentUser.uid,
-  text,
-  time: Date.now()
-};
-if (!user) {
-  console.error("user 為 null", user);
-  return;
-}
-// 再讀 user.nickname
-if (user && user.nickname) {
-  // 正常流程
-} else {
-  // 可能是資料庫沒這個用戶，或還沒載入完成
-}
-push(ref(db, 'groupChat/messages'), msg);
 sendBtn.addEventListener('click', sendMessage);
 msgInput.addEventListener('keydown', e => { if (e.key === "Enter") sendMessage(); });
 
