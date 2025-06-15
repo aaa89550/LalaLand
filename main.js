@@ -354,6 +354,16 @@ const msg = {
   text,
   time: Date.now()
 };
+if (!user) {
+  console.error("user 為 null", user);
+  return;
+}
+// 再讀 user.nickname
+if (user && user.nickname) {
+  // 正常流程
+} else {
+  // 可能是資料庫沒這個用戶，或還沒載入完成
+}
 push(ref(db, 'groupChat/messages'), msg);
 sendBtn.addEventListener('click', sendMessage);
 msgInput.addEventListener('keydown', e => { if (e.key === "Enter") sendMessage(); });
