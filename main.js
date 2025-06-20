@@ -1347,3 +1347,28 @@ window.addEventListener('DOMContentLoaded', () => {
   document.getElementById("toggle-night-mode")?.addEventListener("click", toggleNightMode);
   document.getElementById("toggle-night-mode-mobile")?.addEventListener("click", toggleNightMode);
 });
+
+let deferredPrompt;
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault(); // 防止自動跳出
+  deferredPrompt = e;
+
+  // 顯示你自己的按鈕或彈窗提示
+  const installBtn = document.getElementById('install-btn');
+  installBtn.style.display = 'block';
+
+  installBtn.addEventListener('click', () => {
+    installBtn.style.display = 'none';
+    deferredPrompt.prompt();
+
+    deferredPrompt.userChoice.then((choiceResult) => {
+      if (choiceResult.outcome === 'accepted') {
+        console.log('使用者接受安裝');
+      } else {
+        console.log('使用者拒絕安裝');
+      }
+      deferredPrompt = null;
+    });
+  });
+});
