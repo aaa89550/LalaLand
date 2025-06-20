@@ -1,0 +1,16 @@
+{
+  "name": "lalaland-chat",
+  "version": "1.0.0",
+  "description": "LalaLand 女同聊天室",
+  "scripts": {
+    "start": "firebase serve",
+    "deploy": "firebase deploy"
+  },
+  "engines": {
+    "node": "18"
+  },
+  "author": "WENCHIEN",
+  "license": "MIT",
+  "private": true,
+  "dependencies": {}
+}
