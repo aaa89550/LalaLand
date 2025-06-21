@@ -1,0 +1,174 @@
+<!DOCTYPE html>Add commentMore actions
+<html lang="zh-Hant">
+<head>
+  <script>
+  if (localStorage.getItem('darkMode') === 'yes') {
+    document.documentElement.classList.add('dark'); // 加在 <html>
+  }
+</script>
+  <link rel="stylesheet" href="style.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8">
+  <title>LalaLand女同聊天室</title>
+  <style>
+    body { font-family: sans-serif; background: #f3f3f3; }
+    #login-page, #register-page, #anonymous-page { width: 320px; margin: 80px auto; background: #fff; border-radius: 8px; box-shadow: 0 4px 12px #0001; padding: 32px 24px 24px 24px; display: none; }
+    #main { display: none; max-width: 900px; margin: 40px auto; gap: 20px;}
+    #sidebar { width: 200px; background: #fff; padding: 16px 12px; border-radius: 8px; box-shadow: 0 2px 8px #0001;}
+    #user-list { list-style: none; padding:0; margin:0;}
+    #user-list li { padding: 8px 4px; margin-bottom: 4px; border-radius: 4px; cursor: pointer; display: flex; align-items: center;}
+    #user-list li.active, #user-list li:hover { background: #e0e7ff; }
+    .side-avatar { width:32px; height:32px; border-radius:50%; margin-right:8px; border:2px solid #a3a3a3;}
+    #group-chat-btn { width: 100%; margin: 16px 0 0 0; padding: 8px;}
+    #content { flex: 1; }
+    #chat-title { text-align: center; margin-bottom: 8px;}
+    #chat { height: 320px; border:1px solid #ccc; background:#fff; overflow-y: auto; padding:10px; border-radius:8px;}
+    #input-area { display: flex; gap: 10px; margin-top: 10px;}
+    #msg { flex: 1; padding: 8px; border: 1px solid #aaa; border-radius: 4px;}
+    #send { padding: 8px 20px;}
+    .msg { margin: 8px 0; display:flex; align-items: flex-start;}
+    .userpic { width:36px; height:36px; border-radius:50%; margin-right:8px;}
+    .user { font-weight: bold; color: #2c3e50; }
+    .text { color: #333; word-break: break-all; }
+    .timestamp { color: #aaa; font-size: 10px; margin-left: 6px;}
+    #logout-btn { margin-top: 16px; padding: 6px 14px; width:100%; }
+    .tip { font-size: 13px; color: #555; background: #f5f7fb; border-radius: 5px; padding: 8px 10px; margin-bottom: 14px;}
+    .switch-auth { color: #1d6dce; background:none; border:none; text-decoration:underline; cursor:pointer; margin:6px 0 0 0; font-size:13px;}
+    .tab-btns { display:flex; gap:8px; margin-bottom:18px; justify-content:center;}
+    .tab-btn { background:#f0f0f0; border-radius:6px 6px 0 0; border:none; padding:7px 22px; cursor:pointer; font-weight:bold;}
+    .tab-btn.active { background:#e0e7ff; }
+    .avatar-preview { display:block; margin:10px auto 15px auto; border-radius:50%; width:80px; height:80px; object-fit:cover; background:#eee; }
+  </style>
+</head>
+<body>
+    <div class="splash">
+    <img src="icon-512.png" alt="LalaLand Logo">
+  </div>
+  <!-- 登入/註冊 tab -->
+  <div id="auth-tabs" class="tab-btns">
+    <button id="login-tab-btn" class="tab-btn active">登入</button>
+    <button id="register-tab-btn" class="tab-btn">註冊</button>
+  </div>
+<div id="login-page" class="login-container">
+  <h2>帳號登入</h2>
+  <form id="login-form" class="login-form">
+    <input type="email" id="login-email" placeholder="Email" required>
+    <input type="password" id="login-password" placeholder="密碼" required>
+    <button type="submit" class="login-btn">登入</button>
+    <div class="login-extra">
+</div>
+  </form>
+  <button class="switch-auth" id="forgot-password-link" type="button">忘記密碼？</button>
+</div>
+  <div id="register-page">
+    <h2>註冊新帳號</h2>
+    <form id="register-form">
+      <input type="email" id="register-email" placeholder="Email" required style="width:100%;margin-bottom:10px;">
+      <input type="password" id="register-password" placeholder="密碼" required style="width:100%;margin-bottom:10px;">
+      <input type="text" id="register-nickname" placeholder="暱稱" required style="width:100%;margin-bottom:10px;">
+      <input type="file" id="register-avatar" accept="image/*" required style="width:100%;margin-bottom:10px;">
+      <img id="register-avatar-preview" src="" alt="預覽大頭貼" class="avatar-preview" style="display:none;">
+      <button type="submit" style="width:100%;">註冊並登入</button>
+    </form>
+  </div>
+  </div>
+  <!-- 忘記密碼 Modal，放在 body 最後面 -->
+<div class="modal" id="forgot-modal">
+  <div class="modal-content">
+    <span class="close" id="close-forgot-modal">&times;</span>
+    <h3 style="margin-bottom:18px;color:var(--sea-dark);">密碼重設</h3>
+    <div style="margin-bottom:18px;">
+      <label for="forgot-email" style="color:var(--earth-brown);font-weight:bold;">請輸入註冊的 Email：</label>
+      <input type="email" id="forgot-email" placeholder="Email" required style="margin-bottom:10px;">
+    </div>
+    <button id="forgot-submit-btn" style="width:100%;">寄送重設信</button>
+    <div id="forgot-message" style="margin-top:15px;font-size:14px;text-align:center;"></div>
+  </div>
+</div>
+ <!-- 手機版漢堡按鈕和抽屜 sidebar：放在 #main 之前 -->
+  <button id="mobile-sidebar-btn" class="mobile-sidebar-btn">☰</button>
+  <span style="font-size: 0px; margin-right: 2px;"></span> 
+  <div id="mobile-sidebar-drawer" class="mobile-sidebar-drawer">
+    <div class="mobile-sidebar-content">
+      <button id="close-mobile-sidebar" class="close-mobile-sidebar">&times;</button>
+      <h3>　　　　</h3>
+      <div class="online-header">
+      <h3>在線成員</h3>
+      <button id="toggle-night-mode-mobile" class="night-icon-btn" title="切換夜間模式">🌙</button>
+      </div>
+      <div class="tip-small">
+        點選成可進入一對一私訊，或點選「大群組列表」選區暢聊。
+      </div>
+<ul id="user-list-mobile"></ul>
+<button id="show-friends-mobile" class="sidebar-btn">我的好友</button>
+<div id="friend-area-mobile" style="display:none;">
+  <ul id="friend-list-mobile"></ul>
+</div>
+      <!-- 手機 sidebar 中的大群組按鈕 -->
+<button id="group-chat-list-btn-mobile" class="sidebar-btn">大群組列表</button>
+<div id="group-chat-area-mobile" style="display: none;">
+  <ul id="group-chat-list-mobile">
+    <li class="group-chat-item" data-room="chat">閒聊</li>
+    <li class="group-chat-item" data-room="love">找伴</li>
+    <li class="group-chat-item" data-room="sex">約炮</li>
+  </ul>
+</div>
+      <button id="edit-profile-btn-mobile">編輯個人資料</button>
+      <button id="logout-btn-mobile">登出</button>
+    </div>
+  </div>
+  <!-- 主畫面 -->
+  <div id="main">
+    <div id="sidebar">
+  <div class="online-header">
+  <h3>在線成員</h3>
+  <button id="toggle-night-mode" class="night-icon-btn" title="切換日夜間模式">🌙</button>
+</div>
+<div class="tip-small">
+  點選成可進入一對一私訊，或點選「大群組列表」選區暢聊。
+</div>
+<ul id="user-list"></ul>
+<button id="show-friends" class="sidebar-btn">我的好友</button>
+<div id="friend-area" style="display:none;">
+  <ul id="friend-list"></ul>
+</div>
+  <!-- Sidebar中的大群組按鈕 -->
+<button id="group-chat-list-btn" class="sidebar-btn">大群組列表</button>
+<div id="group-chat-area" style="display: none;">
+  <ul id="group-chat-list">
+    <li class="group-chat-item" data-room="chat">閒聊</li>
+    <li class="group-chat-item" data-room="love">找伴</li>
+    <li class="group-chat-item" data-room="sex">約炮</li>
+  </ul>
+</div>
+  <button id="edit-profile-btn" class="sidebar-btn">編輯個人資料</button>
+  <button id="logout-btn" class="sidebar-btn">登出</button>
+</div>
+    <div id="content">
+      <h3 id="chat-title">聊天室</h3>
+      <div class="tip" id="chat-tip" style="display:none;"></div>
+      <div id="chat"></div>
+      <div id="input-area">
+        <input id="msg" type="text" placeholder="輸入訊息..." autocomplete="off">
+        <button id="send">送出</button>
+      </div>
+    </div>
+  </div>
+
+<div id="edit-profile-modal" class="modal" style="display:none;">
+    <div class="modal-content">
+      <span class="close" id="close-profile-modal">&times;</span>
+      <form id="edit-profile-form">
+        <label>暱稱：<input type="text" id="edit-nickname" required></label><br>
+        <label>頭像：<input type="file" id="edit-avatar" accept="image/*"></label><br>
+        <img id="edit-avatar-preview" style="width:64px;height:64px;display:none;border-radius:50%;">
+        <button type="submit">儲存</button>
+      </form>
+    </div>
+  </div>
+  <script src="splash.js"></script>
+  <script src="linkify.js"></script>
+  <script type="module" src="main.js"></script>
+</button>
+</body>
+</html>
