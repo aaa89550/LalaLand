@@ -143,12 +143,59 @@
       <h3 id="chat-title">聊天室</h3>
       <div class="tip" id="chat-tip" style="display:none;"></div>
       <div id="chat"></div>
-      <div id="input-area">
-        <input id="msg" type="text" placeholder="輸入訊息..." autocomplete="off">
-        <button id="send">送出</button>
-      </div>
+      <div id="input-preview" style="display: none;"></div> <!-- ✅ 圖片縮圖預覽（在輸入框上方） -->
+
+<div id="input-area">
+  <button id="plus-btn" class="plus-btn">＋</button>
+
+  <div id="plus-menu" style="display: none;">
+    <button id="emoji-btn" title="插入表情" class="plus-btn">😊</button>
+    <button id="upload-btn" class="plus-btn">🖼️</button>
+    <input type="file" id="upload-input" accept="image/*" style="display: none;" />
+    <button id="vote-btn" class="plus-btn">🗳️</button>
+  </div>
+
+  <div id="emoji-picker" style="display: none;">
+    <div class="emoji-container">
+      <span>😂</span><span>😍</span><span>🥺</span><span>😡</span><span>😭</span>
+      <span>😎</span><span>😳</span><span>😘</span><span>🤣</span><span>😊</span>
+      <span>😴</span><span>🙄</span><span>🐱</span><span>🐸</span><span>🦊</span>
+      <span>🌈</span><span>❤️</span><span>🫶</span><span>👭</span><span>✨</span><span>💋</span>
     </div>
   </div>
+
+  <input id="msg" type="text" placeholder="輸入訊息..." autocomplete="off">
+  <button id="send">送出</button>
+</div>
+
+<div id="edit-profile-modal" class="modal" style="display:none;">
+    <div class="modal-content">
+      <span class="close" id="close-profile-modal">&times;</span>
+      <form id="edit-profile-form">
+        <label>暱稱：<input type="text" id="edit-nickname" required></label><br>
+        <label>頭像：<input type="file" id="edit-avatar" accept="image/*"></label><br>
+        <img id="edit-avatar-preview" style="width:64px;height:64px;display:none;border-radius:50%;">
+        <button type="submit">儲存</button>
+      </form>
+    </div>
+  </div>
+
+  <div id="vote-modal" class="modal" style="display:none;">
+  <div class="modal-content" style="max-width:400px;">
+    <span class="close" id="close-vote-modal">&times;</span>
+    <h3>發起投票</h3>
+    <label>問題：</label>
+    <input type="text" id="vote-question" placeholder="請輸入問題" style="width:100%; margin-bottom:10px;">
+
+    <div id="vote-options">
+      <input type="text" class="vote-option-input" placeholder="選項 1">
+      <input type="text" class="vote-option-input" placeholder="選項 2">
+    </div>
+
+    <button id="add-option-btn">➕ 新增選項</button>
+    <button id="submit-vote-btn" style="margin-top:12px;">送出投票</button>
+  </div>
+</div>
 
 <div id="edit-profile-modal" class="modal" style="display:none;">
     <div class="modal-content">
