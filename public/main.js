@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
-  getDatabase, ref, push, get, onChildAdded, onValue, set, child, update, onDisconnect, query, limitToLast, off
+  getDatabase, ref, push, get, onChildAdded, onValue, set, child, update, onDisconnect, query, limitToLast, off, onChildChanged, runTransaction
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 import {
   getStorage, ref as sRef, uploadBytes, getDownloadURL
@@ -153,25 +153,6 @@ document.querySelectorAll('.group-chat-item, .group-chat-option').forEach(el => 
   });
 });
 
-async function migrateOldGroupChatToCasual() {
-  const oldRef = ref(db, 'groupChat/messages');
-  const newRef = ref(db, 'groupChats/chat/messages');
-
-  const newSnap = await get(newRef);
-  if (newSnap.exists()) {
-    console.log("⚠️ groupChats/chat/messages 已存在，跳過搬移");
-    return;
-  }
-
-  const oldSnap = await get(oldRef);
-  if (oldSnap.exists()) {
-    await set(newRef, oldSnap.val());
-    console.log("✅ 已搬移原本大群組訊息到 groupChats/chat/messages");
-  } else {
-    console.log("⚠️ 原本 groupChat/messages 無資料");
-  }
-}
-
 const groupToggle = document.getElementById('group-chat-toggle');
 const groupList = document.getElementById('group-chat-list');
 
@@ -200,9 +181,13 @@ function stopAllListeners() {
   }
 }
 
+// 初始化已載入聊天室的 Set
+const loadedRooms = new Set();
+
+
 function loadGroupChat(room) {
-    // 考慮到如果有多個地方呼叫 loadGroupChat，避免重複初始化導致監聽器重複
-    // 這裡我們直接每次都停止所有監聽器，確保單一且正確的監聽狀態
+    localStorage.setItem('lastGroupRoom', room);
+
     stopAllListeners();
     clearChat(); // 先清空聊天室，並清除已渲染的訊息ID
 
@@ -227,10 +212,11 @@ function loadGroupChat(room) {
     tipEl.textContent = tipMap[room] || '';
 
     highlightUserList?.(); // 確保使用者列表高亮功能正常
-
+    listenToVoteUpdates(room);
+    
     const groupPath = `groupChats/${room}/messages`;
     // 針對群組聊天室，我們通常會載入最後 N 條訊息
-    groupChatRef = query(ref(db, groupPath), limitToLast(50));
+    groupChatRef = query(ref(db, groupPath), limitToLast(200));
 
     // 先載入歷史訊息
     get(groupChatRef).then(snapshot => {
@@ -276,11 +262,151 @@ function loadGroupChat(room) {
     document.getElementById('group-chat-area-mobile')?.style.setProperty('display', 'none');
 }
 
+// 訊息渲染函式 appendMessage（含 vote 顯示與互動）
+function escapeHTML(str) {
+  return (str ?? '').replace(/[&<>"]/g, (m) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'
+  }[m]));
+}
 
+function appendMessage(msg, msgId) {
+  if (msgId) messageMap[msgId] = msg;
+
+  const chatDiv = document.getElementById('chat');
+  const dt = new Date(msg.time || Date.now());
+  const timeStr = dt.toLocaleTimeString();
+
+  const div = document.createElement('div');
+  const isMe = msg.from === currentUser.uid;
+  div.className = 'msg' + (isMe ? ' me' : '');
+  div.setAttribute('data-msgid', msgId);
+
+  // 回覆摘要處理
+  let replyHtml = '';
+  if (msg.replyTo && messageMap[msg.replyTo]) {
+    const original = messageMap[msg.replyTo];
+    const preview = original.text.length > 5 ? original.text.slice(0, 30) + '...' : original.text;
+    replyHtml = `
+      <div class="reply-block">
+        <span class="reply-nick">@${escapeHTML(original.user)}</span>
+        <span class="reply-text">${escapeHTML(preview)}</span>
+      </div>
+    `;
+  }
+
+  // 主氣泡內容組裝
+  let bubbleContent = replyHtml;
+
+  if (msg.type === 'vote') {
+    bubbleContent += `<div class="vote-block"><strong>${escapeHTML(msg.question)}</strong><br>`;
+    const hasVoted = msg.voters?.[currentUser.uid] !== undefined;
+    const votedIndex = msg.voters?.[currentUser.uid];
+
+    if (Array.isArray(msg.options)) {
+      msg.options.forEach((opt, i) => {
+        const label = escapeHTML(opt);
+        if (hasVoted) {
+          const isMyVote = i === votedIndex;
+          bubbleContent += `<div class="vote-result ${isMyVote ? 'voted' : ''}">
+            ${label} - ${msg.votes?.[i] ?? 0} 票
+          </div>`;
+        } else {
+          bubbleContent += `<button class="vote-option" data-id="${msgId}" data-idx="${i}">${label}</button>`;
+        }
+      });
+    } else {
+      bubbleContent += `<div class="vote-error">⚠️ 投票資料缺失</div>`;
+    }
+
+    bubbleContent += `</div>`;
+  } else {
+    bubbleContent += linkify(msg.text);
+  }
+
+  if (msg.image) {
+  bubbleContent += `<br><img src="${msg.image}" class="chat-image" style="max-width: 100%; border-radius: 6px; margin-top: 6px;" />`;
+}
+
+  // 主體 HTML 組裝
+  div.innerHTML = `
+    <img src="${msg.avatar || ''}" class="userpic" data-uid="${msg.from}" alt="點我私訊" title="點我私訊">
+    <div>
+      <span class="user">${escapeHTML(msg.user)}</span>
+      <span class="timestamp">${timeStr}</span><br>
+      <span class="bubble"></span>
+      <button class="reply-btn" data-id="${msgId}" title="回覆">↩</button>
+    </div>
+  `;
+
+  div.querySelector('.bubble').innerHTML = bubbleContent;
+  chatDiv.appendChild(div);
+  chatDiv.scrollTop = chatDiv.scrollHeight;
+
+  // 綁定回覆按鈕
+  const btn = div.querySelector('.reply-btn');
+  if (btn) {
+    btn.onclick = function (e) {
+      e.stopPropagation();
+      setReplyTarget(msgId, msg);
+    };
+  }
+
+  // 綁定頭像點擊事件（跳轉私訊）
+  const avatar = div.querySelector('.userpic');
+  if (avatar && msg.from !== currentUser.uid) {
+    avatar.style.cursor = 'pointer';
+    avatar.onclick = (e) => {
+      e.stopPropagation();
+      openPrivateChat(msg.from);
+      document.getElementById('mobile-sidebar-drawer')?.classList.remove('open');
+    };
+  }
+
+  if (msg.imageUrl) {
+  bubbleContent += `<img src="${escapeHTML(msg.imageUrl)}" class="chat-image">`;
+}
+
+  // 綁定投票按鈕事件（僅尚未投票者）
+  if (!hasVoted && msg.type === 'vote') {
+    div.querySelectorAll('.vote-option').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const voteIndex = parseInt(btn.getAttribute('data-idx'));
+        const id = btn.getAttribute('data-id');
+        const votePath = `groupChats/chat/messages/${id}`;
+
+        // 更新 Firebase 資料庫的 votes 和 voters 欄位
+        update(ref(db, votePath), {
+          [`votes/${voteIndex}`]: (msg.votes?.[voteIndex] || 0) + 1,
+          [`voters/${currentUser.uid}`]: voteIndex
+        });
+      });
+    });
+  }
+}
+
+
+function listenToVoteUpdates(room = 'chat') {
+  const messagesRef = ref(db, `groupChats/${room}/messages`);
+
+  onChildChanged(messagesRef, (snap) => {
+    const msg = snap.val();
+    const msgId = snap.key;
+
+    const msgDiv = document.querySelector(`[data-msgid="${msgId}"]`);
+    if (!msgDiv) return;
+
+    // 重新呼叫 appendMessage 前先移除舊的
+    msgDiv.remove();
+
+    // 重新渲染訊息（會自動顯示投票結果）
+    appendMessage(msg, msgId);
+  });
+}
 
 // ✅ 預設進入閒聊區
 window.addEventListener('load', () => {
-  loadGroupChat('chat');
+  const lastRoom = localStorage.getItem('lastGroupRoom') || 'chat';
+  loadGroupChat(lastRoom);
 });
 
 document.getElementById('group-chat-list-btn-mobile')?.addEventListener('click', () => {
@@ -637,6 +763,26 @@ onAuthStateChanged(auth, async (user) => {
   }
 });
 
+document.addEventListener('click', (e) => {
+  if (e.target.classList.contains('vote-option')) {
+    const msgId = e.target.dataset.id;
+    const idx = parseInt(e.target.dataset.idx, 10);
+
+    // Firebase 更新指定投票的 votes 與 voters
+    const voteRef = ref(db, `groupChats/${currentGroupRoom}/messages/${msgId}`);
+    runTransaction(voteRef, (msg) => {
+      if (!msg || msg.type !== 'vote') return msg;
+      if (!msg.voters) msg.voters = {};
+      if (msg.voters[currentUser.uid] !== undefined) return msg; // 已投票
+
+      msg.votes[idx] = (msg.votes[idx] || 0) + 1;
+      msg.voters[currentUser.uid] = idx;
+      return msg;
+    });
+  }
+});
+
+
 // 取得users資料的promise
 function onValuePromise(refObj) {
   return new Promise(res=>{
@@ -747,105 +893,72 @@ function highlightUserListMobile() {
 // 發送訊息
 const sendBtn = document.getElementById('send');
 const msgInput = document.getElementById('msg');
+
 if (!window.sendListenersAttached) {
-  sendBtn.addEventListener('click', sendMessage);
-  msgInput.addEventListener('keydown', e => { if (e.key === "Enter") sendMessage(); });
+  sendBtn?.addEventListener('click', sendMessage);
+  msgInput?.addEventListener('keydown', e => {
+    if (e.key === "Enter") sendMessage();
+  });
   window.sendListenersAttached = true;
 }
-sendBtn.addEventListener('click', sendMessage);
-msgInput.addEventListener('keydown', e => { if (e.key === "Enter") sendMessage(); });
 
-// 訊息發送
+import { clearImagePreview } from './upload.js';
+
+// 發送訊息
 function sendMessage() {
-  if (!currentUser) return alert('請先登入');
+  if (!currentUser) {
+    console.error('Error: User not logged in.');
+    return alert('請先登入');
+  }
+
   const text = msgInput.value.trim();
-  if (!text) return;
+  const image = window.currentImageUrl;
+
+  console.log('Text input:', text);
+  console.log('Current Image URL:', image);
+
+  if (!text && !image) {
+    console.warn('Warning: Message text and image are both empty. Not sending.');
+    return;
+  }
+
   const msg = {
     user: currentUser.nickname,
     avatar: currentUser.avatar,
     from: currentUser.uid,
     text,
+    image: image || null,
     time: Date.now(),
     replyTo: currentReplyMsgId || null
   };
-  // ------ 修正這裡 -------------------
+  console.log('📤 Message object to send:', msg);
+
   if (currentChat && currentChat.startsWith("group_")) {
-    // 取得目前群組房名
     const room = currentGroupRoom || "chat";
-    push(ref(db, `groupChats/${room}/messages`), msg);
+    console.log('📨 Sending to group chat:', room);
+    push(ref(db, `groupChats/${room}/messages`), msg)
+      .then(() => console.log('✅ Group message sent successfully!'))
+      .catch(error => console.error('❌ Error sending group message:', error));
   } else {
     const ids = [currentUser.uid, currentChat].sort();
-    push(ref(db, `privateChats/${ids[0]}_${ids[1]}/messages`), msg);
+    const privateChatPath = `privateChats/${ids[0]}_${ids[1]}/messages`;
+    console.log('📨 Sending to private chat:', privateChatPath);
+    push(ref(db, privateChatPath), msg)
+      .then(() => console.log('✅ Private message sent successfully!'))
+      .catch(error => console.error('❌ Error sending private message:', error));
   }
+
+  // ✅ 清空輸入欄位與狀態
   msgInput.value = '';
+  window.currentImageUrl = null;
+  clearImagePreview(); // 若尚未定義這個函式，請見下方
   currentReplyMsgId = null;
   clearReplyUI();
+  console.log('✨ Message sending process completed (UI cleared).');
 }
 
 
-// 訊息渲染
-function appendMessage(msg, msgId) {
-  if (msgId) messageMap[msgId] = msg;
-
-  const chatDiv = document.getElementById('chat');
-  const dt = new Date(msg.time || Date.now());
-  const timeStr = dt.toLocaleTimeString();
-
-  const div = document.createElement('div');
-  const isMe = msg.from === currentUser.uid;
-  div.className = 'msg' + (isMe ? ' me' : '');
-  div.setAttribute('data-msgid', msgId);
-  
-  // 回覆摘要區，永遠在最上方
-  let replyHtml = '';
-  if (msg.replyTo && messageMap[msg.replyTo]) {
-    const original = messageMap[msg.replyTo];
-    const preview = original.text.length > 5 ? original.text.slice(0, 30) + '...' : original.text;
-    replyHtml = `
-      <div class="reply-block">
-        <span class="reply-nick">@${original.user}</span>
-        <span class="reply-text">${preview}</span>
-      </div>
-    `;
-  }
-
-  div.innerHTML = `
-    <img src="${msg.avatar || ''}" class="userpic" data-uid="${msg.from}" alt="點我私訊" title="點我私訊">
-    <div>
-      <span class="user">${msg.user}</span>
-      <span class="timestamp">${timeStr}</span><br>
-      <span class="bubble">
-        ${replyHtml}
-        ${linkify(msg.text)}
-      </span>
-      <button class="reply-btn" data-id="${msgId}" title="回覆">↩</button>
-    </div>
-  `;
-
-  chatDiv.appendChild(div);
-  chatDiv.scrollTop = chatDiv.scrollHeight;
-
-  const btn = div.querySelector('.reply-btn');
-  if (btn) {
-    btn.onclick = function (e) {
-      e.stopPropagation();
-      setReplyTarget(msgId, msg);
-    };
-  }
-
-  // ✅ 綁定私訊點擊事件
-  const avatar = div.querySelector('.userpic');
-  if (avatar && msg.from !== currentUser.uid) {
-    avatar.style.cursor = 'pointer';
-    avatar.onclick = (e) => {
-      e.stopPropagation();
-      openPrivateChat(msg.from); // 自帶切換聊天室功能
-      document.getElementById('mobile-sidebar-drawer')?.classList.remove('open'); // 手機收合 sidebar
-    };
-  }
-}
-
-
+// 長按回覆設定
 const chatDiv = document.getElementById('chat');
 let holdTimer = null;
 let holdStartX = 0, holdStartY = 0;
@@ -941,7 +1054,7 @@ get(ref(db, `users/${uid}/nickname`)).then((snapshot) => {
 
   const ids = [currentUser.uid, uid].sort();
   const privatePath = `privateChats/${ids[0]}_${ids[1]}/messages`;
-  privateChatRef = query(ref(db, privatePath), limitToLast(50));
+  privateChatRef = query(ref(db, privatePath), limitToLast(200));
 
   privateChatListener = onChildAdded(privateChatRef, (snap) => {
     appendMessage?.(snap.val(), snap.key);
@@ -1354,6 +1467,37 @@ window.addEventListener('DOMContentLoaded', () => {
   document.getElementById("toggle-night-mode-mobile")?.addEventListener("click", toggleNightMode);
 });
 
+// 附加功能
+import { initExtras } from './extras.js';
+import { initImageUpload } from './upload.js';
+import { initVoteFeature } from './vote.js';
+
+document.addEventListener('DOMContentLoaded', () => {
+  initExtras();
+
+  initImageUpload({
+    fileInputId: 'upload-input',
+    previewContainerId: 'input-preview',
+    storage // 如果你的 initImageUpload 支援 storage 傳入，這行保留
+  });
+
+  initVoteFeature((voteData) => {
+    const msg = {
+      user: currentUser.nickname,
+      avatar: currentUser.avatar,
+      from: currentUser.uid,
+      time: Date.now(),
+      ...voteData
+    };
+
+    const roomPath = `groupChats/${currentGroupRoom || 'chat'}/messages`;
+    push(ref(db, roomPath), msg);
+  });
+});
+
+
+
+//PWA 專用
 if ('serviceWorker' in navigator && location.protocol === 'https:') {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js')
