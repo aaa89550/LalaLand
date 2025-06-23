@@ -1033,21 +1033,39 @@ function clearReplyUI() {
 
 function openPrivateChat(uid) {
   console.log("✅ 開啟與使用者私訊：", uid);
-
-  stopAllListeners();  // 清除原本監聽器
-
+  stopAllListeners();
   currentChat = uid;
   currentPrivateUid = uid;
 
   const chatTitle = document.getElementById('chat-title');
   const chatTip = document.getElementById('chat-tip');
-get(ref(db, `users/${uid}/nickname`)).then((snapshot) => {
-  if (snapshot.exists()) {
-    const nickname = snapshot.val();
-    if (chatTitle) chatTitle.textContent = `${nickname} `;
-    if (chatTip) chatTip.textContent = `你正在私訊中`;
-  }
-});
+
+  get(ref(db, `users/${uid}/nickname`)).then((snapshot) => {
+    if (snapshot.exists()) {
+      const nickname = snapshot.val();
+      if (chatTitle) chatTitle.textContent = `${nickname} `;
+    }
+  });
+
+  // 👉 將提示 + 加好友連結直接插入 chat-tip
+  if (chatTip) {
+  const friendRef = ref(db, `users/${currentUser.uid}/friends/${uid}`);
+  onValue(friendRef, (snap) => {
+    if (snap.exists()) {
+      // ✅ 成為好友後，自動顯示這段
+      chatTip.textContent = `你正在私訊中`;
+    } else {
+      // ✅ 尚未成為好友，顯示加好友連結
+      chatTip.innerHTML = `
+        你正在私訊中<a href="#" id="chat-add-friend-link" style="color:#3b5bdb; text-decoration: underline;">⭢加好友</a>
+      `;
+      document.getElementById('chat-add-friend-link').addEventListener('click', (e) => {
+        e.preventDefault();
+        addFriend(uid); // ❗️不要再手動更新 chatTip，讓 onValue 自動處理變化
+      });
+    }
+  });
+}
 
   clearChat?.();
   highlightUserList?.();
@@ -1055,18 +1073,9 @@ get(ref(db, `users/${uid}/nickname`)).then((snapshot) => {
   const ids = [currentUser.uid, uid].sort();
   const privatePath = `privateChats/${ids[0]}_${ids[1]}/messages`;
   privateChatRef = query(ref(db, privatePath), limitToLast(200));
-
   privateChatListener = onChildAdded(privateChatRef, (snap) => {
-    appendMessage?.(snap.val(), snap.key);
+    appendMessage(snap.val(), snap.key);
   });
-
-  // 清除通知紅點（如果有）
-  const li = document.getElementById('user-li-' + uid);
-  if (li) {
-    const dot = li.querySelector('.notify-dot');
-    if(dot) dot.style.display = 'none';
-  }
-  privateChatNotificationStates[uid] = false;
 }
 
 // ========= Firebase Auth 狀態監聽 & 用戶同步/好友機制重寫版 =========
