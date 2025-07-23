@@ -680,101 +680,104 @@ document.getElementById('forgot-submit-btn').onclick = async function() {
   }
 };
 
-// 監聽登入狀態
 onAuthStateChanged(auth, async (user) => {
-      if (user) {
-      const userRef = ref(db, 'users/' + user.uid);
-      const snapshot = await get(userRef);
-      const userData = snapshot.val();
-      const data = snap.val();
+  if (user) {
+    // 進入 loading 狀態
+    if (typeof showLoading === 'function') showLoading();
 
-    // 如果缺 nickname 或 avatar，就補上
-    if (!data?.nickname || !data?.avatar) {
-      const defaultNick = user.email?.split('@')[0] || '匿名用戶';
-      const defaultAvatar = 'https://yourdomain.com/default.png';
+    const uid = user.uid;
+    const userRef = ref(db, 'users/' + uid);
 
+    // 第一步：讀取使用者資料
+    let snapshot = await get(userRef);
+    let data = snapshot.val() || {};
+
+    // 第二步：如果缺 nickname 或 avatar，就補上預設值
+    const defaultNick = user.email?.split('@')[0] || '匿名用戶';
+    const defaultAvatar = 'https://yourdomain.com/default.png';
+
+    const nickname = data.nickname || defaultNick;
+    const avatar = data.avatar || defaultAvatar;
+
+    if (!data.nickname || !data.avatar) {
       await update(userRef, {
-        nickname: data?.nickname || defaultNick,
-        avatar: data?.avatar || defaultAvatar
+        nickname,
+        avatar
       });
     }
 
-    currentUser = {
-      uid,
-      nickname: data?.nickname || defaultNick,
-      avatar: data?.avatar || defaultAvatar
-    };
-  }
-  if (user) {
-    // 顯示 loading（建議放在進聊天室前，UI 更穩定）
-    if (typeof showLoading === 'function') showLoading();
-
+    // 第三步：等待 Firebase 同步完成（重試機制）
     let userDb = null;
     let tryCount = 0;
-    const maxTries = 10;   // 視正式環境延遲可調大
-    const delay = 300;     // 200~300ms
+    const maxTries = 10;
+    const delay = 300;
 
     while (tryCount < maxTries) {
-      userDb = await onValuePromise(ref(db, 'users/' + user.uid));
-      if (userDb && userDb.nickname && userDb.avatar) break;
+      const snap = await onValuePromise(userRef);
+      const val = snap.val();
+      if (val && val.nickname && val.avatar) {
+        userDb = val;
+        break;
+      }
       await new Promise(r => setTimeout(r, delay));
       tryCount++;
     }
 
-    // fallback
-    const nickname = (userDb && userDb.nickname) ? userDb.nickname : '新用戶';
-    const avatar = (userDb && userDb.avatar) ? userDb.avatar : 'default-avatar.png';
+    // fallback（若還是沒資料）
+    const finalNick = userDb?.nickname || nickname;
+    const finalAvatar = userDb?.avatar || avatar;
 
+    // 建立 currentUser 物件
     currentUser = {
-      uid: user.uid,
-      nickname,
-      avatar
+      uid,
+      nickname: finalNick,
+      avatar: finalAvatar
     };
 
-    // 寫入/同步 online 狀態
-    await update(ref(db, 'users/' + user.uid), {
-      ...(userDb || {}), // 保留原有欄位
-      uid: user.uid,
-      nickname,
-      avatar,
+    // 同步 online 狀態
+    await update(userRef, {
+      ...(userDb || {}),
+      uid,
+      nickname: finalNick,
+      avatar: finalAvatar,
       online: true,
       lastActive: Date.now()
     });
-    onDisconnect(ref(db, 'users/' + user.uid + '/online')).set(false);
+    onDisconnect(ref(db, 'users/' + uid + '/online')).set(false);
 
-    // UI 切換
+    // 顯示主要 UI
     document.getElementById('login-page').style.display = 'none';
     document.getElementById('register-page').style.display = 'none';
     document.getElementById('auth-tabs').style.display = 'none';
     document.getElementById('main').style.display = 'flex';
-    document.getElementById('mobile-sidebar-btn').style.display = 'block'; // 顯示三槓
+    document.getElementById('mobile-sidebar-btn').style.display = 'block';
 
-    // 側邊欄顯示
-    if (document.getElementById('sidebar-my-nickname')) {
-      document.getElementById('sidebar-my-nickname').textContent = currentUser.nickname;
-    }
-    if (document.getElementById('sidebar-my-avatar')) {
-      document.getElementById('sidebar-my-avatar').src = currentUser.avatar;
-    }
+    // 側邊欄更新使用者資料
+    const nicknameEl = document.getElementById('sidebar-my-nickname');
+    const avatarEl = document.getElementById('sidebar-my-avatar');
+    if (nicknameEl) nicknameEl.textContent = currentUser.nickname;
+    if (avatarEl) avatarEl.src = currentUser.avatar;
 
-    // 其他初始化
+    // 載入其他必要資料
     loadUserList();
 
     // 關閉 loading
     if (typeof hideLoading === 'function') hideLoading();
 
-    // 若超時還是沒有資料可 alert（建議可以選擇性顯示）
+    // 警告：資料超時仍不完整
     if (!userDb || !userDb.nickname || !userDb.avatar) {
       alert('載入個人資料超時，請重新整理或聯絡管理員。');
     }
+
   } else {
-    // 未登入
+    // 未登入狀態，顯示登入畫面
     document.getElementById('main').style.display = 'none';
     document.getElementById('auth-tabs').style.display = 'flex';
     switchTab('login');
     if (typeof hideLoading === 'function') hideLoading();
   }
 });
+
 
 document.addEventListener('click', (e) => {
   if (e.target.classList.contains('vote-option')) {
