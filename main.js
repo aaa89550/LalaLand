@@ -683,15 +683,9 @@ document.getElementById('forgot-submit-btn').onclick = async function() {
 // 監聽登入狀態
 onAuthStateChanged(auth, async (user) => {
       if (user) {
-    // 先載入基本畫面
-    renderSkeletonUI();
-
-    // 再讀資料（加 loading 指示）
-    try {
       const userRef = ref(db, 'users/' + user.uid);
       const snapshot = await get(userRef);
       const userData = snapshot.val();
-      updateUIWithUserData(userData);
       const data = snap.val();
 
     // 如果缺 nickname 或 avatar，就補上
