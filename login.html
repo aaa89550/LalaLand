@@ -11,61 +11,193 @@
   <meta charset="UTF-8">
   <title>LalaLand女同聊天室</title>
   <style>
-    :root {
-      --earth-brown: #705a36;
-      --earth-beige: #f7f1e1;
-      --earth-sand: #e9dac1;
-      --sea-blue: #2877b9;
-      --sea-light: #b4d1e7;
-      --sea-dark: #16507a;
-      --accent-green: #a3c9ad;
-      --accent-coral: #ffb89a;
-      --white: #fff;
-      --gray: #4a4a4a;
-      --shadow: 0 4px 18px #2877b91a;
-    }
+  :root {
+    --bg: #f7f1e1;            /* 背景：米白 */
+    --text: #4a4a4a;          /* 主文字 */
+    --card: #ffffff;          /* 卡片底 */
+    --accent: #2877b9;        /* 主按鈕 / 點綴海藍 */
+    --accent-dark: #16507a;   /* 按鈕 hover */
+    --soft: #e9dac1;          /* 淺米色：區塊背景 */
+    --border: #a3c9ad;        /* 淺綠：邊框 */
+    --shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+  }
 
-    body {
-      margin: 0;
-      font-family: sans-serif;
-      background-color: #e9dac1;
-      color: var(--gray);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: flex-start;
-      padding: 40px 32px;
-      min-height: 100vh;
-    }
+  body {
+    margin: 0;
+    font-family: 'Noto Sans TC', sans-serif;
+    background-color: var(--bg);
+    color: var(--text);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 40px 24px;
+    min-height: 100vh;
+  }
 
-    body { font-family: sans-serif; background: #f3f3f3; }
-    #login-page, #register-page, #anonymous-page { width: 320px; margin: 80px auto; background: #fff; border-radius: 8px; box-shadow: 0 4px 12px #0001; padding: 32px 24px 24px 24px; display: none; }
-    #main { display: none; max-width: 900px; margin: 40px auto; gap: 20px;}
-    #sidebar { width: 200px; background: #fff; padding: 16px 12px; border-radius: 8px; box-shadow: 0 2px 8px #0001;}
-    #user-list { list-style: none; padding:0; margin:0;}
-    #user-list li { padding: 8px 4px; margin-bottom: 4px; border-radius: 4px; cursor: pointer; display: flex; align-items: center;}
-    #user-list li.active, #user-list li:hover { background: #e0e7ff; }
-    .side-avatar { width:32px; height:32px; border-radius:50%; margin-right:8px; border:2px solid #a3a3a3;}
-    #group-chat-btn { width: 100%; margin: 16px 0 0 0; padding: 8px;}
-    #content { flex: 1; }
-    #chat-title { text-align: center; margin-bottom: 8px;}
-    #chat { height: 320px; border:1px solid #ccc; background:#fff; overflow-y: auto; padding:10px; border-radius:8px;}
-    #input-area { display: flex; gap: 10px; margin-top: 10px;}
-    #msg { flex: 1; padding: 8px; border: 1px solid #aaa; border-radius: 4px;}
-    #send { padding: 8px 20px;}
-    .msg { margin: 8px 0; display:flex; align-items: flex-start;}
-    .userpic { width:36px; height:36px; border-radius:50%; margin-right:8px;}
-    .user { font-weight: bold; color: #2c3e50; }
-    .text { color: #333; word-break: break-all; }
-    .timestamp { color: #aaa; font-size: 10px; margin-left: 6px;}
-    #logout-btn { margin-top: 16px; padding: 6px 14px; width:100%; }
-    .tip { font-size: 13px; color: #555; background: #f5f7fb; border-radius: 5px; padding: 8px 10px; margin-bottom: 14px;}
-    .switch-auth { color: #1d6dce; background:none; border:none; text-decoration:underline; cursor:pointer; margin:6px 0 0 0; font-size:13px;}
-    .tab-btns { display:flex; gap:8px; margin-bottom:18px; justify-content:center;}
-    .tab-btn { background:#f0f0f0; border-radius:6px 6px 0 0; border:none; padding:7px 22px; cursor:pointer; font-weight:bold;}
-    .tab-btn.active { background:#e0e7ff; }
-    .avatar-preview { display:block; margin:10px auto 15px auto; border-radius:50%; width:80px; height:80px; object-fit:cover; background:#eee; }
-  </style>
+  /* 卡片區域 */
+  #login-page, #register-page, #anonymous-page {
+    width: 320px;
+    margin: 60px auto;
+    background: var(--card);
+    border-radius: 10px;
+    box-shadow: var(--shadow);
+    padding: 32px 24px 24px;
+    display: none;
+  }
+
+  #main {
+    display: none;
+    max-width: 920px;
+    margin: 40px auto;
+    gap: 20px;
+  }
+
+  #sidebar {
+    width: 200px;
+    background: var(--card);
+    padding: 16px 12px;
+    border-radius: 8px;
+    box-shadow: var(--shadow);
+  }
+
+  #chat {
+    height: 320px;
+    border: 1px solid var(--border);
+    background: var(--card);
+    overflow-y: auto;
+    padding: 10px;
+    border-radius: 8px;
+  }
+
+  #chat-title {
+    text-align: center;
+    margin-bottom: 10px;
+  }
+
+  .tab-btns {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 18px;
+    justify-content: center;
+  }
+
+  .tab-btn {
+    background: var(--soft);
+    border-radius: 6px 6px 0 0;
+    border: none;
+    padding: 8px 24px;
+    cursor: pointer;
+    font-weight: bold;
+    color: var(--text);
+  }
+
+  .tab-btn.active {
+    background: var(--accent);
+    color: white;
+  }
+
+  button {
+    background-color: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 10px 20px;
+    cursor: pointer;
+    font-weight: bold;
+    box-shadow: var(--shadow);
+  }
+
+  button:hover {
+    background-color: var(--accent-dark);
+  }
+
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="file"] {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 12px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--card);
+    color: var(--text);
+  }
+
+  .switch-auth {
+    background: none;
+    border: none;
+    text-decoration: underline;
+    color: var(--accent);
+    cursor: pointer;
+    font-size: 14px;
+    margin-top: 8px;
+  }
+
+  .tip {
+    font-size: 14px;
+    color: var(--text);
+    background: var(--soft);
+    border-radius: 6px;
+    padding: 12px 16px;
+    margin-bottom: 16px;
+  }
+
+  #user-list, #friend-list, #group-chat-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  #user-list li, .group-chat-item {
+    padding: 8px 10px;
+    margin-bottom: 6px;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+
+  #user-list li:hover,
+  .group-chat-item:hover,
+  #user-list li.active {
+    background: var(--soft);
+  }
+
+  .avatar-preview {
+    display: block;
+    margin: 12px auto;
+    border-radius: 50%;
+    width: 80px;
+    height: 80px;
+    object-fit: cover;
+    background: #eee;
+  }
+
+  /* Mobile sidebar 與 modal 建議 */
+  .modal-content, .mobile-sidebar-drawer {
+    background: var(--card);
+    color: var(--text);
+    border-radius: 8px;
+    box-shadow: var(--shadow);
+    padding: 20px;
+  }
+
+  .plus-btn {
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    padding: 8px 10px;
+    font-size: 16px;
+    cursor: pointer;
+  }
+
+  .emoji-container span {
+    font-size: 20px;
+    margin: 4px;
+    cursor: pointer;
+  }
+</style>
 </head>
 <body>
   <!-- 登入/註冊 tab -->
