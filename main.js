@@ -1354,7 +1354,7 @@ async function logoutHandler() {
       lastActive: Date.now()
     });
     await signOut(auth);
-    location.reload();
+    window.location.href = 'landing.html';  // ✅ 登出後導向 landing.html
   } catch (e) {
     console.error("登出失敗：", e);
   }
