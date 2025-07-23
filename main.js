@@ -7,6 +7,9 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
 import {
   getAuth,
+  setPersistence,
+  browserSessionPersistence,
+  inMemoryPersistence,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   onAuthStateChanged,
@@ -52,6 +55,14 @@ let friendsSnapshot = {};
 let messageMap = {};
 let renderedMessageIds = new Set();
 
+// 若你希望完全不要自動登入（每次開網頁都要重新登入）
+setPersistence(auth, inMemoryPersistence)
+  .then(() => {
+    return signInWithEmailAndPassword(auth, email, password);
+  })
+  .catch((error) => {
+    console.error(error);
+  });
 
 function clearChat() {
   document.getElementById('chat').innerHTML = '';
