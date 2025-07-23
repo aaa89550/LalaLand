@@ -1365,7 +1365,7 @@ async function logoutHandler() {
       lastActive: Date.now()
     });
     await signOut(auth);
-    window.location.href = 'index.html';
+    window.location.href = '/index.html';
   } catch (e) {
     console.error("登出失敗：", e);
   }
