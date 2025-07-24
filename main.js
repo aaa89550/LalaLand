@@ -1451,7 +1451,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const roomPath = `groupChats/${currentGroupRoom || 'chat'}/messages`;
     push(ref(db, roomPath), msg);
-
+    
     document.getElementById('logout-btn')?.addEventListener('click', logoutHandler);
   });
 });
