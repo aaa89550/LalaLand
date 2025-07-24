@@ -1455,11 +1455,3 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('logout-btn')?.addEventListener('click', logoutHandler);
   });
 });
-
-document.getElementById('logout-btn').onclick = function() {
-  signOut(auth).then(() => {
-    // 例如導回登入頁、清 session...
-    window.location.href = "https://aaa89550.github.io/LalaLand/";
-  });
-};
-
