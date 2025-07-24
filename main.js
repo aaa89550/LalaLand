@@ -1087,38 +1087,32 @@ get(ref(db, `users/${uid}/nickname`)).then((snapshot) => {
 // ========= Firebase Auth 狀態監聽 & 用戶同步/好友機制重寫版 =========
 
 
+// ✅ 登入狀態監聽
 onAuthStateChanged(auth, (user) => {
   if (user) {
-    // ✅ 設定使用者資料
     currentUser = {
       uid: user.uid,
       nickname: user.displayName ?? '',
       avatar: user.photoURL ?? ''
     };
 
-    // ✅ 初始化聊天室與監聽
+    // 🔁 初始化各種監聽功能
     listenAllUsers();
     listenFriends();
     listenFriendRequestsPopup();
 
-    // ✅ 顯示主畫面，隱藏登入註冊
-    document.getElementById('main').style.display = 'flex';
+    // ✅ 顯示公告頁面，隱藏聊天室與登入註冊
+    document.getElementById('announcement-page').style.display = 'block';
+    document.getElementById('main').style.display = 'none';
     document.getElementById('login-page').style.display = 'none';
     document.getElementById('register-page').style.display = 'none';
 
-    // ✅ 若登入後有預設聊天室需求（例如剛登入後）
-    const lastRoom = sessionStorage.getItem('lastChatRoom');
-    if (lastRoom) {
-      switchChat(lastRoom);
-      sessionStorage.removeItem('lastRoom');
-    }
-
   } else {
-    // ❌ 尚未登入
     currentUser = null;
 
-    // ✅ 顯示登入頁，隱藏主畫面
+    // ✅ 顯示登入頁，隱藏其他
     document.getElementById('main').style.display = 'none';
+    document.getElementById('announcement-page').style.display = 'none';
     document.getElementById('login-page').style.display = 'block';
     document.getElementById('register-page').style.display = 'none';
   }
@@ -1428,6 +1422,26 @@ document.addEventListener('DOMContentLoaded', function () {
     mobileSidebarBtn.addEventListener('click', () => {
       mobileSidebarDrawer.classList.add('open');
       document.body.style.overflow = 'hidden'; // 防止背景捲動
+
+ // ✅ 登出按鈕
+  const logoutBtn = document.getElementById('logout-btn');
+  if (logoutBtn) logoutBtn.onclick = logoutHandler;
+
+  const logoutBtnMobile = document.getElementById('logout-btn-mobile');
+  if (logoutBtnMobile) logoutBtnMobile.onclick = logoutHandler;
+
+  // ✅ 進入聊天室按鈕（從公告頁進入主頁）
+  const enterBtn = document.getElementById('enter-chat-btn');
+  const announcementPage = document.getElementById('announcement-page');
+  const mainPage = document.getElementById('main');
+
+  if (enterBtn && announcementPage && mainPage) {
+    enterBtn.addEventListener('click', () => {
+      announcementPage.style.display = 'none';
+      mainPage.style.display = 'flex';
+
+      const lastRoom = sessionStorage.getItem('lastChatRoom') || 'group_chat';
+      switchChat(lastRoom);
     });
   }
 
