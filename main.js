@@ -78,17 +78,17 @@ function initializeGroupChatsIfAuthed() {
 
     const defaultRooms = ['chat', 'love', 'sex']; // 可新增其他分區
     for (const room of defaultRooms) {
-      const roomRef = ref(db, `groupChats/${room}/messages`);
+      const roomRef = ref(db, groupChats/${room}/messages);
       try {
         const snap = await get(roomRef);
         if (!snap.exists()) {
           await set(roomRef, {});
-          console.log(`✅ 已建立 ${room}/messages 分區`);
+          console.log(✅ 已建立 ${room}/messages 分區);
         } else {
-          console.log(`⚠️ ${room}/messages 已存在，略過建立`);
+          console.log(⚠️ ${room}/messages 已存在，略過建立);
         }
       } catch (err) {
-        console.error(`🚨 初始化 ${room} 時出錯：`, err);
+        console.error(🚨 初始化 ${room} 時出錯：, err);
       }
     }
   });
@@ -111,10 +111,10 @@ function switchChat(newChatId) {
   // 設定新的路徑
   if (currentChat.startsWith("group_")) {
     const room = currentGroupRoom || "chat";
-    chatRef = ref(db, `groupChats/${room}/messages`);
+    chatRef = ref(db, groupChats/${room}/messages);
   } else {
     const ids = [currentUser.uid, currentChat].sort();
-    chatRef = ref(db, `privateChats/${ids[0]}_${ids[1]}/messages`);
+    chatRef = ref(db, privateChats/${ids[0]}_${ids[1]}/messages);
   }
 
   // 設定新的監聽器
@@ -225,7 +225,7 @@ function loadGroupChat(room) {
     highlightUserList?.(); // 確保使用者列表高亮功能正常
     listenToVoteUpdates(room);
     
-    const groupPath = `groupChats/${room}/messages`;
+    const groupPath = groupChats/${room}/messages;
     // 針對群組聊天室，我們通常會載入最後 N 條訊息
     groupChatRef = query(ref(db, groupPath), limitToLast(200));
 
@@ -254,7 +254,7 @@ function loadGroupChat(room) {
             }
         });
     }).catch(error => {
-        console.error(`Error loading group chat history for ${room}:`, error);
+        console.error(Error loading group chat history for ${room}:, error);
         // 如果載入歷史訊息失敗，仍然設置監聽器以接收新訊息
         groupChatListener = onChildAdded(groupChatRef, snap => {
             const msgId = snap.key;
@@ -298,12 +298,12 @@ function appendMessage(msg, msgId) {
   if (msg.replyTo && messageMap[msg.replyTo]) {
     const original = messageMap[msg.replyTo];
     const preview = original.text.length > 5 ? original.text.slice(0, 30) + '...' : original.text;
-    replyHtml = `
+    replyHtml = 
       <div class="reply-block">
         <span class="reply-nick">@${escapeHTML(original.user)}</span>
         <span class="reply-text">${escapeHTML(preview)}</span>
       </div>
-    `;
+    ;
   }
 
   // 主氣泡內容組裝
@@ -312,7 +312,7 @@ function appendMessage(msg, msgId) {
   let votedIndex = -1;
 
   if (msg.type === 'vote') {
-    bubbleContent += `<div class="vote-block"><strong>${escapeHTML(msg.question)}</strong><br>`;
+    bubbleContent += <div class="vote-block"><strong>${escapeHTML(msg.question)}</strong><br>;
     const hasVoted = msg.voters?.[currentUser.uid] !== undefined;
     const votedIndex = msg.voters?.[currentUser.uid];
 
@@ -321,28 +321,28 @@ function appendMessage(msg, msgId) {
         const label = escapeHTML(opt);
         if (hasVoted) {
           const isMyVote = i === votedIndex;
-          bubbleContent += `<div class="vote-result ${isMyVote ? 'voted' : ''}">
+          bubbleContent += <div class="vote-result ${isMyVote ? 'voted' : ''}">
             ${label} - ${msg.votes?.[i] ?? 0} 票
-          </div>`;
+          </div>;
         } else {
-          bubbleContent += `<button class="vote-option" data-id="${msgId}" data-idx="${i}">${label}</button>`;
+          bubbleContent += <button class="vote-option" data-id="${msgId}" data-idx="${i}">${label}</button>;
         }
       });
     } else {
-      bubbleContent += `<div class="vote-error">⚠️ 投票資料缺失</div>`;
+      bubbleContent += <div class="vote-error">⚠️ 投票資料缺失</div>;
     }
 
-    bubbleContent += `</div>`;
+    bubbleContent += </div>;
   } else {
     bubbleContent += linkify(msg.text);
   }
 
   if (msg.image) {
-  bubbleContent += `<br><img src="${msg.image}" class="chat-image" style="max-width: 100%; border-radius: 6px; margin-top: 6px;" />`;
+  bubbleContent += <br><img src="${msg.image}" class="chat-image" style="max-width: 100%; border-radius: 6px; margin-top: 6px;" />;
 }
 
   // 主體 HTML 組裝
-  div.innerHTML = `
+  div.innerHTML = 
     <img src="${msg.avatar || ''}" class="userpic" data-uid="${msg.from}" alt="點我私訊" title="點我私訊">
     <div>
       <span class="user">${escapeHTML(msg.user)}</span>
@@ -350,7 +350,7 @@ function appendMessage(msg, msgId) {
       <span class="bubble"></span>
       <button class="reply-btn" data-id="${msgId}" title="回覆">↩</button>
     </div>
-  `;
+  ;
 
   div.querySelector('.bubble').innerHTML = bubbleContent;
   chatDiv.appendChild(div);
@@ -377,7 +377,7 @@ function appendMessage(msg, msgId) {
   }
 
   if (msg.imageUrl) {
-  bubbleContent += `<img src="${escapeHTML(msg.imageUrl)}" class="chat-image">`;
+  bubbleContent += <img src="${escapeHTML(msg.imageUrl)}" class="chat-image">;
 }
 
   // 綁定投票按鈕事件（僅尚未投票者）
@@ -386,12 +386,12 @@ function appendMessage(msg, msgId) {
       btn.addEventListener('click', () => {
         const voteIndex = parseInt(btn.getAttribute('data-idx'));
         const id = btn.getAttribute('data-id');
-        const votePath = `groupChats/chat/messages/${id}`;
+        const votePath = groupChats/chat/messages/${id};
 
         // 更新 Firebase 資料庫的 votes 和 voters 欄位
         update(ref(db, votePath), {
-          [`votes/${voteIndex}`]: (msg.votes?.[voteIndex] || 0) + 1,
-          [`voters/${currentUser.uid}`]: voteIndex
+          [votes/${voteIndex}]: (msg.votes?.[voteIndex] || 0) + 1,
+          [voters/${currentUser.uid}]: voteIndex
         });
       });
     });
@@ -400,13 +400,13 @@ function appendMessage(msg, msgId) {
 
 
 function listenToVoteUpdates(room = 'chat') {
-  const messagesRef = ref(db, `groupChats/${room}/messages`);
+  const messagesRef = ref(db, groupChats/${room}/messages);
 
   onChildChanged(messagesRef, (snap) => {
     const msg = snap.val();
     const msgId = snap.key;
 
-    const msgDiv = document.querySelector(`[data-msgid="${msgId}"]`);
+    const msgDiv = document.querySelector([data-msgid="${msgId}"]);
     if (!msgDiv) return;
 
     // 重新呼叫 appendMessage 前先移除舊的
@@ -453,7 +453,7 @@ function listenAllUsers() {
 }
 
 function listenFriends() {
-  onValue(ref(db, `users/${currentUser.uid}/friends`), (snapshot) => {
+  onValue(ref(db, users/${currentUser.uid}/friends), (snapshot) => {
     friendsSnapshot = snapshot.val() || {};
     renderFriendList();
   });
@@ -480,18 +480,18 @@ function renderFriendList() {
 
     // 狀態小圓點
     const onlineDot = fuser.online
-      ? `<span style="color:green;font-size:1.2em;">●</span>`
-      : `<span style="color:gray;font-size:1.2em;">●</span>`;
+      ? <span style="color:green;font-size:1.2em;">●</span>
+      : <span style="color:gray;font-size:1.2em;">●</span>;
 
     // 桌機版
     if (friendList) {
       const li = document.createElement('li');
-      li.innerHTML = `
+      li.innerHTML = 
         <img src="${fuser.avatar}" width="32" style="vertical-align:middle;">
         <span>${fuser.nickname}</span>
         ${onlineDot}
         <button class="remove-friend-btn" data-id="${friendUid}" title="解除好友">❌</button>
-      `;
+      ;
       li.style.cursor = "pointer";
       li.onclick = (e) => {
         if (e.target.classList.contains('remove-friend-btn')) return;
@@ -503,12 +503,12 @@ function renderFriendList() {
     // 手機版
     if (friendListMobile) {
       const liMobile = document.createElement('li');
-      liMobile.innerHTML = `
+      liMobile.innerHTML = 
       <img src="${fuser.avatar}">
       <span class="nickname">${fuser.nickname}</span>
       <span class="status-dot">${onlineDot}</span>
       <button class="remove-friend-btn" data-id="${friendUid}" title="解除好友">❌</button>
-      `;
+      ;
       liMobile.style.cursor = "pointer";
       liMobile.onclick = (e) => {
         if (e.target.classList.contains('remove-friend-btn')) return;
@@ -536,8 +536,8 @@ function renderFriendList() {
 
 function removeFriend(friendUid) {
   if (!currentUser || !friendUid) return;
-  set(ref(db, `users/${currentUser.uid}/friends/${friendUid}`), null)
-    .then(() => set(ref(db, `users/${friendUid}/friends/${currentUser.uid}`), null))
+  set(ref(db, users/${currentUser.uid}/friends/${friendUid}), null)
+    .then(() => set(ref(db, users/${friendUid}/friends/${currentUser.uid}), null))
     .then(() => alert('已解除好友'))
     .catch(err => alert('解除好友失敗：' + err.message));
 }
@@ -785,7 +785,7 @@ document.addEventListener('click', (e) => {
     const idx = parseInt(e.target.dataset.idx, 10);
 
     // Firebase 更新指定投票的 votes 與 voters
-    const voteRef = ref(db, `groupChats/${currentGroupRoom}/messages/${msgId}`);
+    const voteRef = ref(db, groupChats/${currentGroupRoom}/messages/${msgId});
     runTransaction(voteRef, (msg) => {
       if (!msg || msg.type !== 'vote') return msg;
       if (!msg.voters) msg.voters = {};
@@ -825,26 +825,26 @@ function loadUserList() {
       if (user.uid !== currentUser.uid && user.online) {
         // 桌機 sidebar
         const li = document.createElement('li');
-        li.innerHTML = `
+        li.innerHTML = 
   <img src="${user.avatar}" class="side-avatar" title="點我與${user.nickname}私訊">
   <span>${user.nickname}</span>
   <span class="notify-dot" ...>●</span>
   ${
     myFriends[user.uid]
-      ? `<span class="friend-tag">已加好友</span>`
-      : `<button class="add-friend-btn" data-uid="${user.uid}">加好友</button>`
+      ? <span class="friend-tag">已加好友</span>
+      : <button class="add-friend-btn" data-uid="${user.uid}">加好友</button>
   }
-`;
+;
         li.onclick = (e) => {
           if (e.target.classList.contains('add-friend-btn')) return;
           openPrivateChat(user.uid);
         };
-        li.id = `user-li-${user.uid}`;
+        li.id = user-li-${user.uid};
         list.appendChild(li);
 
         // 手機 sidebar drawer
         const liMobile = li.cloneNode(true);
-        liMobile.id = `user-li-mobile-${user.uid}`;
+        liMobile.id = user-li-mobile-${user.uid};
         // 重新綁定事件（cloneNode 不會複製事件）
         liMobile.onclick = (e) => {
           if (e.target.classList.contains('add-friend-btn')) return;
@@ -951,12 +951,12 @@ function sendMessage() {
   if (currentChat && currentChat.startsWith("group_")) {
     const room = currentGroupRoom || "chat";
     console.log('📨 Sending to group chat:', room);
-    push(ref(db, `groupChats/${room}/messages`), msg)
+    push(ref(db, groupChats/${room}/messages), msg)
       .then(() => console.log('✅ Group message sent successfully!'))
       .catch(error => console.error('❌ Error sending group message:', error));
   } else {
     const ids = [currentUser.uid, currentChat].sort();
-    const privateChatPath = `privateChats/${ids[0]}_${ids[1]}/messages`;
+    const privateChatPath = privateChats/${ids[0]}_${ids[1]}/messages;
     console.log('📨 Sending to private chat:', privateChatPath);
     push(ref(db, privateChatPath), msg)
       .then(() => console.log('✅ Private message sent successfully!'))
@@ -1036,7 +1036,7 @@ function setReplyTarget(msgId, msgObj) {
     replyBar.style = 'background:#eef;padding:2px 8px 2px 8px;border-left:2px solid #6af;margin-bottom:3px;font-size:12px;opacity:0.9;display:flex;align-items:center;';
     msgInput.parentElement.insertBefore(replyBar, msgInput);
   }
-  replyBar.innerHTML = `↩ <b style="margin:0 3px">@${msgObj.user}</b>: <span style="color:#666;">${msgObj.text}</span> <button id="cancel-reply-btn" style="margin-left:6px;font-size:12px;background:none;border:none;cursor:pointer;opacity:0.5;" title="取消回覆">╳</button>`;
+  replyBar.innerHTML = ↩ <b style="margin:0 3px">@${msgObj.user}</b>: <span style="color:#666;">${msgObj.text}</span> <button id="cancel-reply-btn" style="margin-left:6px;font-size:12px;background:none;border:none;cursor:pointer;opacity:0.5;" title="取消回覆">╳</button>;
   document.getElementById('cancel-reply-btn').onclick = clearReplyUI;
 }
 function clearReplyUI() {
@@ -1056,11 +1056,11 @@ function openPrivateChat(uid) {
 
   const chatTitle = document.getElementById('chat-title');
   const chatTip = document.getElementById('chat-tip');
-get(ref(db, `users/${uid}/nickname`)).then((snapshot) => {
+get(ref(db, users/${uid}/nickname)).then((snapshot) => {
   if (snapshot.exists()) {
     const nickname = snapshot.val();
-    if (chatTitle) chatTitle.textContent = `${nickname} `;
-    if (chatTip) chatTip.textContent = `你正在私訊中`;
+    if (chatTitle) chatTitle.textContent = ${nickname} ;
+    if (chatTip) chatTip.textContent = 你正在私訊中;
   }
 });
 
@@ -1068,7 +1068,7 @@ get(ref(db, `users/${uid}/nickname`)).then((snapshot) => {
   highlightUserList?.();
 
   const ids = [currentUser.uid, uid].sort();
-  const privatePath = `privateChats/${ids[0]}_${ids[1]}/messages`;
+  const privatePath = privateChats/${ids[0]}_${ids[1]}/messages;
   privateChatRef = query(ref(db, privatePath), limitToLast(200));
 
   privateChatListener = onChildAdded(privateChatRef, (snap) => {
@@ -1096,27 +1096,28 @@ onAuthStateChanged(auth, (user) => {
       avatar: user.photoURL ?? ''
     };
 
+    // 🔁 初始化各種監聽功能
     listenAllUsers();
     listenFriends();
     listenFriendRequestsPopup();
 
-    // ✅ 登入後先顯示公告頁
+    // ✅ 顯示公告頁面，隱藏聊天室與登入註冊
     document.getElementById('announcement-page').style.display = 'block';
     document.getElementById('main').style.display = 'none';
     document.getElementById('login-page').style.display = 'none';
     document.getElementById('register-page').style.display = 'none';
 
-    // ❌ 不要在這裡顯示 main 或切換聊天室！應該等使用者按下按鈕後才做
-
   } else {
     currentUser = null;
 
+    // ✅ 顯示登入頁，隱藏其他
     document.getElementById('main').style.display = 'none';
     document.getElementById('announcement-page').style.display = 'none';
     document.getElementById('login-page').style.display = 'block';
     document.getElementById('register-page').style.display = 'none';
   }
 });
+
 
 
 // ======= UI 切換：好友區、在線成員區 =======
@@ -1167,7 +1168,7 @@ showFriendsBtnMobile.onclick = function() {
 window.addFriend = function(friendUid) {
   if (!currentUser || !friendUid) return;
   console.log('addFriend', currentUser.uid, '->', friendUid);
-  set(ref(db, `users/${friendUid}/friendRequests/${currentUser.uid}`), true)
+  set(ref(db, users/${friendUid}/friendRequests/${currentUser.uid}), true)
     .then(() => alert('好友申請已送出，請等待對方確認！'))
     .catch(err => alert('加好友失敗：' + err.message));
 };
@@ -1187,12 +1188,12 @@ window.acceptFriend = async function(friendUid) {
   console.log('currentUser.uid:', currentUser.uid, 'friendUid:', friendUid);
 
   try {
-    await set(ref(db, `users/${currentUser.uid}/friends/${friendUid}`), true);
-    console.log(`自己好友寫入成功: users/${currentUser.uid}/friends/${friendUid}`);
-    await set(ref(db, `users/${friendUid}/friends/${currentUser.uid}`), true);
-    console.log(`對方好友寫入成功: users/${friendUid}/friends/${currentUser.uid}`);
-    await set(ref(db, `users/${currentUser.uid}/friendRequests/${friendUid}`), null);
-    await set(ref(db, `users/${friendUid}/friendRequests/${currentUser.uid}`), null);
+    await set(ref(db, users/${currentUser.uid}/friends/${friendUid}), true);
+    console.log(自己好友寫入成功: users/${currentUser.uid}/friends/${friendUid});
+    await set(ref(db, users/${friendUid}/friends/${currentUser.uid}), true);
+    console.log(對方好友寫入成功: users/${friendUid}/friends/${currentUser.uid});
+    await set(ref(db, users/${currentUser.uid}/friendRequests/${friendUid}), null);
+    await set(ref(db, users/${friendUid}/friendRequests/${currentUser.uid}), null);
     alert('已成為好友！');
   } catch (err) {
     console.error('acceptFriend 發生錯誤', err);
@@ -1203,8 +1204,8 @@ window.acceptFriend = async function(friendUid) {
 // ====== 拒絕好友 ======
 window.rejectFriend = async function(friendUid) {
   if (!currentUser || !friendUid) return;
-  await set(ref(db, `users/${currentUser.uid}/friendRequests/${friendUid}`), null);
-  await set(ref(db, `users/${friendUid}/friendRequests/${currentUser.uid}`), null);
+  await set(ref(db, users/${currentUser.uid}/friendRequests/${friendUid}), null);
+  await set(ref(db, users/${friendUid}/friendRequests/${currentUser.uid}), null);
   alert('已拒絕好友申請');
 };
 
@@ -1213,19 +1214,19 @@ function renderFriendRequests() {
   if (!currentUser) return;
   const requestList = document.getElementById('friend-request-list');
   if (!requestList) return;
-  onValue(ref(db, `users/${currentUser.uid}/friendRequests`), (snapshot) => {
+  onValue(ref(db, users/${currentUser.uid}/friendRequests), (snapshot) => {
     const requests = snapshot.val() || {};
     requestList.innerHTML = '';
     Object.keys(requests).forEach(requestUid => {
       const requester = usersSnapshot[requestUid];
       if (!requester) return;
       const li = document.createElement('li');
-      li.innerHTML = `
+      li.innerHTML = 
         <img src="${requester.avatar}" width="32">
         <span>${requester.nickname}</span>
         <button onclick="acceptFriend('${requestUid}')">接受</button>
         <button onclick="rejectFriend('${requestUid}')">拒絕</button>
-      `;
+      ;
       requestList.appendChild(li);
     });
     if (Object.keys(requests).length === 0) {
@@ -1238,14 +1239,14 @@ function renderFriendRequests() {
 // ====== 即時彈窗通知：收到好友申請時詢問是否同意 ======
 function listenFriendRequestsPopup() {
   if (!currentUser) return;
-  const reqRef = ref(db, `users/${currentUser.uid}/friendRequests`);
+  const reqRef = ref(db, users/${currentUser.uid}/friendRequests);
   onChildAdded(reqRef, (snapshot) => {
     const fromUid = snapshot.key;
     if (!fromUid) return;
     const requester = usersSnapshot[fromUid];
     if (!requester) return;
     // 彈窗詢問
-    const msg = `「${requester.nickname}」想加你為好友，是否同意？`;
+    const msg = 「${requester.nickname}」想加你為好友，是否同意？;
     if (window.confirm(msg)) {
       window.acceptFriend(fromUid);
     } else {
@@ -1430,12 +1431,17 @@ document.addEventListener('DOMContentLoaded', function () {
   if (logoutBtnMobile) logoutBtnMobile.onclick = logoutHandler;
 
   // ✅ 進入聊天室按鈕（從公告頁進入主頁）
-  document.getElementById('enter-chat-btn')?.addEventListener('click', () => {
-  document.getElementById('announcement-page').style.display = 'none';
-  document.getElementById('main').style.display = 'flex';
+  const enterBtn = document.getElementById('enter-chat-btn');
+  const announcementPage = document.getElementById('announcement-page');
+  const mainPage = document.getElementById('main');
 
-  const lastRoom = sessionStorage.getItem('lastChatRoom') || 'group_chat';
-  switchChat(lastRoom); // ⏎ 只有在這裡才切換聊天室！
+  if (enterBtn && announcementPage && mainPage) {
+    enterBtn.addEventListener('click', () => {
+      announcementPage.style.display = 'none';
+      mainPage.style.display = 'flex';
+
+      const lastRoom = sessionStorage.getItem('lastChatRoom') || 'group_chat';
+      switchChat(lastRoom);
     });
   }
 
@@ -1513,8 +1519,7 @@ document.addEventListener('DOMContentLoaded', () => {
       ...voteData
     };
 
-    const roomPath = `groupChats/${currentGroupRoom || 'chat'}/messages`;
+    const roomPath = groupChats/${currentGroupRoom || 'chat'}/messages;
     push(ref(db, roomPath), msg);
   });
 });
-
