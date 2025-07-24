@@ -1307,16 +1307,13 @@ async function updateProfileInfo(newNickname, newAvatarFile) {
 async function logoutHandler() {
   try {
     if (!auth.currentUser) return;
-
     await update(ref(db, 'users/' + auth.currentUser.uid), {
       online: false,
       lastActive: Date.now()
     });
-
     await signOut(auth);
-    
+    console.log("登出成功，回到首頁");
     window.location.href = 'https://aaa89550.github.io/LalaLand/';
-
   } catch (e) {
     console.error("登出失敗：", e);
   }
