@@ -1314,9 +1314,8 @@ async function logoutHandler() {
     });
 
     await signOut(auth);
-
-    console.log("登出成功，前往 index.html");
-    window.location.href = 'https://aaa89550.github.io/LalaLand/'; // 使用絕對路徑
+    
+    window.location.href = 'https://aaa89550.github.io/LalaLand/';
 
   } catch (e) {
     console.error("登出失敗：", e);
