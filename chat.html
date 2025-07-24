@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <script>
+    if (localStorage.getItem('darkMode') === 'yes') {
+      document.documentElement.classList.add('dark');
+    }
+  </script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LalaLand 女同聊天室</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- ☰ 手機版 sidebar 按鈕 -->
+  <button id="mobile-sidebar-btn">☰</button>
+
+  <!-- 📱 手機側邊欄 Drawer -->
+  <div id="mobile-sidebar-drawer" class="mobile-sidebar-drawer">
+    <!-- 這裡放在線列表、切換聊天室群組、編輯個人資料與登出按鈕等 -->
+    <!-- ... -->
+  </div>
+
+  <!-- 💬 聊天室主畫面 -->
+  <div id="main">
+    <div id="sidebar">
+      <!-- 在線人員、好友、大群組、編輯個資、登出等 -->
+    </div>
+    <div id="content">
+      <h3 id="chat-title">聊天室</h3>
+      <div id="chat"></div>
+      <div id="input-preview" style="display:none;"></div>
+      <div id="input-area">
+        <button id="plus-btn">＋</button>
+        <input id="msg" type="text" placeholder="輸入訊息..." />
+        <button id="send">送出</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 編輯個人資料 Modal -->
+  <div id="edit-profile-modal" class="modal">
+    <!-- ... -->
+  </div>
+
+  <!-- 投票 Modal -->
+  <div id="vote-modal" class="modal">
+    <!-- ... -->
+  </div>
+
+  <script src="splash.js"></script>
+  <script src="linkify.js"></script>
+  <script type="module" src="main.js"></script>
+</body>
+</html>

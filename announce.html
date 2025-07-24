@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>系統公告 - LalaLand</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="announcement-page" style="padding: 2em; max-width: 600px; margin: auto;">
+    <h2>📢 系統公告</h2>
+    <ul id="announcement-list">
+      <li>歡迎使用 LalaLand！</li>
+      <li>請遵守平台規範。</li>
+      <li>新功能將於近期上線，敬請期待。</li>
+    </ul>
+    <button id="enter-chat-btn" style="margin-top: 20px;">➡️ 進入聊天室</button>
+  </div>
+
+  <script>
+    document.getElementById('enter-chat-btn')?.addEventListener('click', () => {
+      window.location.href = 'login.html'; // 或 chat.html，視你的頁面命名
+    });
+  </script>
+</body>
+</html>
