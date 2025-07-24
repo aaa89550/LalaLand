@@ -1096,28 +1096,27 @@ onAuthStateChanged(auth, (user) => {
       avatar: user.photoURL ?? ''
     };
 
-    // 🔁 初始化各種監聽功能
     listenAllUsers();
     listenFriends();
     listenFriendRequestsPopup();
 
-    // ✅ 顯示公告頁面，隱藏聊天室與登入註冊
+    // ✅ 登入後先顯示公告頁
     document.getElementById('announcement-page').style.display = 'block';
     document.getElementById('main').style.display = 'none';
     document.getElementById('login-page').style.display = 'none';
     document.getElementById('register-page').style.display = 'none';
 
+    // ❌ 不要在這裡顯示 main 或切換聊天室！應該等使用者按下按鈕後才做
+
   } else {
     currentUser = null;
 
-    // ✅ 顯示登入頁，隱藏其他
     document.getElementById('main').style.display = 'none';
     document.getElementById('announcement-page').style.display = 'none';
     document.getElementById('login-page').style.display = 'block';
     document.getElementById('register-page').style.display = 'none';
   }
 });
-
 
 
 // ======= UI 切換：好友區、在線成員區 =======
@@ -1431,17 +1430,12 @@ document.addEventListener('DOMContentLoaded', function () {
   if (logoutBtnMobile) logoutBtnMobile.onclick = logoutHandler;
 
   // ✅ 進入聊天室按鈕（從公告頁進入主頁）
-  const enterBtn = document.getElementById('enter-chat-btn');
-  const announcementPage = document.getElementById('announcement-page');
-  const mainPage = document.getElementById('main');
+  document.getElementById('enter-chat-btn')?.addEventListener('click', () => {
+  document.getElementById('announcement-page').style.display = 'none';
+  document.getElementById('main').style.display = 'flex';
 
-  if (enterBtn && announcementPage && mainPage) {
-    enterBtn.addEventListener('click', () => {
-      announcementPage.style.display = 'none';
-      mainPage.style.display = 'flex';
-
-      const lastRoom = sessionStorage.getItem('lastChatRoom') || 'group_chat';
-      switchChat(lastRoom);
+  const lastRoom = sessionStorage.getItem('lastChatRoom') || 'group_chat';
+  switchChat(lastRoom); // ⏎ 只有在這裡才切換聊天室！
     });
   }
 
