@@ -619,13 +619,55 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // 🔐 登入邏輯
   const loginForm = document.getElementById('login-form');
+  let isUserTriggeredSubmit = false; // 添加標記確保是用戶主動觸發
+  
+  // 監聽登入按鈕點擊
+  const loginBtn = loginForm.querySelector('.login-btn');
+  if (loginBtn) {
+    loginBtn.addEventListener('click', () => {
+      isUserTriggeredSubmit = true;
+    });
+  }
+  
+  // 監聽 Enter 鍵按下（但要求更明確的確認）
+  const loginEmailInput = document.getElementById('login-email');
+  const loginPasswordInput = document.getElementById('login-password');
+  
+  [loginEmailInput, loginPasswordInput].forEach(input => {
+    if (input) {
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          // 只有在密碼框中按 Enter 且兩個欄位都有值時才允許
+          if (e.target === loginPasswordInput && 
+              loginEmailInput.value.trim() && 
+              loginPasswordInput.value.trim()) {
+            isUserTriggeredSubmit = true;
+          } else {
+            e.preventDefault(); // 阻止其他情況下的 Enter 提交
+          }
+        }
+      });
+    }
+  });
+  
   loginForm.addEventListener('submit', async (e) => {
     e.preventDefault();
+    
+    // 檢查是否為用戶主動觸發
+    if (!isUserTriggeredSubmit) {
+      console.log('⚠️ 阻止非用戶觸發的登入嘗試');
+      return;
+    }
+    
     const email = document.getElementById('login-email').value.trim();
     const password = document.getElementById('login-password').value;
     if (!email || !password) {
+      isUserTriggeredSubmit = false; // 重置標記
       return alert('請輸入帳號與密碼');
     }
+    
+    console.log('🔐 用戶主動觸發登入');
+    
     try {
       // 設置一個標記，表示這是從登入表單觸發的登入
       sessionStorage.setItem('isLoginRedirect', 'true');
@@ -634,6 +676,7 @@ document.addEventListener('DOMContentLoaded', function() {
     } catch (err) {
       // 登入失敗時清除標記
       sessionStorage.removeItem('isLoginRedirect');
+      isUserTriggeredSubmit = false; // 重置標記
       alert('登入失敗：' + err.message);
     }
   });
@@ -684,9 +727,27 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // 監聽登入狀態
 onAuthStateChanged(auth, async (user) => {
+  console.log('🔄 Auth state changed:', user ? `用戶已登入: ${user.uid}` : '用戶未登入');
+  
   if (user) {
     try {
-      console.log('🔐 用戶已登入:', user.uid);
+      console.log('🔐 處理已登入用戶:', user.uid);
+      
+      // 檢查當前頁面類型
+      const isLoginPage = window.location.pathname.includes('login.html') || 
+                         document.getElementById('login-form') !== null;
+      const isChatPage = window.location.pathname.includes('chat.html') || 
+                        document.getElementById('main') !== null;
+      const isAnnouncePage = window.location.pathname.includes('announce.html');
+      
+      console.log('📄 頁面類型:', { isLoginPage, isChatPage, isAnnouncePage });
+      
+      // 如果在登入頁面且用戶已登入，直接跳轉到聊天室
+      if (isLoginPage && !sessionStorage.getItem('isLoginRedirect')) {
+        console.log('🔀 用戶已登入但在登入頁面，跳轉到聊天室');
+        window.location.href = 'chat.html';
+        return;
+      }
       
       // 檢查是否是從登入表單觸發的登入
       const isLoginRedirect = sessionStorage.getItem('isLoginRedirect') === 'true';
@@ -701,8 +762,8 @@ onAuthStateChanged(auth, async (user) => {
 
       let userDb = null;
       let tryCount = 0;
-      const maxTries = 5;   // 減少重試次數避免卡死
-      const delay = 500;    // 增加延遲時間
+      const maxTries = 3;   // 進一步減少重試次數
+      const delay = 1000;   // 增加延遲時間
 
       // 使用 try-catch 包裝獲取用戶資料的邏輯
       try {
@@ -711,7 +772,7 @@ onAuthStateChanged(auth, async (user) => {
           
           // 添加超時機制
           const timeoutPromise = new Promise((_, reject) => {
-            setTimeout(() => reject(new Error('獲取用戶資料超時')), 5000);
+            setTimeout(() => reject(new Error('獲取用戶資料超時')), 3000); // 減少超時時間
           });
           
           const userDataPromise = onValuePromise(ref(db, 'users/' + user.uid));
@@ -725,6 +786,7 @@ onAuthStateChanged(auth, async (user) => {
           
           tryCount++;
           if (tryCount < maxTries) {
+            console.log(`⏳ 等待 ${delay}ms 後重試...`);
             await new Promise(r => setTimeout(r, delay));
           }
         }
@@ -1722,4 +1784,28 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   document.getElementById('logout-btn')?.addEventListener('click', logoutHandler);
+});
+
+// 頁面載入時的初始化檢查
+window.addEventListener('DOMContentLoaded', () => {
+  console.log('🔄 頁面載入完成，檢查登入狀態');
+  
+  // 如果在登入頁面，添加額外的保護
+  const isLoginPage = window.location.pathname.includes('login.html') || 
+                     document.getElementById('login-form') !== null;
+  
+  if (isLoginPage) {
+    console.log('📄 當前在登入頁面');
+    
+    // 添加一個短暫的延遲，讓 Firebase Auth 有時間初始化
+    setTimeout(() => {
+      const currentUser = auth.currentUser;
+      if (currentUser) {
+        console.log('🔀 檢測到已登入用戶，準備跳轉到聊天室');
+        // 不設置 sessionStorage，讓 onAuthStateChanged 處理跳轉
+      } else {
+        console.log('👤 用戶未登入，停留在登入頁面');
+      }
+    }, 1000);
+  }
 });

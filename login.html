@@ -148,9 +148,9 @@
   </div>
   <div id="login-page" class="login-container">
     <h2>帳號登入</h2>
-    <form id="login-form" class="login-form">
-      <input type="email" id="login-email" placeholder="Email" required>
-      <input type="password" id="login-password" placeholder="密碼" required>
+    <form id="login-form" class="login-form" autocomplete="off">
+      <input type="email" id="login-email" placeholder="Email" required autocomplete="new-email">
+      <input type="password" id="login-password" placeholder="密碼" required autocomplete="new-password">
       <button type="submit" class="login-btn">登入</button>
       <div class="login-extra"></div>
     </form>
@@ -158,10 +158,10 @@
   </div>
   <div id="register-page">
     <h2>註冊新帳號</h2>
-    <form id="register-form">
-      <input type="email" id="register-email" placeholder="Email" required style="width:100%;margin-bottom:10px;">
-      <input type="password" id="register-password" placeholder="密碼" required style="width:100%;margin-bottom:10px;">
-      <input type="text" id="register-nickname" placeholder="暱稱" required style="width:100%;margin-bottom:10px;">
+    <form id="register-form" autocomplete="off">
+      <input type="email" id="register-email" placeholder="Email" required autocomplete="new-email" style="width:100%;margin-bottom:10px;">
+      <input type="password" id="register-password" placeholder="密碼" required autocomplete="new-password" style="width:100%;margin-bottom:10px;">
+      <input type="text" id="register-nickname" placeholder="暱稱" required autocomplete="off" style="width:100%;margin-bottom:10px;">
       <input type="file" id="register-avatar" accept="image/*" required style="width:100%;margin-bottom:10px;">
       <img id="register-avatar-preview" src="" alt="預覽大頭貼" class="avatar-preview" style="display:none;">
       <button type="submit" style="width:100%;">註冊並登入</button>
@@ -173,7 +173,7 @@
       <h3 style="margin-bottom:18px;color:var(--sea-dark);">密碼重設</h3>
       <div style="margin-bottom:18px;">
         <label for="forgot-email" style="color:var(--earth-brown);font-weight:bold;">請輸入註冊的 Email：</label>
-        <input type="email" id="forgot-email" placeholder="Email" required style="margin-bottom:10px;">
+        <input type="email" id="forgot-email" placeholder="Email" required autocomplete="off" style="margin-bottom:10px;">
       </div>
       <button id="forgot-submit-btn" style="width:100%;">寄送重設信</button>
       <div id="forgot-message" style="margin-top:15px;font-size:14px;text-align:center;"></div>
