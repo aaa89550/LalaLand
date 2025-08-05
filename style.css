@@ -1965,7 +1965,7 @@ button:hover {
 
 .bubble {
   /* 原本的 bubble 樣式 */
-  margin-top: 24px; /* 避開 reply-block */
+  margin-top: 6px; /* 減少與 reply-block 的間距 */
 }
 
 .reply-btn, .mobile-reply {
