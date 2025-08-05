@@ -385,6 +385,70 @@ button:hover {
   color: var(--sea-dark);
   letter-spacing: 2px;
 }
+
+/* 私訊通知欄 */
+.notification-bar {
+  background: linear-gradient(135deg, #ff6b9d, #ff8fb3);
+  border: 2px solid #ff4081;
+  border-radius: 12px;
+  margin-bottom: 15px;
+  padding: 12px 16px;
+  box-shadow: 0 4px 12px rgba(255, 64, 129, 0.3);
+  animation: slideDown 0.3s ease-out;
+}
+
+.notification-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: white;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.notification-content:hover {
+  opacity: 0.9;
+}
+
+#notification-text {
+  flex: 1;
+  font-size: 14px;
+  letter-spacing: 0.5px;
+}
+
+.notification-close {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 18px;
+  font-weight: bold;
+  cursor: pointer;
+  padding: 0;
+  margin-left: 10px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s;
+}
+
+.notification-close:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 #chat-tip {
   text-align:center;
   color: var(--sea-blue);

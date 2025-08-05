@@ -15,12 +15,55 @@
       <li>新功能將於近期上線，敬請期待。</li>
     </ul>
     <button id="enter-chat-btn" style="margin-top: 20px;">➡️ 進入聊天室</button>
+    <p style="margin-top: 15px; color: #666; font-size: 14px;">
+      <span id="countdown">3</span> 秒後自動進入聊天室
+    </p>
   </div>
 
-  <script>
-    document.getElementById('enter-chat-btn')?.addEventListener('click', () => {
-      window.location.href = 'login.html'; // 或 chat.html，視你的頁面命名
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+    // Firebase config
+    const firebaseConfig = {
+      apiKey: "AIzaSyD9-_GYLQabcC3SPMTOG9zj2CcaPqzfOrI",
+      authDomain: "lalaland-24931.firebaseapp.com",
+      databaseURL: "https://lalaland-24931-default-rtdb.firebaseio.com",
+      projectId: "lalaland-24931",
+      storageBucket: "lalaland-24931.firebasestorage.app",
+      messagingSenderId: "45134876312",
+      appId: "1:45134876312:web:9e33e46c54cb7c9bfc8aed",
+      measurementId: "G-M04NRCY9FQ"
+    };
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+
+    // 檢查登入狀態
+    onAuthStateChanged(auth, (user) => {
+      if (!user) {
+        // 未登入，重定向到登入頁面
+        window.location.href = 'login.html';
+      }
     });
+
+    // 進入聊天室按鈕
+    document.getElementById('enter-chat-btn')?.addEventListener('click', () => {
+      window.location.href = 'chat.html';
+    });
+
+    // 自動跳轉邏輯（3秒後自動進入聊天室）
+    let countdown = 3;
+    const countdownEl = document.getElementById('countdown');
+    const autoRedirect = setInterval(() => {
+      countdown--;
+      if (countdownEl) {
+        countdownEl.textContent = countdown;
+      }
+      if (countdown <= 0) {
+        clearInterval(autoRedirect);
+        window.location.href = 'chat.html';
+      }
+    }, 1000);
   </script>
 </body>
 </html>

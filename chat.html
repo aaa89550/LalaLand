@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <script>
+  if (localStorage.getItem('darkMode') === 'yes') {
+    document.documentElement.classList.add('dark');
+  }
+  </script>
+  <link rel="stylesheet" href="style.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8">
+  <title>LalaLand女同聊天室 - 主畫面</title>
+  <style>
+    #loader {
+      position: fixed;
+      left: 0; top: 0; right: 0; bottom: 0;
+      background: var(--bg, #f7f1e1);
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: opacity 0.5s;
+    }
+    #loader.hide {
+      opacity: 0;
+      pointer-events: none;
+    }
+    .loader-spinner {
+      border: 6px solid #eee;
+      border-top: 6px solid var(--accent, #2877b9);
+      border-radius: 50%;
+      width: 48px;
+      height: 48px;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div id="loader"><div class="loader-spinner"></div></div>
+  <!-- 手機版漢堡按鈕和抽屜 sidebar：放在 #main 之前 -->
+  <button id="mobile-sidebar-btn" class="mobile-sidebar-btn">☰</button>
+  <span style="font-size: 0px; margin-right: 2px;"></span> 
+  <div id="mobile-sidebar-drawer" class="mobile-sidebar-drawer">
+    <div class="mobile-sidebar-content">
+      <button id="close-mobile-sidebar" class="close-mobile-sidebar">&times;</button>
+      <h3>　　　　</h3>
+      <div class="online-header">
+      <h3>在線成員</h3>
+      <button id="toggle-night-mode-mobile" class="night-icon-btn" title="切換夜間模式">🌙</button>
+      </div>
+      <div class="tip-small">
+        點選成可進入一對一私訊，或點選「大群組列表」選區暢聊。
+      </div>
+<ul id="user-list-mobile"></ul>
+<button id="show-friends-mobile" class="sidebar-btn">我的好友</button>
+<div id="friend-area-mobile" style="display:none;">
+  <ul id="friend-list-mobile"></ul>
+</div>
+      <!-- 手機 sidebar 中的大群組按鈕 -->
+<button id="group-chat-list-btn-mobile" class="sidebar-btn">大群組列表</button>
+<div id="group-chat-area-mobile" style="display: none;">
+  <ul id="group-chat-list-mobile">
+    <li class="group-chat-item" data-room="chat">閒聊</li>
+    <li class="group-chat-item" data-room="love">找伴</li>
+    <li class="group-chat-item" data-room="sex">約炮</li>
+  </ul>
+</div>
+      <button id="edit-profile-btn-mobile">編輯個人資料</button>
+      <button id="logout-btn-mobile">登出</button>
+    </div>
+  </div>
+  <!-- 主畫面 -->
+  <div id="main">
+    <div id="sidebar">
+  <div class="online-header">
+  <h3>在線成員</h3>
+  <button id="toggle-night-mode" class="night-icon-btn" title="切換日夜間模式">🌙</button>
+</div>
+<div class="tip-small">
+  點選成可進入一對一私訊，或點選「大群組列表」選區暢聊。
+</div>
+<ul id="user-list"></ul>
+<button id="show-friends" class="sidebar-btn">我的好友</button>
+<div id="friend-area" style="display:none;">
+  <ul id="friend-list"></ul>
+</div>
+  <!-- Sidebar中的大群組按鈕 -->
+<button id="group-chat-list-btn" class="sidebar-btn">大群組列表</button>
+<div id="group-chat-area" style="display: none;">
+  <ul id="group-chat-list">
+    <li class="group-chat-item" data-room="chat">閒聊</li>
+    <li class="group-chat-item" data-room="love">找伴</li>
+    <li class="group-chat-item" data-room="sex">約炮</li>
+  </ul>
+</div>
+  <button id="edit-profile-btn" class="sidebar-btn">編輯個人資料</button>
+  <button id="logout-btn" class="sidebar-btn">登出</button>
+</div>
+  <div id="content">
+      <!-- 私訊通知欄 -->
+      <div id="notification-bar" class="notification-bar" style="display: none;">
+        <div class="notification-content">
+          <span id="notification-text">收到新私訊</span>
+          <button id="notification-close" class="notification-close">&times;</button>
+        </div>
+      </div>
+      <h3 id="chat-title">聊天室</h3>
+      <div class="tip" id="chat-tip" style="display:none;"></div>
+      <div id="chat-action" style="margin-top: 8px;"></div>
+      <div id="chat"></div>
+<div id="input-preview" style="display: none;"></div>
+<div id="input-area">
+  <button id="plus-btn" class="plus-btn">＋</button>
+  <div id="plus-menu" style="display: none;">
+    <button id="emoji-btn" title="插入表情" class="plus-btn">😊</button>
+    <button id="upload-btn" class="plus-btn">🖼️</button>
+    <input type="file" id="upload-input" accept="image/*" style="display: none;" />
+    <button id="vote-btn" class="plus-btn">🗳️</button>
+  </div>
+  <div id="emoji-picker" style="display: none;">
+    <div class="emoji-container">
+      <span>😂</span><span>😍</span><span>🥺</span><span>😡</span><span>😭</span>
+      <span>😎</span><span>😳</span><span>😘</span><span>🤣</span><span>😊</span>
+      <span>😴</span><span>🙄</span><span>🐱</span><span>🐸</span><span>🦊</span>
+      <span>🌈</span><span>❤️</span><span>🫶</span><span>👭</span><span>✨</span><span>💋</span>
+    </div>
+  </div>
+  <input id="msg" type="text" placeholder="輸入訊息..." autocomplete="off">
+  <button id="send">送出</button>
+</div>
+<div id="edit-profile-modal" class="modal" style="display:none;">
+    <div class="modal-content">
+      <span class="close" id="close-profile-modal">&times;</span>
+      <form id="edit-profile-form">
+        <label>暱稱：<input type="text" id="edit-nickname" required></label><br>
+        <label>頭像：<input type="file" id="edit-avatar" accept="image/*"></label><br>
+        <img id="edit-avatar-preview" style="width:64px;height:64px;display:none;border-radius:50%;">
+        <button type="submit">儲存</button>
+      </form>
+    </div>
+  </div>
+  <div id="vote-modal" class="modal" style="display:none;">
+  <div class="modal-content" style="max-width:400px;">
+    <span class="close" id="close-vote-modal">&times;</span>
+    <h3>發起投票</h3>
+    <label>問題：</label>
+    <input type="text" id="vote-question" placeholder="請輸入問題" style="width:100%; margin-bottom:10px;">
+    <div id="vote-options">
+      <input type="text" class="vote-option-input" placeholder="選項 1">
+      <input type="text" class="vote-option-input" placeholder="選項 2">
+    </div>
+    <button id="add-option-btn">➕ 新增選項</button>
+    <button id="submit-vote-btn" style="margin-top:12px;">送出投票</button>
+  </div>
+</div>
+  </div>
+  <script>
+    // 載入動畫
+    window.addEventListener('DOMContentLoaded', function() {
+      setTimeout(function() {
+        document.getElementById('loader').classList.add('hide');
+      }, 600);
+    });
+  </script>
+  <script src="splash.js"></script>
+  <script src="linkify.js"></script>
+  <script type="module" src="main.js"></script>
+</body>
+</html>

@@ -53,10 +53,6 @@ let messageMap = {};
 let renderedMessageIds = new Set();
 let voteUpdateListener = null;
 let voteUpdateRef = null;
-// 私訊通知相關變數
-let globalPrivateMessageListeners = new Map(); // 存儲所有私訊監聽器
-let activeNotifications = new Map(); // 存儲活動的通知
-let lastNotificationTime = 0; // 防止通知過於頻繁
 
 
 function clearChat() {
@@ -171,9 +167,6 @@ function stopAllListeners() {
     voteUpdateListener = null;
     voteUpdateRef = null;
   }
-
-  // 清理全域私訊監聽器
-  stopGlobalPrivateMessageMonitoring();
 }
 
 // 初始化已載入聊天室的 Set
@@ -671,26 +664,33 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   };
   }
-
-  // 私訊通知欄關閉按鈕事件
-  const notificationClose = document.getElementById('notification-close');
-  if (notificationClose) {
-    notificationClose.onclick = (e) => {
-      e.stopPropagation(); // 防止觸發通知欄的點擊事件
-      hidePrivateMessageNotification();
-    };
-  }
 });
 
 // 監聽登入狀態
 onAuthStateChanged(auth, async (user) => {
+  // 如果是從登入表單觸發的登入，讓頁面跳轉優先處理
+  if (sessionStorage.getItem('isLoginRedirect') === 'true') {
+    sessionStorage.removeItem('isLoginRedirect');
+    return; // 不處理 UI 切換，讓登入表單的跳轉邏輯執行
+  }
+
   if (user) {
-    // 檢查是否是從登入表單觸發的登入
-    const isLoginRedirect = sessionStorage.getItem('isLoginRedirect') === 'true';
-    if (isLoginRedirect) {
-      sessionStorage.removeItem('isLoginRedirect');
-      // 仍然初始化用戶資料，但不處理 UI 切換
+    const uid = user.uid;
+    const userRef = ref(db, 'users/' + uid);
+    const snap = await get(userRef);
+    const data = snap.val();
+
+    // 如果缺 nickname 或 avatar，就補上
+    if (!data?.nickname || !data?.avatar) {
+      const defaultNick = user.email?.split('@')[0] || '匿名用戶';
+      const defaultAvatar = 'https://yourdomain.com/default.png';
+
+      await update(userRef, {
+        nickname: data?.nickname || defaultNick,
+        avatar: data?.avatar || defaultAvatar
+      });
     }
+
     // 顯示 loading（建議放在進聊天室前，UI 更穩定）
     if (typeof showLoading === 'function') showLoading();
 
@@ -701,6 +701,20 @@ onAuthStateChanged(auth, async (user) => {
 
     while (tryCount < maxTries) {
       userDb = await onValuePromise(ref(db, 'users/' + user.uid));
+      if (userDb && userDb.nickname && userDb.avatar) break;
+      await new Promise(r => setTimeout(r, delay));
+      tryCount++;
+    }
+
+    // fallback
+    const nickname = (userDb && userDb.nickname) ? userDb.nickname : '新用戶';
+    const avatar = (userDb && userDb.avatar) ? userDb.avatar : 'default-avatar.png';
+
+    currentUser = {
+      uid: user.uid,
+      nickname,
+      avatar
+    };
       if (userDb && userDb.nickname && userDb.avatar) break;
       await new Promise(r => setTimeout(r, delay));
       tryCount++;
@@ -727,11 +741,6 @@ onAuthStateChanged(auth, async (user) => {
     });
     onDisconnect(ref(db, 'users/' + user.uid + '/online')).set(false);
 
-    // 如果是登入跳轉，跳過 UI 處理，讓頁面跳轉邏輯執行
-    if (isLoginRedirect) {
-      return;
-    }
-
     // UI 切換 - 只在相關元素存在時執行
     const loginPageEl = document.getElementById('login-page');
     const registerPageEl = document.getElementById('register-page');
@@ -756,18 +765,6 @@ onAuthStateChanged(auth, async (user) => {
     // 其他初始化 - 只在相關元素存在時執行
     if (typeof loadUserList === 'function') {
       loadUserList();
-    }
-
-    // 啟動好友和用戶監聽（只在 chat.html 頁面）
-    if (document.getElementById('main') && document.getElementById('chat')) {
-      listenAllUsers();
-      listenFriends();
-      listenFriendRequestsPopup();
-    }
-
-    // 啟動私訊通知監聽（只在 chat.html 頁面）
-    if (document.getElementById('main') && document.getElementById('chat')) {
-      startGlobalPrivateMessageMonitoring();
     }
 
     // ✅ 自動進入上次的聊天室（只在 chat.html 頁面）
@@ -1107,121 +1104,6 @@ function openPrivateChat(uid) {
     if(dot) dot.style.display = 'none';
   }
   privateChatNotificationStates[uid] = false;
-}
-
-// ========= 私訊通知功能 =========
-function showPrivateMessageNotification(fromUid, message, nickname) {
-  // 避免在當前私訊對話中顯示通知
-  if (currentPrivateUid === fromUid) {
-    return;
-  }
-
-  // 防止通知過於頻繁（1秒內只顯示一次）
-  const now = Date.now();
-  if (now - lastNotificationTime < 1000) {
-    return;
-  }
-  lastNotificationTime = now;
-
-  const notificationBar = document.getElementById('notification-bar');
-  const notificationText = document.getElementById('notification-text');
-  
-  if (!notificationBar || !notificationText) return;
-
-  // 設置通知內容
-  const shortMessage = message.length > 30 ? message.substring(0, 30) + '...' : message;
-  notificationText.textContent = `${nickname || '匿名用戶'}: ${shortMessage}`;
-  
-  // 設置點擊事件
-  notificationBar.onclick = () => {
-    openPrivateChat(fromUid);
-    hidePrivateMessageNotification();
-  };
-  
-  // 顯示通知
-  notificationBar.style.display = 'block';
-  
-  // 存儲通知信息
-  activeNotifications.set(fromUid, {
-    message,
-    nickname,
-    timestamp: now
-  });
-  
-  // 3秒後自動隱藏通知
-  setTimeout(() => {
-    if (activeNotifications.has(fromUid)) {
-      hidePrivateMessageNotification();
-    }
-  }, 3000);
-}
-
-function hidePrivateMessageNotification() {
-  const notificationBar = document.getElementById('notification-bar');
-  if (notificationBar) {
-    notificationBar.style.display = 'none';
-    notificationBar.onclick = null;
-  }
-  activeNotifications.clear();
-}
-
-function startGlobalPrivateMessageMonitoring() {
-  if (!currentUser?.uid) return;
-  
-  console.log('📢 啟動全域私訊監聽');
-  
-  // 監聽所有與當前用戶相關的私訊路徑
-  const privateChatsRef = ref(db, 'privateChats');
-  
-  onChildAdded(privateChatsRef, (chatSnapshot) => {
-    const chatId = chatSnapshot.key;
-    
-    // 檢查這個聊天是否與當前用戶相關
-    const [uid1, uid2] = chatId.split('_');
-    if (uid1 !== currentUser.uid && uid2 !== currentUser.uid) {
-      return; // 不是當前用戶的私訊
-    }
-    
-    // 確定對方的 UID
-    const otherUid = uid1 === currentUser.uid ? uid2 : uid1;
-    
-    // 如果已經在監聽這個對話，跳過
-    if (globalPrivateMessageListeners.has(chatId)) {
-      return;
-    }
-    
-    // 監聽這個私訊對話的新訊息
-    const messagesRef = ref(db, `privateChats/${chatId}/messages`);
-    const messagesQuery = query(messagesRef, orderByKey(), limitToLast(1));
-    
-    const listener = onChildAdded(messagesQuery, (messageSnapshot) => {
-      const messageData = messageSnapshot.val();
-      
-      // 只處理別人發送給我的訊息
-      if (messageData.from !== currentUser.uid && messageData.to === currentUser.uid) {
-        // 獲取發送者昵稱
-        get(ref(db, `users/${messageData.from}/nickname`)).then((snapshot) => {
-          const senderNickname = snapshot.val() || '匿名用戶';
-          showPrivateMessageNotification(messageData.from, messageData.msg, senderNickname);
-        });
-      }
-    });
-    
-    globalPrivateMessageListeners.set(chatId, listener);
-  });
-}
-
-function stopGlobalPrivateMessageMonitoring() {
-  console.log('🔇 停止全域私訊監聽');
-  
-  globalPrivateMessageListeners.forEach((listener, chatId) => {
-    const [uid1, uid2] = chatId.split('_');
-    const messagesRef = ref(db, `privateChats/${chatId}/messages`);
-    off(messagesRef, 'child_added', listener);
-  });
-  
-  globalPrivateMessageListeners.clear();
-  hidePrivateMessageNotification();
 }
 
 // ========= Firebase Auth 狀態監聽 & 用戶同步/好友機制 =========
