@@ -46,59 +46,83 @@
   <span style="font-size: 0px; margin-right: 2px;"></span> 
   <div id="mobile-sidebar-drawer" class="mobile-sidebar-drawer">
     <div class="mobile-sidebar-content">
-      <button id="close-mobile-sidebar" class="close-mobile-sidebar">&times;</button>
-      <h3>　　　　</h3>
-      <div class="online-header">
-      <h3>在線成員</h3>
-      <button id="toggle-night-mode-mobile" class="night-icon-btn" title="切換夜間模式">🌙</button>
+      <!-- 夜間模式按鈕在最上面 -->
+      <div class="mobile-header">
+        <button id="toggle-night-mode-mobile" class="mobile-night-mode-btn">🌙</button>
+        <button id="close-mobile-sidebar" class="close-mobile-sidebar">&times;</button>
       </div>
-      <div class="tip-small">
-        點選成可進入一對一私訊，或點選「大群組列表」選區暢聊。
+      
+      <!-- 手機版用戶資料 -->
+      <div class="mobile-user-profile">
+        <img id="mobile-user-avatar" class="mobile-avatar" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Ccircle cx='20' cy='20' r='20' fill='%23ddd'/%3E%3Ctext x='20' y='26' text-anchor='middle' fill='white' font-size='16'%3E👤%3C/text%3E%3C/svg%3E" alt="用戶頭像">
+        <span id="mobile-user-nickname" class="mobile-nickname">載入中...</span>
       </div>
-<ul id="user-list-mobile"></ul>
-<button id="show-friends-mobile" class="sidebar-btn">我的好友</button>
-<div id="friend-area-mobile" style="display:none;">
-  <ul id="friend-list-mobile"></ul>
-</div>
-      <!-- 手機 sidebar 中的大群組按鈕 -->
-<button id="group-chat-list-btn-mobile" class="sidebar-btn">大群組列表</button>
-<div id="group-chat-area-mobile" style="display: none;">
-  <ul id="group-chat-list-mobile">
-    <li class="group-chat-item" data-room="chat">閒聊</li>
-    <li class="group-chat-item" data-room="love">找伴</li>
-    <li class="group-chat-item" data-room="sex">約炮</li>
-  </ul>
-</div>
-      <button id="edit-profile-btn-mobile">編輯個人資料</button>
-      <button id="logout-btn-mobile">登出</button>
+
+
+
+      <!-- 在線成員（簡化版） -->
+      <div class="mobile-online-section">
+        <h4>在線成員 <span id="mobile-online-count">(0)</span></h4>
+        <div class="mobile-online-list">
+          <ul id="user-list-mobile"></ul>
+        </div>
+      </div>
+
+      <!-- 手機版功能按鈕 -->
+      <div class="mobile-actions">
+        <button id="mobile-view-friends-btn" class="mobile-action-btn">👥 我的好友</button>
+        <button id="edit-profile-btn-mobile" class="mobile-action-btn">⚙️ 編輯資料</button>
+        <button id="logout-btn-mobile" class="mobile-action-btn logout">🚪 登出</button>
+      </div>
     </div>
   </div>
   <!-- 主畫面 -->
   <div id="main">
     <div id="sidebar">
+  <!-- 用戶資料區 -->
+  <div class="user-profile-section">
+    <div class="user-info" id="user-info-dropdown">
+      <img id="user-avatar" class="user-main-avatar" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Ccircle cx='20' cy='20' r='20' fill='%23ddd'/%3E%3Ctext x='20' y='26' text-anchor='middle' fill='white' font-size='16'%3E👤%3C/text%3E%3C/svg%3E" alt="用戶頭像">
+      <div class="user-details">
+        <span id="user-nickname" class="user-nickname">載入中...</span>
+        <span class="dropdown-arrow">▼</span>
+      </div>
+    </div>
+    <div id="user-dropdown-menu" class="user-dropdown-menu" style="display: none;">
+      <button id="view-friends-btn" class="dropdown-item">我的好友</button>
+      <button id="edit-profile-btn" class="dropdown-item">編輯個人資料</button>
+      <button id="toggle-notification-btn" class="dropdown-item">關閉私訊通知</button>
+      <button id="logout-btn" class="dropdown-item logout-btn">登出</button>
+    </div>
+  </div>
+
+  <!-- 在線成員區 -->
   <div class="online-header">
-  <h3>在線成員</h3>
-  <button id="toggle-night-mode" class="night-icon-btn" title="切換日夜間模式">🌙</button>
-</div>
-<div class="tip-small">
-  點選成可進入一對一私訊，或點選「大群組列表」選區暢聊。
-</div>
-<ul id="user-list"></ul>
-<button id="show-friends" class="sidebar-btn">我的好友</button>
-<div id="friend-area" style="display:none;">
-  <ul id="friend-list"></ul>
-</div>
-  <!-- Sidebar中的大群組按鈕 -->
-<button id="group-chat-list-btn" class="sidebar-btn">大群組列表</button>
-<div id="group-chat-area" style="display: none;">
-  <ul id="group-chat-list">
-    <li class="group-chat-item" data-room="chat">閒聊</li>
-    <li class="group-chat-item" data-room="love">找伴</li>
-    <li class="group-chat-item" data-room="sex">約炮</li>
-  </ul>
-</div>
-  <button id="edit-profile-btn" class="sidebar-btn">編輯個人資料</button>
-  <button id="logout-btn" class="sidebar-btn">登出</button>
+    <h3>在線成員</h3>
+    <button id="toggle-night-mode" class="night-icon-btn" title="切換日夜間模式">🌙</button>
+  </div>
+  <div class="tip-small">
+    點選成員可進入一對一私訊
+  </div>
+  <ul id="user-list"></ul>
+
+  <!-- 隱藏原有按鈕 -->
+  <div style="display: none;">
+    <button id="show-friends" class="sidebar-btn">我的好友</button>
+    <div id="friend-area">
+      <ul id="friend-list"></ul>
+    </div>
+    <button id="group-chat-list-btn" class="sidebar-btn">大群組列表</button>
+    <div id="group-chat-area">
+      <ul id="group-chat-list">
+        <li class="group-chat-item" data-room="chat">閒聊</li>
+        <li class="group-chat-item" data-room="love">找伴</li>
+        <li class="group-chat-item" data-room="sex">約炮</li>
+      </ul>
+    </div>
+    <button id="edit-profile-btn-old" class="sidebar-btn">編輯個人資料</button>
+    <button id="logout-btn-old" class="sidebar-btn">登出</button>
+  </div>
 </div>
   <div id="content">
       <!-- 私訊通知欄 -->
@@ -108,13 +132,23 @@
           <button id="notification-close" class="notification-close">&times;</button>
         </div>
       </div>
-      <h3 id="chat-title">聊天室</h3>
-      <div class="tip" id="chat-tip" style="display:none;"></div>
-      <div id="chat-action" style="margin-top: 8px;"></div>
+      
+      <!-- 聊天室分類標籤 -->
+      <div id="chat-tabs" class="chat-tabs">
+        <button class="chat-tab active" data-room="chat" onclick="console.log('點擊閒聊標籤'); window.switchChatRoom ? switchChatRoom('chat') : alert('功能載入中...')">閒聊</button>
+        <button class="chat-tab" data-room="love" onclick="console.log('點擊找伴標籤'); window.switchChatRoom ? switchChatRoom('love') : alert('功能載入中...')">找伴</button>
+        <button class="chat-tab" data-room="sex" onclick="console.log('點擊約炮標籤'); window.switchChatRoom ? switchChatRoom('sex') : alert('功能載入中...')">約炮</button>
+        <button class="chat-tab" data-room="private" onclick="console.log('點擊私訊標籤'); window.switchChatRoom ? switchChatRoom('private') : alert('功能載入中...')">私訊</button>
+      </div>
+      
+      <div class="tip" id="chat-tip" style="display:none; font-size: 11px; color: #999; padding: 4px 8px; margin: 4px 0;"></div>
+      <div id="chat-action" style="margin-top: 4px;"></div>
       <div id="chat"></div>
 <div id="input-preview" style="display: none;"></div>
 <div id="input-area">
   <button id="plus-btn" class="plus-btn">＋</button>
+  <input id="msg" type="text" placeholder="輸入訊息..." autocomplete="off">
+  <button id="send">送出</button>
   <div id="plus-menu" style="display: none;">
     <button id="emoji-btn" title="插入表情" class="plus-btn">😊</button>
     <button id="upload-btn" class="plus-btn">🖼️</button>
@@ -129,8 +163,6 @@
       <span>🌈</span><span>❤️</span><span>🫶</span><span>👭</span><span>✨</span><span>💋</span>
     </div>
   </div>
-  <input id="msg" type="text" placeholder="輸入訊息..." autocomplete="off">
-  <button id="send">送出</button>
 </div>
 <div id="edit-profile-modal" class="modal" style="display:none;">
     <div class="modal-content">
@@ -164,6 +196,20 @@
       setTimeout(function() {
         document.getElementById('loader').classList.add('hide');
       }, 600);
+      
+      // 檢查全域函數是否可用
+      setTimeout(() => {
+        if (typeof window.switchChatRoom === 'function') {
+          console.log('✅ switchChatRoom 函數已準備就緒');
+        } else {
+          console.error('❌ switchChatRoom 函數未找到');
+          // 提供後備函數
+          window.switchChatRoom = function(room) {
+            console.log('🔄 後備：切換聊天室:', room);
+            alert('正在切換到：' + room + ' 聊天室');
+          };
+        }
+      }, 1000);
     });
   </script>
   <script src="splash.js"></script>

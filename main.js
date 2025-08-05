@@ -116,18 +116,79 @@ if (mobileGroupToggleBtn && mobileGroupArea) {
   });
 }
 
-// 點擊每個選項切換聊天室
-// ✅ 綁定所有群組聊天室按鈕（桌機 + 手機）
-document.querySelectorAll('.group-chat-item, .group-chat-option').forEach(el => {
-  el.addEventListener('click', () => {
-    const room = el.dataset.room;
-    if (room) loadGroupChat(room);
-
-    // 若為手機，額外收起 UI
-    document.getElementById('mobile-sidebar-drawer')?.classList.remove('open');
-    document.getElementById('group-chat-area-mobile')?.style.setProperty('display', 'none');
+// 初始化聊天標籤事件處理器
+function initChatTabsEventHandlers() {
+  console.log('🔧 初始化聊天標籤事件處理器');
+  
+  // 移除舊的事件監聽器
+  document.querySelectorAll('.chat-tab').forEach(tab => {
+    const newTab = tab.cloneNode(true);
+    tab.parentNode.replaceChild(newTab, tab);
   });
-});
+  
+  // 重新綁定事件
+  document.querySelectorAll('.chat-tab').forEach(tab => {
+    tab.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      
+      const room = tab.dataset.room;
+      console.log('🏷️ 點擊聊天標籤:', room);
+      
+      if (!room) {
+        console.error('❌ 標籤沒有room屬性');
+        return;
+      }
+      
+      // 移除所有標籤的active狀態
+      document.querySelectorAll('.chat-tab').forEach(t => t.classList.remove('active'));
+      
+      if (room === 'private') {
+        // 顯示私訊列表
+        console.log('📱 載入私訊列表');
+        loadPrivateMessages();
+        tab.classList.add('active');
+        tab.classList.remove('has-unread');
+      } else {
+        // 載入群組聊天
+        console.log('🗨️ 載入群組聊天:', room);
+        loadGroupChat(room);
+        tab.classList.add('active');
+      }
+      
+      // 收起手機版UI
+      document.getElementById('mobile-sidebar-drawer')?.classList.remove('open');
+      document.getElementById('group-chat-area-mobile')?.style.setProperty('display', 'none');
+    });
+  });
+  
+  console.log('✅ 聊天標籤事件處理器綁定完成');
+}
+
+// 初始化其他聊天室按鈕（側邊欄和手機版）
+function initOtherChatButtons() {
+  console.log('🔧 初始化其他聊天室按鈕');
+  
+  document.querySelectorAll('.group-chat-item, .group-chat-option').forEach(el => {
+    if (!el.dataset.listenerAdded) {
+      el.addEventListener('click', () => {
+        const room = el.dataset.room;
+        console.log('🏠 點擊側邊欄聊天按鈕:', room);
+        if (room && room !== 'private') {
+          loadGroupChat(room);
+          // 同步更新標籤狀態
+          document.querySelectorAll('.chat-tab').forEach(tab => tab.classList.remove('active'));
+          document.querySelector(`.chat-tab[data-room="${room}"]`)?.classList.add('active');
+        }
+        
+        // 收起手機版UI
+        document.getElementById('mobile-sidebar-drawer')?.classList.remove('open');
+        document.getElementById('group-chat-area-mobile')?.style.setProperty('display', 'none');
+      });
+      el.dataset.listenerAdded = 'true';
+    }
+  });
+}
 
 const groupToggle = document.getElementById('group-chat-toggle');
 const groupList = document.getElementById('group-chat-list');
@@ -181,6 +242,7 @@ const loadedRooms = new Set();
 
 
 function loadGroupChat(room) {
+    console.log('🗨️ loadGroupChat被調用:', room);
     localStorage.setItem('lastGroupRoom', room);
 
     stopAllListeners();
@@ -190,7 +252,7 @@ function loadGroupChat(room) {
     currentGroupRoom = room;
 
     const titleMap = {
-        chat: "閒聊區",
+        chat: "", // 閒聊區不顯示標題
         love: "找伴區",
         sex: "約炮區"
     };
@@ -201,10 +263,13 @@ function loadGroupChat(room) {
         sex: "匿名聊性、約炮自由，但請勿冒犯他人。"
     };
 
-    document.getElementById('chat-title').textContent = titleMap[room] || "大群組聊天室";
+    // 移除對 chat-title 的引用，因為該元素已被移除
+    // 只設置提示文字
     const tipEl = document.getElementById('chat-tip');
-    tipEl.style.display = 'block';
-    tipEl.textContent = tipMap[room] || '';
+    if (tipEl) {
+        tipEl.style.display = 'block';
+        tipEl.textContent = tipMap[room] || '';
+    }
 
     highlightUserList?.(); // 確保使用者列表高亮功能正常
     listenToVoteUpdates(room);
@@ -255,6 +320,242 @@ function loadGroupChat(room) {
     document.getElementById('group-chat-options-mobile')?.style.setProperty('display', 'none');
     document.getElementById('mobile-sidebar-drawer')?.classList.remove('open');
     document.getElementById('group-chat-area-mobile')?.style.setProperty('display', 'none');
+}
+
+// 加載好友列表功能
+function loadFriendsList() {
+    stopAllListeners();
+    clearChat();
+    
+    currentChat = "friends";
+    
+    // 設置提示
+    const tipEl = document.getElementById('chat-tip');
+    tipEl.style.display = 'block';
+    tipEl.textContent = '點選好友開始私人對話';
+    
+    // 顯示好友列表在聊天區域
+    displayFriendsInChat();
+}
+
+// 在聊天區域顯示好友列表
+function displayFriendsInChat() {
+    const user = auth.currentUser;
+    if (!user) return;
+    
+    const chatContainer = document.getElementById('chat');
+    chatContainer.innerHTML = '<div style="text-align: center; color: #999; padding: 20px;">載入好友列表中...</div>';
+    
+    // 從Firebase獲取好友列表 - 修正路徑與addFriend函數一致
+    const friendsRef = ref(db, `users/${user.uid}/friends`);
+    onValue(friendsRef, (snapshot) => {
+        const friends = snapshot.val() || {};
+        displayFriends(Object.keys(friends));
+    });
+}
+
+// 顯示好友列表
+function displayFriends(friendIds) {
+    const chatContainer = document.getElementById('chat');
+    
+    if (friendIds.length === 0) {
+        chatContainer.innerHTML = `
+            <div style="text-align: center; color: #999; padding: 40px;">
+                <p>還沒有好友</p>
+                <p style="font-size: 12px;">在聊天室中點擊其他用戶頭像可以加為好友</p>
+            </div>
+        `;
+        return;
+    }
+    
+    chatContainer.innerHTML = '<div style="padding: 10px;"><h4 style="margin: 0 0 15px 0; color: var(--sea-blue); background: linear-gradient(135deg, var(--sea-light), var(--accent-green)); padding: 8px; border-radius: 6px; text-align: center;">👥 我的好友</h4></div>';
+    
+    friendIds.forEach(friendId => {
+        // 獲取好友資料
+        const userRef = ref(db, `users/${friendId}`);
+        onValue(userRef, (snapshot) => {
+            const friendData = snapshot.val();
+            if (friendData) {
+                addFriendToList(friendId, friendData);
+            }
+        }, { once: true });
+    });
+}
+
+// 添加好友到列表
+function addFriendToList(friendId, friendData) {
+    const chatContainer = document.getElementById('chat');
+    const existingFriend = chatContainer.querySelector(`[data-friend-id="${friendId}"]`);
+    
+    if (existingFriend) return; // 避免重複添加
+    
+    const friendDiv = document.createElement('div');
+    friendDiv.className = 'friend-item';
+    friendDiv.setAttribute('data-friend-id', friendId);
+    friendDiv.innerHTML = `
+        <div style="display: flex; align-items: center; padding: 15px; background: linear-gradient(135deg, #f8f9fa, #e3f2fd); border: 2px solid var(--accent-green); border-radius: 12px; margin-bottom: 12px; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 2px 6px rgba(0,0,0,0.1);">
+            <img src="${friendData.avatar || 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'40\' height=\'40\' viewBox=\'0 0 40 40\'%3E%3Ccircle cx=\'20\' cy=\'20\' r=\'20\' fill=\'%23ddd\'/%3E%3Ctext x=\'20\' y=\'26\' text-anchor=\'middle\' fill=\'white\' font-size=\'16\'%3E👤%3C/text%3E%3C/svg%3E'}" 
+                 style="width: 60px; height: 60px; border-radius: 50%; margin-right: 15px; object-fit: cover; border: 3px solid var(--accent-green); box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
+            <div style="flex: 1;">
+                <div style="font-weight: 700; color: var(--sea-dark); margin-bottom: 4px; font-size: 16px;">👥 ${friendData.nickname || '匿名用戶'}</div>
+                <div style="font-size: 12px; color: #666; display: flex; align-items: center;">
+                    <span style="color: var(--accent-green); margin-right: 4px;">●</span>好友
+                </div>
+            </div>
+            <button onclick="startPrivateChat('${friendId}')" style="background: linear-gradient(135deg, var(--sea-blue), var(--accent-green)); color: white; border: none; padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.2); transition: transform 0.2s ease;">💬 聊天</button>
+        </div>
+    `;
+    
+    friendDiv.addEventListener('click', () => {
+        startPrivateChat(friendId);
+    });
+    
+    chatContainer.appendChild(friendDiv);
+}
+
+// 開始私人對話
+function startPrivateChat(friendId) {
+    if (!friendId || !currentUser) return;
+    
+    // 生成聊天室ID（使用較小的uid在前）
+    const roomId = currentUser.uid < friendId 
+        ? `${currentUser.uid}_${friendId}` 
+        : `${friendId}_${currentUser.uid}`;
+    
+    // 切換到聊天標籤
+    const chatTab = document.querySelector('[data-room="chat"]');
+    if (chatTab) {
+        // 移除所有標籤的active狀態
+        document.querySelectorAll('.chat-tab').forEach(tab => {
+            tab.classList.remove('active');
+        });
+        // 激活聊天標籤
+        chatTab.classList.add('active');
+    }
+    
+    // 進入私人聊天室
+    enterRoom(roomId, '私人聊天');
+}
+
+// 加載私訊列表功能
+function loadPrivateMessages() {
+    stopAllListeners();
+    clearChat();
+    
+    currentChat = "private";
+    
+    // 設置提示
+    const tipEl = document.getElementById('chat-tip');
+    tipEl.style.display = 'block';
+    tipEl.textContent = '點選對話開始私訊';
+    
+    // 顯示私訊列表在聊天區域
+    displayPrivateMessagesInChat();
+}
+
+// 在聊天區域顯示私訊列表
+function displayPrivateMessagesInChat() {
+    const user = auth.currentUser;
+    if (!user) return;
+    
+    const chatContainer = document.getElementById('chat');
+    chatContainer.innerHTML = '<div style="text-align: center; color: #999; padding: 20px;">載入私訊列表中...</div>';
+    
+    // 獲取所有私人聊天室
+    const privateChatsRef = ref(db, 'privateChats');
+    onValue(privateChatsRef, (snapshot) => {
+        const privateChats = snapshot.val() || {};
+        const userPrivateChats = [];
+        
+        // 篩選出包含當前用戶的聊天室
+        Object.keys(privateChats).forEach(roomId => {
+            if (roomId.includes(user.uid)) {
+                const otherUserId = roomId.replace(user.uid, '').replace('_', '');
+                if (otherUserId && otherUserId !== user.uid) {
+                    userPrivateChats.push({
+                        roomId,
+                        otherUserId,
+                        lastMessage: privateChats[roomId].lastMessage || null,
+                        lastTime: privateChats[roomId].lastTime || 0
+                    });
+                }
+            }
+        });
+        
+        // 按最後訊息時間排序
+        userPrivateChats.sort((a, b) => b.lastTime - a.lastTime);
+        
+        displayPrivateChats(userPrivateChats);
+    });
+}
+
+// 顯示私訊對話列表
+function displayPrivateChats(privateChats) {
+    const chatContainer = document.getElementById('chat');
+    
+    if (privateChats.length === 0) {
+        chatContainer.innerHTML = `
+            <div style="text-align: center; color: #999; padding: 40px;">
+                <p>還沒有私訊對話</p>
+                <p style="font-size: 12px;">點擊其他用戶開始私人對話</p>
+            </div>
+        `;
+        return;
+    }
+    
+    chatContainer.innerHTML = '<div style="padding: 10px;"><h4 style="margin: 0 0 15px 0; color: var(--sea-blue);">私訊對話</h4></div>';
+    
+    privateChats.forEach(chat => {
+        // 獲取對方用戶資料
+        const userRef = ref(db, `users/${chat.otherUserId}`);
+        onValue(userRef, (snapshot) => {
+            const userData = snapshot.val();
+            if (userData) {
+                addPrivateChatToList(chat, userData);
+            }
+        }, { once: true });
+    });
+}
+
+// 添加私訊對話到列表
+function addPrivateChatToList(chat, userData) {
+    const chatContainer = document.getElementById('chat');
+    const existingChat = chatContainer.querySelector(`[data-room-id="${chat.roomId}"]`);
+    
+    if (existingChat) return; // 避免重複添加
+    
+    const lastMessageText = chat.lastMessage ? 
+        (chat.lastMessage.length > 30 ? chat.lastMessage.substring(0, 30) + '...' : chat.lastMessage) : 
+        '開始對話';
+    
+    const timeStr = chat.lastTime ? new Date(chat.lastTime).toLocaleString('zh-TW', {
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    }) : '';
+    
+    const chatDiv = document.createElement('div');
+    chatDiv.className = 'private-chat-item';
+    chatDiv.setAttribute('data-room-id', chat.roomId);
+    chatDiv.innerHTML = `
+        <div style="display: flex; align-items: center; padding: 12px; background: #f8f9fa; border-radius: 8px; margin-bottom: 8px; cursor: pointer; transition: background 0.2s ease;">
+            <img src="${userData.avatar || 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'40\' height=\'40\' viewBox=\'0 0 40 40\'%3E%3Ccircle cx=\'20\' cy=\'20\' r=\'20\' fill=\'%23ddd\'/%3E%3Ctext x=\'20\' y=\'26\' text-anchor=\'middle\' fill=\'white\' font-size=\'16\'%3E👤%3C/text%3E%3C/svg%3E'}" 
+                 style="width: 50px; height: 50px; border-radius: 50%; margin-right: 12px; object-fit: cover; border: 2px solid var(--accent-green);">
+            <div style="flex: 1;">
+                <div style="font-weight: 600; color: var(--sea-dark); margin-bottom: 2px;">${userData.nickname || '匿名用戶'}</div>
+                <div style="font-size: 12px; color: #666; margin-bottom: 2px;">${lastMessageText}</div>
+                <div style="font-size: 10px; color: #999;">${timeStr}</div>
+            </div>
+            <button onclick="enterRoom('${chat.roomId}', '與${userData.nickname}的對話')" style="background: var(--sea-blue); color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer;">開啟</button>
+        </div>
+    `;
+    
+    chatDiv.addEventListener('click', () => {
+        enterRoom(chat.roomId, `與${userData.nickname}的對話`);
+    });
+    
+    chatContainer.appendChild(chatDiv);
 }
 
 
@@ -810,6 +1111,21 @@ onAuthStateChanged(auth, async (user) => {
       };
 
       console.log('👤 設置當前用戶:', currentUser);
+      
+      // 更新用戶顯示
+      updateUserProfileDisplay();
+      
+      // 初始化桌面通知系統
+      if (typeof initDesktopNotifications === 'function') {
+        initDesktopNotifications();
+      }
+      
+      // 重新初始化事件處理器（登入後確保所有功能正常）
+      setTimeout(() => {
+        initChatTabsEventHandlers();
+        initOtherChatButtons();
+        initUserDropdownMenu();
+      }, 500);
 
       // 寫入/同步 online 狀態
       try {
@@ -1180,13 +1496,13 @@ function openPrivateChat(uid) {
   currentChat = uid;
   currentPrivateUid = uid;
 
-  const chatTitle = document.getElementById('chat-title');
+  // 移除對 chat-title 的引用，因為該元素已被移除
   const chatTip = document.getElementById('chat-tip');
   
   get(ref(db, `users/${uid}/nickname`)).then((snapshot) => {
     if (snapshot.exists()) {
       const nickname = snapshot.val();
-      if (chatTitle) chatTitle.textContent = `${nickname} `;
+      // 只設置提示文字，不設置標題
       if (chatTip) chatTip.textContent = `你正在私訊中`;
     }
   });
@@ -1609,7 +1925,7 @@ if (editProfileBtnMobile) {
 
 // 綁定大群組聊天室按鈕（手機）
 document.getElementById('group-chat-btn-mobile')?.addEventListener('click', function () {
-  document.getElementById('chat-title').textContent = '大群組聊天室';
+  // 移除對 chat-title 的引用，因為該元素已被移除
   document.getElementById('chat').innerHTML = '';
   const drawer = document.getElementById('mobile-sidebar-drawer');
   if (drawer) drawer.classList.remove('open');
@@ -1755,6 +2071,198 @@ window.addEventListener('DOMContentLoaded', () => {
   document.getElementById("toggle-night-mode-mobile")?.addEventListener("click", toggleNightMode);
 });
 
+// 桌面通知系統
+function initDesktopNotifications() {
+    // 檢查瀏覽器是否支援通知
+    if (!("Notification" in window)) {
+        console.log("此瀏覽器不支援桌面通知");
+        return;
+    }
+    
+    // 請求通知權限
+    if (Notification.permission === "default") {
+        Notification.requestPermission().then(permission => {
+            if (permission === "granted") {
+                console.log("桌面通知權限已授予");
+                // 初始化私訊監聽
+                checkForNewPrivateMessages();
+            } else {
+                console.log("桌面通知權限被拒絕");
+            }
+        });
+    } else if (Notification.permission === "granted") {
+        // 如果已經有權限，直接初始化
+        checkForNewPrivateMessages();
+    }
+}
+
+// 顯示桌面通知
+function showDesktopNotification(title, body, icon = null) {
+    if (Notification.permission !== "granted") {
+        console.log("無桌面通知權限");
+        return;
+    }
+    
+    const options = {
+        body: body,
+        icon: icon || '/icon-512.png',
+        badge: '/icon-512.png',
+        tag: 'lalaland-chat',
+        requireInteraction: false,
+        silent: false
+    };
+    
+    const notification = new Notification(title, options);
+    
+    // 點擊通知時聚焦到視窗
+    notification.onclick = function() {
+        window.focus();
+        notification.close();
+    };
+    
+    // 自動關閉通知
+    setTimeout(() => {
+        notification.close();
+    }, 5000);
+}
+
+// 檢查是否有新私訊並顯示通知
+function checkForNewPrivateMessages() {
+    const user = auth.currentUser;
+    if (!user) return;
+    
+    // 監聽所有私人聊天室的新訊息
+    const privateChatsRef = ref(db, 'privateChats');
+    onValue(privateChatsRef, (snapshot) => {
+        const privateChats = snapshot.val() || {};
+        
+        Object.keys(privateChats).forEach(roomId => {
+            if (roomId.includes(user.uid)) {
+                const messagesRef = ref(db, `privateChats/${roomId}/messages`);
+                
+                // 監聽新訊息
+                onChildAdded(messagesRef, (messageSnapshot) => {
+                    const message = messageSnapshot.val();
+                    
+                    // 如果不是自己發送的訊息且在最近5秒內發送
+                    if (message && message.from !== user.uid && 
+                        message.time && 
+                        (Date.now() - message.time) < 5000) {
+                        
+                        // 標記私訊標籤有未讀
+                        const privateTab = document.querySelector('.chat-tab[data-room="private"]');
+                        if (privateTab) {
+                            privateTab.classList.add('has-unread');
+                        }
+                        
+                        // 顯示桌面通知
+                        showDesktopNotification(
+                            '新私訊',
+                            `${message.user || '匿名'}: ${message.message || '傳送了一則訊息'}`,
+                            message.avatar
+                        );
+                    }
+                });
+            }
+        });
+    });
+}
+
+// 更新用戶個人資料顯示
+function updateUserProfileDisplay() {
+    if (!currentUser) return;
+    
+    const userAvatar = document.getElementById('user-avatar');
+    const userNickname = document.getElementById('user-nickname');
+    const mobileAvatar = document.querySelector('.mobile-avatar');
+    const mobileNickname = document.querySelector('.mobile-nickname');
+    
+    const defaultAvatar = 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'40\' height=\'40\' viewBox=\'0 0 40 40\'%3E%3Ccircle cx=\'20\' cy=\'20\' r=\'20\' fill=\'%23ddd\'/%3E%3Ctext x=\'20\' y=\'26\' text-anchor=\'middle\' fill=\'white\' font-size=\'16\'%3E👤%3C/text%3E%3C/svg%3E';
+    const avatarSrc = currentUser.avatar || defaultAvatar;
+    const nicknameText = currentUser.nickname || '用戶';
+    
+    // 更新桌面版用戶資料
+    if (userAvatar) {
+        userAvatar.src = avatarSrc;
+        userAvatar.alt = currentUser.nickname;
+    }
+    
+    if (userNickname) {
+        userNickname.textContent = nicknameText;
+    }
+    
+    // 更新手機版用戶資料
+    if (mobileAvatar) {
+        mobileAvatar.src = avatarSrc;
+        mobileAvatar.alt = currentUser.nickname;
+    }
+    
+    if (mobileNickname) {
+        mobileNickname.textContent = nicknameText;
+    }
+}
+
+// 全域聊天室切換函數 - 移到全域範圍確保HTML onclick可以調用
+window.switchChatRoom = function(room) {
+  console.log('🔄 切換聊天室:', room);
+  
+  // 移除所有標籤的active狀態
+  document.querySelectorAll('.chat-tab').forEach(tab => {
+    tab.classList.remove('active');
+  });
+  
+  // 設置當前標籤為active
+  const currentTab = document.querySelector(`.chat-tab[data-room="${room}"]`);
+  if (currentTab) {
+    currentTab.classList.add('active');
+  }
+  
+  // 切換聊天內容
+  currentChatRoom = room;
+  
+  if (room === 'private') {
+    if (typeof loadPrivateMessages === 'function') {
+      loadPrivateMessages();
+    } else {
+      console.error('loadPrivateMessages function not found');
+    }
+    currentTab?.classList.remove('has-unread');
+  } else {
+    if (typeof loadGroupChat === 'function') {
+      loadGroupChat(room);
+    } else {
+      console.error('loadGroupChat function not found');
+    }
+  }
+  
+  // 關閉手機版側邊欄
+  closeMobileSidebar();
+};
+
+// 全域關閉手機版側邊欄函數
+window.closeMobileSidebar = function() {
+  const sidebar = document.querySelector('.mobile-sidebar-drawer');
+  if (sidebar) {
+    sidebar.classList.remove('active', 'open');
+  }
+  // 恢復背景滾動
+  document.body.style.overflow = '';
+};
+
+// 測試函數 - 全域範圍
+window.testChatTab = function(room) {
+  console.log('🧪 測試聊天標籤:', room);
+  if (room === 'private') {
+    if (typeof loadPrivateMessages === 'function') {
+      loadPrivateMessages();
+    }
+  } else {
+    if (typeof loadGroupChat === 'function') {
+      loadGroupChat(room);
+    }
+  }
+};
+
 // 附加功能
 import { initExtras } from './extras.js';
 import { initImageUpload } from './upload.js';
@@ -1784,7 +2292,83 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   document.getElementById('logout-btn')?.addEventListener('click', logoutHandler);
+  
+  // 初始化桌面通知權限
+  initDesktopNotifications();
+  
+  // 初始化聊天標籤事件處理器
+  initChatTabsEventHandlers();
+  
+  // 初始化其他聊天室按鈕
+  initOtherChatButtons();
+  
+  // 添加額外的測試函數到全域
+  console.log('✅ 聊天功能初始化完成');
+  
+  // 延遲綁定用戶下拉選單功能，確保DOM完全載入
+  setTimeout(() => {
+    initUserDropdownMenu();
+  }, 100);
 });
+
+// 初始化用戶下拉選單功能
+function initUserDropdownMenu() {
+  const userProfileSection = document.querySelector('.user-profile-section');
+  const userDropdownMenu = document.querySelector('.user-dropdown-menu');
+  
+  console.log('初始化下拉選單:', { userProfileSection, userDropdownMenu });
+  
+  if (userProfileSection && userDropdownMenu) {
+    // 移除可能存在的舊事件監聽器
+    userProfileSection.replaceWith(userProfileSection.cloneNode(true));
+    const newUserProfileSection = document.querySelector('.user-profile-section');
+    
+    newUserProfileSection.addEventListener('click', (e) => {
+      console.log('點擊用戶資料區域');
+      e.stopPropagation();
+      const menu = document.querySelector('.user-dropdown-menu');
+      menu.classList.toggle('show');
+      console.log('選單狀態:', menu.classList.contains('show'));
+    });
+    
+    // 點擊其他地方關閉下拉選單
+    document.addEventListener('click', (e) => {
+      const menu = document.querySelector('.user-dropdown-menu');
+      if (!menu.contains(e.target)) {
+        menu.classList.remove('show');
+      }
+    });
+    
+    // 下拉選單項目事件
+    document.getElementById('view-friends-btn')?.addEventListener('click', () => {
+      document.querySelector('.user-dropdown-menu').classList.remove('show');
+      loadFriendsList();
+    });
+    
+    // 手機版好友按鈕事件
+    document.getElementById('mobile-view-friends-btn')?.addEventListener('click', () => {
+      closeMobileSidebar();
+      loadFriendsList();
+    });
+    
+    document.getElementById('edit-profile-btn')?.addEventListener('click', () => {
+      document.querySelector('.user-dropdown-menu').classList.remove('show');
+      console.log('編輯個人資料功能待開發');
+    });
+    
+    document.getElementById('toggle-notification-btn')?.addEventListener('click', () => {
+      document.querySelector('.user-dropdown-menu').classList.remove('show');
+      console.log('通知設定功能待開發');
+    });
+    
+    document.getElementById('logout-btn')?.addEventListener('click', () => {
+      document.querySelector('.user-dropdown-menu').classList.remove('show');
+      logoutHandler();
+    });
+  } else {
+    console.error('無法找到用戶下拉選單元素');
+  }
+}
 
 // 頁面載入時的初始化檢查
 window.addEventListener('DOMContentLoaded', () => {
