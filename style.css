@@ -1547,6 +1547,7 @@ button:hover {
   background: var(--white);
   border-bottom: 1px solid #eee;
   flex-shrink: 0;
+  position: relative;
 }
 
 .mobile-night-mode-btn {
@@ -1562,6 +1563,8 @@ button:hover {
   display: flex;
   align-items: center;
   justify-content: center;
+  order: 2;
+  margin-left: auto;
 }
 
 .mobile-night-mode-btn:hover {
@@ -1584,6 +1587,9 @@ button:hover {
   display: flex;
   align-items: center;
   justify-content: center;
+  order: 1;
+  margin-right: auto;
+  position: static;
 }
 
 .close-mobile-sidebar:hover {
@@ -1712,14 +1718,15 @@ button:hover {
   border-radius: 6px;
 }
   .close-mobile-sidebar {
-    position: absolute;
-    top: 18px; right: 18px;
-    font-size: 30px;
-    background: none;
+    position: static !important;
+    top: auto;
+    right: auto;
+    font-size: 20px;
+    background: var(--accent-coral);
     border: none;
-    color: var(--sea-blue, #2877b9);
+    color: white;
     cursor: pointer;
-    z-index: 2001;
+    z-index: auto;
   }
 }
 
