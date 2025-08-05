@@ -1331,17 +1331,14 @@ button:hover {
   color: var(--text-color);
   border: none;
   border-radius: 8px;
-  padding: 10px; /* 調整padding以適應手機版 */
+  padding: 8px; /* 減小padding */
   font-weight: bold;
   cursor: pointer;
   transition: background 0.2s, color 0.2s;
-  margin: 0; /* 移除margin */
+  margin-top: 6px; /* 恢復margin */
   letter-spacing: 1px;
   box-shadow: 0 2px 8px #2877b91a;
-  min-width: 44px; /* 確保按鈕有最小寬度 */
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  font-size: 14px; /* 手機版使用較小字體 */
 }
 .plus-btn:hover {
   background: var(--sea-dark);
@@ -1413,12 +1410,12 @@ button:hover {
   }
   #input-area {
     gap: 8px;
-    flex-direction: row; /* 改為水平排列 */
+    flex-direction: column;
     padding: 8px;
     margin-top: 6px;
-    align-items: flex-end; /* 底部對齊 */
   }
   #msg, #send {
+    width: 100% !important;
     box-sizing: border-box;
     font-size: 16px !important;
     margin: 0 !important;
@@ -1427,12 +1424,10 @@ button:hover {
     font-size: 16px;
     padding: 10px !important;
     min-height: 20px !important;
-    flex: 1; /* 讓輸入框占滿剩餘空間 */
   }
   #send {
     padding: 12px !important;
     font-size: 16px !important;
-    white-space: nowrap; /* 防止文字換行 */
   }
   #send:hover {
     background: var(--sea-blue);
