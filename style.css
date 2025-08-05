@@ -384,7 +384,7 @@ button:hover {
   top: 100%;
   left: 0;
   right: 0;
-  background: var(--white);
+  background: var(--accent-green);
   border: 1px solid #ddd;
   border-radius: 6px;
   box-shadow: 0 4px 12px rgba(0,0,0,0.15);
@@ -404,24 +404,26 @@ button:hover {
   background: none;
   text-align: left;
   font-size: 12px;
-  color: var(--gray);
+  color: var(--white);
   cursor: pointer;
   transition: background 0.2s ease;
 }
 
 .dropdown-item:hover {
-  background: #f5f5f5;
-  color: var(--sea-blue);
+  background: rgba(255, 255, 255, 0.2);
+  color: var(--white);
 }
 
 .dropdown-item.logout-btn {
-  color: var(--accent-coral);
-  border-top: 1px solid #eee;
+  color: var(--white);
+  border-top: 1px solid rgba(255, 255, 255, 0.3);
   margin-top: 4px;
+  background: var(--accent-coral);
 }
 
 .dropdown-item.logout-btn:hover {
-  background: #ffeaea;
+  background: #ff4757;
+  color: var(--white);
 }
 
 /* 好友聊天項目樣式 */
@@ -1327,18 +1329,21 @@ button:hover {
 /* RWD 手機版 */
 @media (max-width: 600px) {
   .plus-btn  {
-  background: transparent;
-  color: var(--text-color);
+  background: var(--sea-blue);
+  color: var(--accent-green);
   border: none;
   border-radius: 8px;
-  padding: 8px; /* 減小padding */
+  padding: 10px 0;
   font-weight: bold;
   cursor: pointer;
   transition: background 0.2s, color 0.2s;
-  margin-top: 6px; /* 恢復margin */
+  margin-top: 0;
+  margin-bottom: 8px;
   letter-spacing: 1px;
   box-shadow: 0 2px 8px #2877b91a;
-  font-size: 14px; /* 手機版使用較小字體 */
+  font-size: 16px;
+  display: block;
+  width: 100%;
 }
 .plus-btn:hover {
   background: var(--sea-dark);
@@ -1547,7 +1552,6 @@ button:hover {
   background: var(--white);
   border-bottom: 1px solid #eee;
   flex-shrink: 0;
-  position: relative;
 }
 
 .mobile-night-mode-btn {
@@ -1563,8 +1567,7 @@ button:hover {
   display: flex;
   align-items: center;
   justify-content: center;
-  order: 2;
-  margin-left: auto;
+  order: 2; /* 放到右邊 */
 }
 
 .mobile-night-mode-btn:hover {
@@ -1587,9 +1590,7 @@ button:hover {
   display: flex;
   align-items: center;
   justify-content: center;
-  order: 1;
-  margin-right: auto;
-  position: static;
+  order: 1; /* 放到左邊 */
 }
 
 .close-mobile-sidebar:hover {
@@ -1676,7 +1677,7 @@ button:hover {
   border-radius: 8px;
   color: var(--gray);
   font-size: 14px;
-  text-align: left;
+  text-align: center;
   cursor: pointer;
   transition: all 0.2s ease;
 }
@@ -1692,6 +1693,7 @@ button:hover {
   border-color: var(--accent-coral);
   color: var(--accent-coral);
   margin-bottom: 0;
+  text-align: center;
 }
 
 .mobile-action-btn.logout:hover {
@@ -1718,7 +1720,8 @@ button:hover {
   border-radius: 6px;
 }
   .close-mobile-sidebar {
-    position: static !important;
+    /* 移除絕對定位，使用 flexbox 布局 */
+    position: static;
     top: auto;
     right: auto;
     font-size: 20px;
@@ -1727,6 +1730,12 @@ button:hover {
     color: white;
     cursor: pointer;
     z-index: auto;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 }
 
@@ -1965,7 +1974,8 @@ button:hover {
 
 .bubble {
   /* 原本的 bubble 樣式 */
-  margin-top: 6px; /* 減少與 reply-block 的間距 */
+  margin-top: 4px; /* 大幅減少與 reply-block 的間距 */
+  margin-bottom: 2px;
 }
 
 .reply-btn, .mobile-reply {
