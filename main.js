@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
-  getDatabase, ref, push, get, onChildAdded, onValue, set, child, update, onDisconnect, query, limitToLast, off, onChildChanged, runTransaction
+  getDatabase, ref, push, get, onChildAdded, onValue, set, child, update, onDisconnect, query, limitToLast, off, onChildChanged, runTransaction, orderByKey
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 import {
   getStorage, ref as sRef, uploadBytes, getDownloadURL
@@ -685,47 +685,84 @@ document.addEventListener('DOMContentLoaded', function() {
 // 監聽登入狀態
 onAuthStateChanged(auth, async (user) => {
   if (user) {
-    // 檢查是否是從登入表單觸發的登入
-    const isLoginRedirect = sessionStorage.getItem('isLoginRedirect') === 'true';
-    if (isLoginRedirect) {
-      sessionStorage.removeItem('isLoginRedirect');
-      // 仍然初始化用戶資料，但不處理 UI 切換
-    }
-    // 顯示 loading（建議放在進聊天室前，UI 更穩定）
-    if (typeof showLoading === 'function') showLoading();
+    try {
+      console.log('🔐 用戶已登入:', user.uid);
+      
+      // 檢查是否是從登入表單觸發的登入
+      const isLoginRedirect = sessionStorage.getItem('isLoginRedirect') === 'true';
+      if (isLoginRedirect) {
+        console.log('⏭️ 登入跳轉模式，跳過UI處理');
+        sessionStorage.removeItem('isLoginRedirect');
+        // 仍然初始化用戶資料，但不處理 UI 切換
+      }
+      
+      // 顯示 loading（建議放在進聊天室前，UI 更穩定）
+      if (typeof showLoading === 'function') showLoading();
 
-    let userDb = null;
-    let tryCount = 0;
-    const maxTries = 10;   // 視正式環境延遲可調大
-    const delay = 300;     // 200~300ms
+      let userDb = null;
+      let tryCount = 0;
+      const maxTries = 5;   // 減少重試次數避免卡死
+      const delay = 500;    // 增加延遲時間
 
-    while (tryCount < maxTries) {
-      userDb = await onValuePromise(ref(db, 'users/' + user.uid));
-      if (userDb && userDb.nickname && userDb.avatar) break;
-      await new Promise(r => setTimeout(r, delay));
-      tryCount++;
-    }
+      // 使用 try-catch 包裝獲取用戶資料的邏輯
+      try {
+        while (tryCount < maxTries) {
+          console.log(`📡 嘗試獲取用戶資料 (${tryCount + 1}/${maxTries})`);
+          
+          // 添加超時機制
+          const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => reject(new Error('獲取用戶資料超時')), 5000);
+          });
+          
+          const userDataPromise = onValuePromise(ref(db, 'users/' + user.uid));
+          
+          userDb = await Promise.race([userDataPromise, timeoutPromise]);
+          
+          if (userDb && userDb.nickname && userDb.avatar) {
+            console.log('✅ 成功獲取用戶資料');
+            break;
+          }
+          
+          tryCount++;
+          if (tryCount < maxTries) {
+            await new Promise(r => setTimeout(r, delay));
+          }
+        }
+      } catch (error) {
+        console.error('❌ 獲取用戶資料失敗:', error);
+        userDb = null; // 確保使用 fallback
+      }
 
-    // fallback
-    const nickname = (userDb && userDb.nickname) ? userDb.nickname : '新用戶';
-    const avatar = (userDb && userDb.avatar) ? userDb.avatar : 'default-avatar.png';
+      // fallback - 使用 Firebase Auth 的資料或預設值
+      const nickname = (userDb && userDb.nickname) 
+        ? userDb.nickname 
+        : (user.displayName || user.email?.split('@')[0] || '新用戶');
+      const avatar = (userDb && userDb.avatar) 
+        ? userDb.avatar 
+        : (user.photoURL || 'default-avatar.png');
 
-    currentUser = {
-      uid: user.uid,
-      nickname,
-      avatar
-    };
+      currentUser = {
+        uid: user.uid,
+        nickname,
+        avatar
+      };
 
-    // 寫入/同步 online 狀態
-    await update(ref(db, 'users/' + user.uid), {
-      ...(userDb || {}), // 保留原有欄位
-      uid: user.uid,
-      nickname,
-      avatar,
-      online: true,
-      lastActive: Date.now()
-    });
-    onDisconnect(ref(db, 'users/' + user.uid + '/online')).set(false);
+      console.log('👤 設置當前用戶:', currentUser);
+
+      // 寫入/同步 online 狀態
+      try {
+        await update(ref(db, 'users/' + user.uid), {
+          ...(userDb || {}), // 保留原有欄位
+          uid: user.uid,
+          nickname,
+          avatar,
+          online: true,
+          lastActive: Date.now()
+        });
+        onDisconnect(ref(db, 'users/' + user.uid + '/online')).set(false);
+      } catch (error) {
+        console.error('❌ 更新用戶狀態失敗:', error);
+      }
 
     // 如果是登入跳轉，跳過 UI 處理，讓頁面跳轉邏輯執行
     if (isLoginRedirect) {
@@ -783,6 +820,12 @@ onAuthStateChanged(auth, async (user) => {
     if (!userDb || !userDb.nickname || !userDb.avatar) {
       console.warn('載入個人資料超時');
     }
+    
+    } catch (error) {
+      console.error('❌ onAuthStateChanged 處理用戶登入時發生錯誤:', error);
+      if (typeof hideLoading === 'function') hideLoading();
+    }
+  
   } else {
     // 未登入 - 只在相關元素存在時執行
     const mainEl = document.getElementById('main');
@@ -1111,14 +1154,18 @@ function openPrivateChat(uid) {
 
 // ========= 私訊通知功能 =========
 function showPrivateMessageNotification(fromUid, message, nickname) {
+  console.log('🔔 嘗試顯示私訊通知:', { fromUid, message, nickname, currentPrivateUid });
+  
   // 避免在當前私訊對話中顯示通知
   if (currentPrivateUid === fromUid) {
+    console.log('⏭️ 跳過通知：正在與此用戶私訊中');
     return;
   }
 
   // 防止通知過於頻繁（1秒內只顯示一次）
   const now = Date.now();
   if (now - lastNotificationTime < 1000) {
+    console.log('⏭️ 跳過通知：太頻繁');
     return;
   }
   lastNotificationTime = now;
@@ -1126,7 +1173,12 @@ function showPrivateMessageNotification(fromUid, message, nickname) {
   const notificationBar = document.getElementById('notification-bar');
   const notificationText = document.getElementById('notification-text');
   
-  if (!notificationBar || !notificationText) return;
+  if (!notificationBar || !notificationText) {
+    console.error('❌ 找不到通知欄元素');
+    return;
+  }
+
+  console.log('✅ 顯示私訊通知');
 
   // 設置通知內容
   const shortMessage = message.length > 30 ? message.substring(0, 30) + '...' : message;
@@ -1166,49 +1218,85 @@ function hidePrivateMessageNotification() {
 }
 
 function startGlobalPrivateMessageMonitoring() {
-  if (!currentUser?.uid) return;
+  if (!currentUser?.uid) {
+    console.warn('無法啟動私訊監聽：用戶未登入');
+    return;
+  }
   
-  console.log('📢 啟動全域私訊監聽');
+  console.log('📢 啟動全域私訊監聽，用戶 UID:', currentUser.uid);
   
   // 監聽所有與當前用戶相關的私訊路徑
   const privateChatsRef = ref(db, 'privateChats');
   
+  // 先獲取所有現有的私訊對話
+  get(privateChatsRef).then((snapshot) => {
+    if (snapshot.exists()) {
+      console.log('🔍 檢查現有私訊對話...');
+      snapshot.forEach((chatSnapshot) => {
+        const chatId = chatSnapshot.key;
+        setupPrivateChatListener(chatId);
+      });
+    } else {
+      console.log('📭 目前沒有私訊對話');
+    }
+  });
+  
+  // 監聽新的私訊對話
   onChildAdded(privateChatsRef, (chatSnapshot) => {
     const chatId = chatSnapshot.key;
+    setupPrivateChatListener(chatId);
+  });
+}
+
+function setupPrivateChatListener(chatId) {
+  // 檢查這個聊天是否與當前用戶相關
+  const [uid1, uid2] = chatId.split('_');
+  if (uid1 !== currentUser.uid && uid2 !== currentUser.uid) {
+    return; // 不是當前用戶的私訊
+  }
+  
+  // 如果已經在監聽這個對話，跳過
+  if (globalPrivateMessageListeners.has(chatId)) {
+    return;
+  }
+  
+  console.log('🎧 設置私訊監聽器:', chatId);
+  
+  // 監聽這個私訊對話的新訊息
+  const messagesRef = ref(db, `privateChats/${chatId}/messages`);
+  
+  const listener = onChildAdded(messagesRef, (messageSnapshot) => {
+    const messageData = messageSnapshot.val();
+    const messageId = messageSnapshot.key;
     
-    // 檢查這個聊天是否與當前用戶相關
-    const [uid1, uid2] = chatId.split('_');
-    if (uid1 !== currentUser.uid && uid2 !== currentUser.uid) {
-      return; // 不是當前用戶的私訊
-    }
-    
-    // 確定對方的 UID
-    const otherUid = uid1 === currentUser.uid ? uid2 : uid1;
-    
-    // 如果已經在監聽這個對話，跳過
-    if (globalPrivateMessageListeners.has(chatId)) {
-      return;
-    }
-    
-    // 監聽這個私訊對話的新訊息
-    const messagesRef = ref(db, `privateChats/${chatId}/messages`);
-    const messagesQuery = query(messagesRef, orderByKey(), limitToLast(1));
-    
-    const listener = onChildAdded(messagesQuery, (messageSnapshot) => {
-      const messageData = messageSnapshot.val();
-      
-      // 只處理別人發送給我的訊息
-      if (messageData.from !== currentUser.uid && messageData.to === currentUser.uid) {
-        // 獲取發送者昵稱
-        get(ref(db, `users/${messageData.from}/nickname`)).then((snapshot) => {
-          const senderNickname = snapshot.val() || '匿名用戶';
-          showPrivateMessageNotification(messageData.from, messageData.msg, senderNickname);
-        });
-      }
+    console.log('💬 收到私訊:', {
+      chatId,
+      messageId,
+      from: messageData.from,
+      to: messageData.to,
+      currentUser: currentUser.uid,
+      currentPrivateUid
     });
     
-    globalPrivateMessageListeners.set(chatId, listener);
+    // 只處理別人發送給我的訊息，且不是當前正在查看的私訊
+    if (messageData.from !== currentUser.uid && 
+        messageData.to === currentUser.uid && 
+        messageData.from !== currentPrivateUid) {
+      
+      console.log('🔔 顯示私訊通知:', messageData.from);
+      
+      // 獲取發送者昵稱
+      get(ref(db, `users/${messageData.from}/nickname`)).then((snapshot) => {
+        const senderNickname = snapshot.val() || '匿名用戶';
+        showPrivateMessageNotification(messageData.from, messageData.msg, senderNickname);
+      }).catch((error) => {
+        console.error('獲取發送者昵稱失敗:', error);
+        showPrivateMessageNotification(messageData.from, messageData.msg, '匿名用戶');
+      });
+    }
   });
+  
+  globalPrivateMessageListeners.set(chatId, listener);
 }
 
 function stopGlobalPrivateMessageMonitoring() {
@@ -1223,6 +1311,12 @@ function stopGlobalPrivateMessageMonitoring() {
   globalPrivateMessageListeners.clear();
   hidePrivateMessageNotification();
 }
+
+// 測試私訊通知功能
+window.testPrivateNotification = function() {
+  console.log('🧪 測試私訊通知功能');
+  showPrivateMessageNotification('test-uid', '這是一個測試私訊通知', '測試用戶');
+};
 
 // ========= Firebase Auth 狀態監聽 & 用戶同步/好友機制 =========
 // 只在 login.html 才執行登入頁 UI 切換
