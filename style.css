@@ -1479,7 +1479,7 @@ button:hover {
   z-index: 9999;
   width: 38px;
   height: 38px;
-  background-color: transparent;
+  background-color: rgba(255, 255, 255, 0.8);
   color: var(--sea-dark);
   border: none;
   border-radius: 8px;
@@ -1487,6 +1487,9 @@ button:hover {
   display: flex;
   align-items: center;
   justify-content: center;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 }
 
 /* 手機才顯示 */
@@ -2302,6 +2305,13 @@ body.dark-mode #logout-btn-mobile {
 @media (max-width: 600px) {
   body.dark-mode {
     background: #0a0a0a !important;
+  }
+  
+  body.dark-mode .mobile-sidebar-btn {
+    background-color: rgba(26, 26, 26, 0.8);
+    color: var(--highlight);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
   }
   
   body.dark-mode .mobile-header {
