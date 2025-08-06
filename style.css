@@ -1560,11 +1560,13 @@ button:hover {
   background: var(--white);
   border-bottom: 1px solid #eee;
   flex-shrink: 0;
+  gap: 12px; /* 確保兩個按鈕之間有間距 */
 }
 
 .mobile-night-mode-btn {
   width: 40px;
   height: 40px;
+  min-width: 40px; /* 防止按鈕被壓縮 */
   border: none;
   border-radius: 50%;
   background: var(--sea-light);
@@ -1575,6 +1577,7 @@ button:hover {
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0; /* 防止按鈕被壓縮 */
 }
 
 .mobile-night-mode-btn:hover {
@@ -1586,6 +1589,7 @@ button:hover {
 .close-mobile-sidebar {
   width: 40px;
   height: 40px;
+  min-width: 40px; /* 防止按鈕被壓縮 */
   border: none;
   border-radius: 50%;
   background: var(--accent-coral);
@@ -1597,6 +1601,7 @@ button:hover {
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0; /* 防止按鈕被壓縮 */
 }
 
 .close-mobile-sidebar:hover {

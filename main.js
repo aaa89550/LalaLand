@@ -45,6 +45,8 @@ let groupChatListener = null;
 let chatListener = null;
 let chatRef = null;
 let currentReplyMsgId = null;
+let currentPrivateRoomId = null; // 當前私訊房間ID
+let currentChatRoom = null; // 當前聊天室
 let privateChatNotificationRefs = {};
 let privateChatNotificationStates = {};
 let usersSnapshot = {};
@@ -402,7 +404,7 @@ function addFriendToList(friendId, friendData) {
                     <span style="color: var(--accent-green); margin-right: 4px;">●</span>好友
                 </div>
             </div>
-            <button onclick="startPrivateChat('${friendId}')" style="background: linear-gradient(135deg, var(--sea-blue), var(--accent-green)); color: white; border: none; padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.2); transition: transform 0.2s ease;">💬 聊天</button>
+            <button onclick="event.stopPropagation(); window.startPrivateChat('${friendId}')" style="background: linear-gradient(135deg, var(--sea-blue), var(--accent-green)); color: white; border: none; padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.2); transition: transform 0.2s ease;">💬 聊天</button>
         </div>
     `;
     
@@ -414,28 +416,24 @@ function addFriendToList(friendId, friendData) {
 }
 
 // 開始私人對話
-function startPrivateChat(friendId) {
+window.startPrivateChat = function(friendId) {
     if (!friendId || !currentUser) return;
+    
+    console.log('🔄 開始與好友聊天:', friendId);
     
     // 生成聊天室ID（使用較小的uid在前）
     const roomId = currentUser.uid < friendId 
         ? `${currentUser.uid}_${friendId}` 
         : `${friendId}_${currentUser.uid}`;
     
-    // 切換到聊天標籤
-    const chatTab = document.querySelector('[data-room="chat"]');
-    if (chatTab) {
-        // 移除所有標籤的active狀態
-        document.querySelectorAll('.chat-tab').forEach(tab => {
-            tab.classList.remove('active');
-        });
-        // 激活聊天標籤
-        chatTab.classList.add('active');
-    }
-    
-    // 進入私人聊天室
-    enterRoom(roomId, '私人聊天');
-}
+    // 獲取好友暱稱並進入聊天室
+    get(ref(db, `users/${friendId}/nickname`)).then((snapshot) => {
+        const friendNickname = snapshot.val() || '好友';
+        enterRoom(roomId, `與${friendNickname}的對話`);
+    }).catch(() => {
+        enterRoom(roomId, '私人對話');
+    });
+};
 
 // 進入私人聊天室函數
 window.enterRoom = function(roomId, title) {
@@ -496,13 +494,21 @@ function loadPrivateMessages(specificRoomId = null) {
 function loadSpecificPrivateChat(roomId) {
     console.log('🔄 載入私訊聊天室:', roomId);
     
+    // 停止所有監聽器
+    stopAllListeners();
+    
     // 隱藏提示
     const tipEl = document.getElementById('chat-tip');
-    tipEl.style.display = 'none';
+    if (tipEl) tipEl.style.display = 'none';
+    
+    // 設置當前聊天狀態
+    currentChat = 'private';
+    currentPrivateRoomId = roomId;
     
     // 監聽該聊天室的訊息
     const messagesRef = ref(db, `privateChats/${roomId}/messages`);
-    onValue(messagesRef, (snapshot) => {
+    privateChatRef = messagesRef;
+    privateChatListener = onValue(messagesRef, (snapshot) => {
         const messages = snapshot.val() || {};
         clearChat();
         
@@ -522,6 +528,8 @@ function loadSpecificPrivateChat(roomId) {
             chatDiv.scrollTop = chatDiv.scrollHeight;
         }
     });
+    
+    console.log('✅ 私訊聊天室監聽器已設置');
 }
 
 // 在聊天區域顯示私訊列表
