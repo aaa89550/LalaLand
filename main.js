@@ -437,20 +437,91 @@ function startPrivateChat(friendId) {
     enterRoom(roomId, '私人聊天');
 }
 
+// 進入私人聊天室函數
+window.enterRoom = function(roomId, title) {
+    console.log('🔄 進入聊天室:', roomId, title);
+    
+    // 切換到私訊標籤
+    const privateTab = document.querySelector('.chat-tab[data-room="private"]');
+    if (privateTab) {
+        document.querySelectorAll('.chat-tab').forEach(tab => {
+            tab.classList.remove('active');
+        });
+        privateTab.classList.add('active');
+    }
+    
+    // 設置當前聊天室
+    currentChatRoom = 'private';
+    currentPrivateRoomId = roomId;
+    
+    // 更新聊天區域標題
+    const chatTitleEl = document.getElementById('chat-title');
+    if (chatTitleEl) {
+        chatTitleEl.textContent = title;
+    }
+    
+    // 載入該聊天室的訊息
+    loadPrivateMessages(roomId);
+    
+    // 關閉手機版側邊欄
+    if (typeof closeMobileSidebar === 'function') {
+        closeMobileSidebar();
+    }
+};
+
 // 加載私訊列表功能
-function loadPrivateMessages() {
+function loadPrivateMessages(specificRoomId = null) {
     stopAllListeners();
     clearChat();
     
     currentChat = "private";
     
-    // 設置提示
-    const tipEl = document.getElementById('chat-tip');
-    tipEl.style.display = 'block';
-    tipEl.textContent = '點選對話開始私訊';
+    if (specificRoomId) {
+        // 加載特定聊天室的訊息
+        currentPrivateRoomId = specificRoomId;
+        loadSpecificPrivateChat(specificRoomId);
+    } else {
+        // 顯示私訊列表
+        // 設置提示
+        const tipEl = document.getElementById('chat-tip');
+        tipEl.style.display = 'block';
+        tipEl.textContent = '點選對話開始私訊';
+        
+        // 顯示私訊列表在聊天區域
+        displayPrivateMessagesInChat();
+    }
+}
+
+// 加載特定私訊聊天室的訊息
+function loadSpecificPrivateChat(roomId) {
+    console.log('🔄 載入私訊聊天室:', roomId);
     
-    // 顯示私訊列表在聊天區域
-    displayPrivateMessagesInChat();
+    // 隱藏提示
+    const tipEl = document.getElementById('chat-tip');
+    tipEl.style.display = 'none';
+    
+    // 監聽該聊天室的訊息
+    const messagesRef = ref(db, `privateChats/${roomId}/messages`);
+    onValue(messagesRef, (snapshot) => {
+        const messages = snapshot.val() || {};
+        clearChat();
+        
+        // 按時間排序訊息
+        const sortedMessages = Object.entries(messages)
+            .map(([id, msg]) => ({ id, ...msg }))
+            .sort((a, b) => a.time - b.time);
+        
+        // 顯示訊息
+        sortedMessages.forEach(msg => {
+            appendMessage(msg, msg.id);
+        });
+        
+        // 滾動到底部
+        const chatDiv = document.getElementById('chat');
+        if (chatDiv) {
+            chatDiv.scrollTop = chatDiv.scrollHeight;
+        }
+    });
 }
 
 // 在聊天區域顯示私訊列表
@@ -539,15 +610,15 @@ function addPrivateChatToList(chat, userData) {
     chatDiv.className = 'private-chat-item';
     chatDiv.setAttribute('data-room-id', chat.roomId);
     chatDiv.innerHTML = `
-        <div style="display: flex; align-items: center; padding: 12px; background: #f8f9fa; border-radius: 8px; margin-bottom: 8px; cursor: pointer; transition: background 0.2s ease;">
+        <div class="private-chat-content" style="display: flex; align-items: center; padding: 12px; background: #f8f9fa; border-radius: 8px; margin-bottom: 8px; cursor: pointer; transition: background 0.2s ease;">
             <img src="${userData.avatar || 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'40\' height=\'40\' viewBox=\'0 0 40 40\'%3E%3Ccircle cx=\'20\' cy=\'20\' r=\'20\' fill=\'%23ddd\'/%3E%3Ctext x=\'20\' y=\'26\' text-anchor=\'middle\' fill=\'white\' font-size=\'16\'%3E👤%3C/text%3E%3C/svg%3E'}" 
-                 style="width: 50px; height: 50px; border-radius: 50%; margin-right: 12px; object-fit: cover; border: 2px solid var(--accent-green);">
+                 class="private-chat-avatar" style="width: 50px; height: 50px; border-radius: 50%; margin-right: 12px; object-fit: cover; border: 2px solid var(--accent-green);">
             <div style="flex: 1;">
                 <div style="font-weight: 600; color: var(--sea-dark); margin-bottom: 2px;">${userData.nickname || '匿名用戶'}</div>
                 <div style="font-size: 12px; color: #666; margin-bottom: 2px;">${lastMessageText}</div>
                 <div style="font-size: 10px; color: #999;">${timeStr}</div>
             </div>
-            <button onclick="enterRoom('${chat.roomId}', '與${userData.nickname}的對話')" style="background: var(--sea-blue); color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer;">開啟</button>
+            <button class="desktop-enter-btn" onclick="event.stopPropagation(); enterRoom('${chat.roomId}', '與${userData.nickname}的對話')" style="background: var(--sea-blue); color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer;">開啟</button>
         </div>
     `;
     
@@ -1396,11 +1467,35 @@ function sendMessage() {
       .then(() => console.log('✅ Group message sent successfully!'))
       .catch(error => console.error('❌ Error sending group message:', error));
   } else {
-    const ids = [currentUser.uid, currentChat].sort();
-    const privateChatPath = `privateChats/${ids[0]}_${ids[1]}/messages`;
-    console.log('📨 Sending to private chat:', privateChatPath);
+    // 處理私訊發送
+    let privateChatPath;
+    
+    if (currentPrivateRoomId) {
+      // 如果在特定私訊房間中
+      privateChatPath = `privateChats/${currentPrivateRoomId}/messages`;
+      console.log('📨 Sending to private chat room:', currentPrivateRoomId);
+    } else {
+      // 傳統私訊方式
+      const ids = [currentUser.uid, currentChat].sort();
+      privateChatPath = `privateChats/${ids[0]}_${ids[1]}/messages`;
+      console.log('📨 Sending to private chat:', privateChatPath);
+    }
+    
     push(ref(db, privateChatPath), msg)
-      .then(() => console.log('✅ Private message sent successfully!'))
+      .then(() => {
+        console.log('✅ Private message sent successfully!');
+        
+        // 更新私訊聊天室的最後訊息時間
+        const roomId = currentPrivateRoomId || privateChatPath.split('/')[1];
+        const chatUpdateData = {
+          lastMessage: text,
+          lastTime: msg.time
+        };
+        
+        update(ref(db, `privateChats/${roomId}`), chatUpdateData)
+          .then(() => console.log('✅ Private chat metadata updated'))
+          .catch(error => console.error('❌ Error updating chat metadata:', error));
+      })
       .catch(error => console.error('❌ Error sending private message:', error));
   }
 
