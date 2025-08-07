@@ -1553,61 +1553,71 @@ button:hover {
 
 /* 手機版標題欄 */
 .mobile-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 8px 12px; /* 減少padding防止按鈕擠壓 */
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  padding: 8px 12px !important;
   background: var(--white);
   border-bottom: 1px solid #eee;
   flex-shrink: 0;
-  gap: 16px; /* 增加按鈕間距 */
-  min-height: 56px; /* 確保有足夠高度 */
+  min-height: 48px !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+/* 確保按鈕能夠並排 */
+.mobile-header > * {
+  flex-shrink: 0 !important;
+}
+
+.mobile-header-spacer {
+  flex: 1; /* 佔滿中間空間，確保按鈕分別在兩側 */
 }
 
 .mobile-night-mode-btn {
-  width: 36px; /* 稍微縮小防止重疊 */
-  height: 36px;
-  min-width: 36px; /* 防止按鈕被壓縮 */
+  width: 28px !important;
+  height: 28px !important;
+  min-width: 28px !important;
   border: none;
-  border-radius: 8px;
+  border-radius: 6px;
   background: var(--sea-light);
   color: var(--sea-dark);
-  font-size: 16px; /* 調整字體大小 */
+  font-size: 12px;
   cursor: pointer;
   transition: all 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0; /* 防止按鈕被壓縮 */
+  flex-shrink: 0;
 }
 
 .mobile-night-mode-btn:hover {
   background: var(--sea-blue);
   color: white;
-  transform: scale(1.1);
+  transform: scale(1.05); /* 減少hover放大效果防止重疊 */
 }
 
 .close-mobile-sidebar {
-  width: 36px; /* 稍微縮小防止重疊 */
-  height: 36px;
-  min-width: 36px; /* 防止按鈕被壓縮 */
+  width: 28px !important;
+  height: 28px !important;
+  min-width: 28px !important;
   border: none;
-  border-radius: 8px;
+  border-radius: 6px;
   background: var(--accent-coral);
   color: white;
-  font-size: 18px; /* 調整字體大小 */
+  font-size: 14px;
   font-weight: bold;
   cursor: pointer;
   transition: all 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0; /* 防止按鈕被壓縮 */
+  flex-shrink: 0;
 }
 
 .close-mobile-sidebar:hover {
   background: #ff4757;
-  transform: scale(1.1);
+  transform: scale(1.05); /* 減少hover放大效果防止重疊 */
 }
 
 /* 手機版用戶資料區 */
