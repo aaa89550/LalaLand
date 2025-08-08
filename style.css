@@ -981,6 +981,51 @@ button:hover {
 /* ========================================
    訊息輸入區域
 ======================================== */
+
+/* 手機版 + 按鈕區域 */
+#mobile-plus-area {
+  display: none; /* 桌機版隱藏 */
+  padding: 8px 12px;
+  background: transparent;
+  position: relative;
+}
+
+/* 電腦版專用樣式 */
+.desktop-only {
+  display: inline-block;
+  position: relative; /* 讓菜單能相對於按鈕定位 */
+}
+
+/* + 按鈕菜單 */
+#plus-menu {
+  position: absolute;
+  bottom: 100%; /* 電腦版顯示在按鈕上方 */
+  left: 0; /* 與按鈕對齊 */
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  z-index: 1000;
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px; /* 添加間距 */
+}
+
+#plus-menu-mobile {
+  position: absolute;
+  top: 100%; /* 改回手機版原來的設定 */
+  left: 12px;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  z-index: 1000;
+  display: flex;
+  gap: 8px;
+}
+
 #input-area {
   display: flex;
   gap: 8px;
@@ -1411,10 +1456,23 @@ button:hover {
     font-size: 20px !important;
     margin-bottom: 6px !important;
   }
+  
+  /* 手機版顯示 + 按鈕區域 */
+  #mobile-plus-area {
+    display: block !important;
+    padding: 8px 12px;
+    text-align: left;
+  }
+  
+  /* 手機版隱藏電腦版的 + 按鈕 */
+  .desktop-only {
+    display: none !important;
+  }
+  
   #input-area {
-    gap: 8px;
+    gap: 10px; /* 增加間距 */
     flex-direction: row; /* 改為水平排列 */
-    padding: 8px;
+    padding: 12px 16px; /* 增加 padding */
     margin-top: 6px;
     align-items: flex-end; /* 底部對齊 */
   }
@@ -1425,14 +1483,20 @@ button:hover {
   }
   #msg {
     font-size: 16px;
-    padding: 10px !important;
-    min-height: 20px !important;
+    padding: 14px 12px !important; /* 增加 padding 讓輸入框更高 */
+    min-height: 48px !important; /* 增加最小高度 */
     flex: 1; /* 讓輸入框占滿剩餘空間 */
+    border-radius: 8px !important; /* 稍微增加圓角 */
+    min-width: 0; /* 確保 flex item 可以縮小 */
   }
   #send {
-    padding: 12px !important;
+    padding: 14px 20px !important; /* 調整 padding */
     font-size: 16px !important;
     white-space: nowrap; /* 防止文字換行 */
+    min-height: 48px !important; /* 與輸入框同高 */
+    border-radius: 8px !important; /* 稍微增加圓角 */
+    flex-shrink: 0; /* 防止按鈕被壓縮 */
+    width: auto; /* 讓按鈕寬度自適應 */
   }
   #send:hover {
     background: var(--sea-blue);
@@ -1699,7 +1763,7 @@ button:hover {
   border-radius: 8px;
   color: var(--gray);
   font-size: 14px;
-  text-align: left;
+  text-align: center;
   cursor: pointer;
   transition: all 0.2s ease;
 }

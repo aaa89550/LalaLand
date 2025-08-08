@@ -70,9 +70,9 @@
 
       <!-- 手機版功能按鈕 -->
       <div class="mobile-actions">
-        <button id="mobile-view-friends-btn" class="mobile-action-btn">👥 我的好友</button>
-        <button id="edit-profile-btn-mobile" class="mobile-action-btn">⚙️ 編輯資料</button>
-        <button id="logout-btn-mobile" class="mobile-action-btn logout">🚪 登出</button>
+        <button id="mobile-view-friends-btn" class="mobile-action-btn">我的好友</button>
+        <button id="edit-profile-btn-mobile" class="mobile-action-btn">編輯資料</button>
+        <button id="logout-btn-mobile" class="mobile-action-btn logout">登出</button>
       </div>
     </div>
   </div>
@@ -145,10 +145,22 @@
       <div id="chat-action" style="margin-top: 4px;"></div>
       <div id="chat"></div>
 <div id="input-preview" style="display: none;"></div>
+<!-- 手機版 + 按鈕區域 -->
+<div id="mobile-plus-area">
+  <button id="plus-btn-mobile" class="plus-btn">＋</button>
+  <div id="plus-menu-mobile" style="display: none;">
+    <button id="emoji-btn-mobile" title="插入表情" class="plus-btn">😊</button>
+    <button id="upload-btn-mobile" class="plus-btn">🖼️</button>
+    <input type="file" id="upload-input-mobile" accept="image/*" style="display: none;" />
+    <button id="vote-btn-mobile" class="plus-btn">🗳️</button>
+  </div>
+</div>
 <div id="input-area">
-  <button id="plus-btn" class="plus-btn">＋</button>
+  <!-- 電腦版 + 按鈕 -->
+  <button id="plus-btn" class="plus-btn desktop-only">＋</button>
   <input id="msg" type="text" placeholder="輸入訊息..." autocomplete="off">
   <button id="send">送出</button>
+  <!-- 電腦版菜單 -->
   <div id="plus-menu" style="display: none;">
     <button id="emoji-btn" title="插入表情" class="plus-btn">😊</button>
     <button id="upload-btn" class="plus-btn">🖼️</button>
@@ -215,5 +227,39 @@
   <script src="splash.js"></script>
   <script src="linkify.js"></script>
   <script type="module" src="main.js"></script>
+  <script>
+    // 臨時測試 + 按鈕功能
+    document.addEventListener('DOMContentLoaded', function() {
+      const plusBtn = document.getElementById('plus-btn');
+      const plusMenu = document.getElementById('plus-menu');
+      const plusBtnMobile = document.getElementById('plus-btn-mobile');
+      const plusMenuMobile = document.getElementById('plus-menu-mobile');
+      
+      console.log('Plus buttons:', plusBtn, plusBtnMobile);
+      console.log('Plus menus:', plusMenu, plusMenuMobile);
+      
+      if (plusBtn) {
+        plusBtn.addEventListener('click', function(e) {
+          e.stopPropagation();
+          console.log('Desktop plus button clicked');
+          if (plusMenu) {
+            plusMenu.style.display = plusMenu.style.display === 'block' ? 'none' : 'block';
+            console.log('Desktop menu display:', plusMenu.style.display);
+          }
+        });
+      }
+      
+      if (plusBtnMobile) {
+        plusBtnMobile.addEventListener('click', function(e) {
+          e.stopPropagation();
+          console.log('Mobile plus button clicked');
+          if (plusMenuMobile) {
+            plusMenuMobile.style.display = plusMenuMobile.style.display === 'block' ? 'none' : 'block';
+            console.log('Mobile menu display:', plusMenuMobile.style.display);
+          }
+        });
+      }
+    });
+  </script>
 </body>
 </html>

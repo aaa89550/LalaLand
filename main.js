@@ -404,7 +404,6 @@ function addFriendToList(friendId, friendData) {
                     <span style="color: var(--accent-green); margin-right: 4px;">●</span>好友
                 </div>
             </div>
-            <button onclick="event.stopPropagation(); window.startPrivateChat('${friendId}')" style="background: linear-gradient(135deg, var(--sea-blue), var(--accent-green)); color: white; border: none; padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.2); transition: transform 0.2s ease;">💬 聊天</button>
         </div>
     `;
     
@@ -626,7 +625,6 @@ function addPrivateChatToList(chat, userData) {
                 <div style="font-size: 12px; color: #666; margin-bottom: 2px;">${lastMessageText}</div>
                 <div style="font-size: 10px; color: #999;">${timeStr}</div>
             </div>
-            <button class="desktop-enter-btn" onclick="event.stopPropagation(); enterRoom('${chat.roomId}', '與${userData.nickname}的對話')" style="background: var(--sea-blue); color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer;">開啟</button>
         </div>
     `;
     
