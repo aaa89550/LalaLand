@@ -609,33 +609,66 @@ function displayPrivateMessagesInChat() {
         
         console.log('💬 All private chats:', privateChats);
         
-        // 篩選出包含當前用戶的聊天室
-        Object.keys(privateChats).forEach(roomId => {
+        // 篩選出包含當前用戶的聊天室並獲取真實的最新訊息時間
+        const roomPromises = Object.keys(privateChats).map(roomId => {
             if (roomId.includes(user.uid)) {
                 const otherUserId = roomId.replace(user.uid, '').replace('_', '');
                 if (otherUserId && otherUserId !== user.uid) {
-                    const chatData = {
-                        roomId,
-                        otherUserId,
-                        lastMessage: privateChats[roomId].lastMessage || null,
-                        lastTime: privateChats[roomId].lastTime || 0
-                    };
-                    userPrivateChats.push(chatData);
-                    console.log('➕ Added private chat:', chatData);
+                    // 獲取該聊天室的最新訊息
+                    return get(ref(db, `privateChats/${roomId}/messages`)).then(messagesSnapshot => {
+                        const messages = messagesSnapshot.val() || {};
+                        const messageValues = Object.values(messages);
+                        
+                        // 找出最新的訊息時間
+                        let latestTime = 0;
+                        let latestMessage = '';
+                        
+                        messageValues.forEach(msg => {
+                            if (msg.time && msg.time > latestTime) {
+                                latestTime = msg.time;
+                                latestMessage = msg.text || '';
+                            }
+                        });
+                        
+                        console.log(`🕒 Room ${roomId} latest time:`, latestTime, 'message:', latestMessage);
+                        
+                        return {
+                            roomId,
+                            otherUserId,
+                            lastMessage: latestMessage,
+                            lastTime: latestTime,
+                            messageCount: messageValues.length
+                        };
+                    }).catch(error => {
+                        console.error(`❌ Error loading messages for room ${roomId}:`, error);
+                        return {
+                            roomId,
+                            otherUserId,
+                            lastMessage: '',
+                            lastTime: 0,
+                            messageCount: 0
+                        };
+                    });
                 }
             }
+            return Promise.resolve(null);
+        }).filter(promise => promise !== null);
+        
+        // 等待所有聊天室資料載入完成
+        Promise.all(roomPromises).then(chatDataArray => {
+            const validChats = chatDataArray.filter(chat => chat !== null);
+            
+            // 按最新訊息時間排序（最新的在前）
+            validChats.sort((a, b) => {
+                const timeA = a.lastTime || 0;
+                const timeB = b.lastTime || 0;
+                return timeB - timeA;
+            });
+            
+            console.log('📋 Sorted private chats by actual message time:', validChats);
+            
+            displayPrivateChats(validChats);
         });
-        
-        // 按最後訊息時間排序（最新的在前）
-        userPrivateChats.sort((a, b) => {
-            const timeA = a.lastTime || 0;
-            const timeB = b.lastTime || 0;
-            return timeB - timeA;
-        });
-        
-        console.log('📋 Sorted private chats:', userPrivateChats);
-        
-        displayPrivateChats(userPrivateChats);
     });
 }
 
