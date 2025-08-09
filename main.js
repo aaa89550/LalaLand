@@ -110,6 +110,14 @@ function initializeApp() {
 function setupApplication() {
   console.log('📱 設置應用程式功能...');
   
+  // 檢查是否在登入頁面
+  const isLoginPage = document.getElementById('login-form') && document.getElementById('register-form');
+  console.log('🔍 登入頁面檢測:', isLoginPage);
+  
+  if (isLoginPage) {
+    setupLoginPage();
+  }
+  
   // 設置認證狀態監聽器
   if (typeof onAuthStateChanged !== 'undefined' && auth) {
     onAuthStateChanged(auth, (user) => {
@@ -129,6 +137,105 @@ function setupApplication() {
   }
   
   console.log('✅ 應用程式初始化完成');
+}
+
+// 設置登入頁面功能
+function setupLoginPage() {
+  console.log('🔐 設置登入頁面功能...');
+  
+  // Tab 切換邏輯
+  const loginTabBtn = document.getElementById('login-tab-btn');
+  const registerTabBtn = document.getElementById('register-tab-btn');
+  const loginPage = document.getElementById('login-page');
+  const registerPage = document.getElementById('register-page');
+  
+  if (loginTabBtn) loginTabBtn.onclick = () => switchTab('login');
+  if (registerTabBtn) registerTabBtn.onclick = () => switchTab('register');
+  
+  function switchTab(tab) {
+    if (!loginTabBtn || !registerTabBtn || !loginPage || !registerPage) {
+      console.error('⚠️ 找不到必要的登入頁面元素');
+      return;
+    }
+    loginTabBtn.classList.remove('active');
+    registerTabBtn.classList.remove('active');
+    loginPage.style.display = 'none';
+    registerPage.style.display = 'none';
+    
+    if(tab==='login'){
+      loginTabBtn.classList.add('active');
+      loginPage.style.display = 'block';
+    } else if(tab==='register'){
+      registerTabBtn.classList.add('active');
+      registerPage.style.display = 'block';
+    }
+  }
+  
+  // 🔐 登入邏輯  
+  const loginForm = document.getElementById('login-form');
+  
+  if (loginForm) {
+    loginForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      console.log('🔐 登入表單提交');
+      
+      const email = document.getElementById('login-email').value.trim();
+      const password = document.getElementById('login-password').value;
+      
+      if (!email || !password) {
+        alert('請輸入帳號與密碼');
+        return;
+      }
+      
+      console.log('📧 嘗試登入:', email);
+      
+      // 檢查 Firebase 是否已載入
+      if (!firebaseLoaded || !auth || typeof signInWithEmailAndPassword === 'undefined') {
+        console.log('⏳ Firebase 尚未載入完成，等待...');
+        alert('系統初始化中，請稍後再試');
+        return;
+      }
+      
+      try {
+        console.log('🔐 開始驗證用戶...');
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        console.log('✅ 登入成功:', userCredential.user.uid);
+        
+        // 設置跳轉標記
+        sessionStorage.setItem('isLoginRedirect', 'true');
+        window.location.href = "announce.html";
+        
+      } catch (error) {
+        console.error('❌ 登入失敗:', error);
+        let errorMessage = '登入失敗';
+        
+        switch(error.code) {
+          case 'auth/user-not-found':
+            errorMessage = '找不到此帳號';
+            break;
+          case 'auth/wrong-password':
+            errorMessage = '密碼錯誤';
+            break;
+          case 'auth/invalid-email':
+            errorMessage = 'Email 格式不正確';
+            break;
+          case 'auth/too-many-requests':
+            errorMessage = '登入嘗試次數過多，請稍後再試';
+            break;
+          default:
+            errorMessage = `登入失敗: ${error.message}`;
+        }
+        
+        alert(errorMessage);
+      }
+    });
+    
+    console.log('✅ 登入表單事件監聽器已設置');
+  } else {
+    console.warn('⚠️ 找不到登入表單');
+  }
+  
+  console.log('✅ 登入頁面設置完成');
 }
 
 // Firebase 變數將在動態載入後設置
@@ -1236,70 +1343,6 @@ document.addEventListener('DOMContentLoaded', function() {
       switchChat("group_chat");
     }catch(err){
       alert(err.message);
-    }
-  });
-
-  // 🔐 登入邏輯
-  const loginForm = document.getElementById('login-form');
-  let isUserTriggeredSubmit = false; // 添加標記確保是用戶主動觸發
-  
-  // 監聽登入按鈕點擊
-  const loginBtn = loginForm.querySelector('.login-btn');
-  if (loginBtn) {
-    loginBtn.addEventListener('click', () => {
-      isUserTriggeredSubmit = true;
-    });
-  }
-  
-  // 監聽 Enter 鍵按下（但要求更明確的確認）
-  const loginEmailInput = document.getElementById('login-email');
-  const loginPasswordInput = document.getElementById('login-password');
-  
-  [loginEmailInput, loginPasswordInput].forEach(input => {
-    if (input) {
-      input.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
-          // 只有在密碼框中按 Enter 且兩個欄位都有值時才允許
-          if (e.target === loginPasswordInput && 
-              loginEmailInput.value.trim() && 
-              loginPasswordInput.value.trim()) {
-            isUserTriggeredSubmit = true;
-          } else {
-            e.preventDefault(); // 阻止其他情況下的 Enter 提交
-          }
-        }
-      });
-    }
-  });
-  
-  loginForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    
-    // 檢查是否為用戶主動觸發
-    if (!isUserTriggeredSubmit) {
-      console.log('⚠️ 阻止非用戶觸發的登入嘗試');
-      return;
-    }
-    
-    const email = document.getElementById('login-email').value.trim();
-    const password = document.getElementById('login-password').value;
-    if (!email || !password) {
-      isUserTriggeredSubmit = false; // 重置標記
-      return alert('請輸入帳號與密碼');
-    }
-    
-    console.log('🔐 用戶主動觸發登入');
-    
-    try {
-      // 設置一個標記，表示這是從登入表單觸發的登入
-      sessionStorage.setItem('isLoginRedirect', 'true');
-      await signInWithEmailAndPassword(auth, email, password);
-      window.location.href = "announce.html";
-    } catch (err) {
-      // 登入失敗時清除標記
-      sessionStorage.removeItem('isLoginRedirect');
-      isUserTriggeredSubmit = false; // 重置標記
-      alert('登入失敗：' + err.message);
     }
   });
 
