@@ -13,39 +13,126 @@ window.addEventListener('unhandledrejection', (e) => {
   console.error('🚨 Unhandled Promise Rejection:', e.reason);
 });
 
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import {
-  getDatabase, ref, push, get, onChildAdded, onValue, set, child, update, onDisconnect, query, limitToLast, off, onChildChanged, runTransaction, orderByKey
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
-import {
-  getStorage, ref as sRef, uploadBytes, getDownloadURL
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
-import {
-  getAuth,
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  onAuthStateChanged,
-  signOut,
-  updateProfile,
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+// 嘗試修正 CORB 問題 - 使用動態 import
+let firebaseLoaded = false;
+let db, auth, storage;
 
-// Firebase config
-const firebaseConfig = {
-  apiKey: "AIzaSyD9-_GYLQabcC3SPMTOG9zj2CcaPqzfOrI",
-  authDomain: "lalaland-24931.firebaseapp.com",
-  databaseURL: "https://lalaland-24931-default-rtdb.firebaseio.com",
-  projectId: "lalaland-24931",
-  storageBucket: "lalaland-24931.firebasestorage.app", // <<<< 修正這裡
-  messagingSenderId: "45134876312",
-  appId: "1:45134876312:web:9e33e46c54cb7c9bfc8aed",
-  measurementId: "G-M04NRCY9FQ"
-};
-const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
-const storage = getStorage(app);
-const auth = getAuth(app);
+async function loadFirebase() {
+  try {
+    console.log('🔄 開始載入 Firebase...');
+    
+    const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js");
+    const firebaseDb = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js");
+    const firebaseStorage = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js");
+    const firebaseAuth = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js");
+    
+    console.log('✅ Firebase 模組載入成功');
+    
+    // Firebase configuration - 使用正確的配置
+    firebaseConfig = {
+      apiKey: "AIzaSyD9-_GYLQabcC3SPMTOG9zj2CcaPqzfOrI",
+      authDomain: "lalaland-24931.firebaseapp.com",
+      databaseURL: "https://lalaland-24931-default-rtdb.firebaseio.com",
+      projectId: "lalaland-24931",
+      storageBucket: "lalaland-24931.firebasestorage.app",
+      messagingSenderId: "45134876312",
+      appId: "1:45134876312:web:9e33e46c54cb7c9bfc8aed",
+      measurementId: "G-M04NRCY9FQ"
+    };
+    
+    app = initializeApp(firebaseConfig);
+    db = firebaseDb.getDatabase(app);
+    auth = firebaseAuth.getAuth(app);
+    storage = firebaseStorage.getStorage(app);
+    
+    // 匯出所有需要的函數到全域範圍
+    window.firebaseDb = firebaseDb;
+    window.firebaseStorage = firebaseStorage;
+    window.firebaseAuth = firebaseAuth;
+    window.db = db;
+    window.auth = auth;
+    window.storage = storage;
+    
+    // 匯出 Firebase Auth 函數到全域範圍
+    window.signInWithEmailAndPassword = firebaseAuth.signInWithEmailAndPassword;
+    window.createUserWithEmailAndPassword = firebaseAuth.createUserWithEmailAndPassword;
+    window.sendPasswordResetEmail = firebaseAuth.sendPasswordResetEmail;
+    window.signOut = firebaseAuth.signOut;
+    window.onAuthStateChanged = firebaseAuth.onAuthStateChanged;
+    
+    // 匯出 Firebase Database 函數到全域範圍
+    window.ref = firebaseDb.ref;
+    window.get = firebaseDb.get;
+    window.set = firebaseDb.set;
+    window.push = firebaseDb.push;
+    window.onValue = firebaseDb.onValue;
+    window.update = firebaseDb.update;
+    window.child = firebaseDb.child;
+    window.onChildAdded = firebaseDb.onChildAdded;
+    window.onChildChanged = firebaseDb.onChildChanged;
+    window.onDisconnect = firebaseDb.onDisconnect;
+    window.query = firebaseDb.query;
+    window.limitToLast = firebaseDb.limitToLast;
+    window.orderByKey = firebaseDb.orderByKey;
+    window.runTransaction = firebaseDb.runTransaction;
+    window.off = firebaseDb.off;
+    
+    // 匯出 Firebase Storage 函數到全域範圍
+    window.uploadBytes = firebaseStorage.uploadBytes;
+    window.getDownloadURL = firebaseStorage.getDownloadURL;
+    window.storageRef = firebaseStorage.ref;
+    
+    firebaseLoaded = true;
+    console.log('🎉 Firebase 初始化完成，所有函數已匯出到全域範圍');
+    
+    // 繼續執行應用程式初始化
+    initializeApp();
+    
+  } catch (error) {
+    console.error('❌ Firebase 載入失敗:', error);
+    alert('Firebase 載入失敗，請重新整理頁面');
+  }
+}
+
+// 主應用程式初始化函數
+function initializeApp() {
+  console.log('🚀 應用程式初始化中...');
+  
+  // 等待 DOM 完全載入
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', setupApplication);
+  } else {
+    setupApplication();
+  }
+}
+
+// 設置應用程式功能
+function setupApplication() {
+  console.log('📱 設置應用程式功能...');
+  
+  // 設置認證狀態監聽器
+  if (typeof onAuthStateChanged !== 'undefined' && auth) {
+    onAuthStateChanged(auth, (user) => {
+      console.log('🔐 認證狀態變更:', user ? '已登入' : '未登入');
+      if (user) {
+        console.log('👤 用戶ID:', user.uid);
+        console.log('📧 用戶Email:', user.email);
+        
+        // 如果在登入頁面且有 sessionStorage 標記，則跳轉
+        if (window.location.pathname.includes('login.html') && 
+            sessionStorage.getItem('isLoginRedirect') === 'true') {
+          sessionStorage.removeItem('isLoginRedirect');
+          window.location.href = "announce.html";
+        }
+      }
+    });
+  }
+  
+  console.log('✅ 應用程式初始化完成');
+}
+
+// Firebase 變數將在動態載入後設置
+let firebaseConfig, app;
 
 // 狀態
 let currentUser = null;
@@ -419,6 +506,16 @@ function displayFriends(friendIds) {
             console.error('❌ Error loading friend data for', friendId, ':', error);
         });
     });
+    
+    // 檢查容器內容
+    setTimeout(() => {
+        console.log('🔍 Final chat container content:', chatContainer.innerHTML);
+        const friendItems = chatContainer.querySelectorAll('[data-friend-click]');
+        console.log('🔍 Found', friendItems.length, 'friend items with data-friend-click');
+        friendItems.forEach((item, index) => {
+            console.log(`🔍 Friend item ${index}:`, item, 'data-friend-click:', item.getAttribute('data-friend-click'));
+        });
+    }, 2000);
 }
 
 // 添加好友到列表
@@ -2599,9 +2696,34 @@ function initUserDropdownMenu() {
     // 手機版好友按鈕事件
     document.getElementById('mobile-view-friends-btn')?.addEventListener('click', () => {
       closeMobileSidebar();
-      loadFriendsList();
+      
       // 添加手機版好友模式類別，隱藏聊天相關元素
       document.body.classList.add('mobile-friends-mode');
+      
+      // 先添加測試好友項目以確保有東西可以點擊
+      const chatContainer = document.getElementById('chat');
+      chatContainer.innerHTML = `
+        <div style="padding: 10px;">
+          <h4 style="margin: 0 0 15px 0; color: var(--sea-blue); background: linear-gradient(135deg, var(--sea-light), var(--accent-green)); padding: 8px; border-radius: 6px; text-align: center;">👥 我的好友</h4>
+          
+          <!-- 測試好友項目 -->
+          <div style="display: flex; align-items: center; padding: 15px; background: linear-gradient(135deg, #f8f9fa, #e3f2fd); border: 2px solid var(--accent-green); border-radius: 12px; margin-bottom: 12px; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 2px 6px rgba(0,0,0,0.1);" data-friend-click="test-friend-123">
+            <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Ccircle cx='20' cy='20' r='20' fill='%2374b3ff'/%3E%3Ctext x='20' y='26' text-anchor='middle' fill='white' font-size='16'%3E😊%3C/text%3E%3C/svg%3E" 
+                 style="width: 60px; height: 60px; border-radius: 50%; margin-right: 15px; object-fit: cover; border: 3px solid var(--accent-green); box-shadow: 0 2px 4px rgba(0,0,0,0.2);" data-friend-click="test-friend-123">
+            <div style="flex: 1;" data-friend-click="test-friend-123">
+              <div style="font-weight: 700; color: var(--sea-dark); margin-bottom: 4px; font-size: 16px;" data-friend-click="test-friend-123">👥 測試好友</div>
+              <div style="font-size: 12px; color: #666; display: flex; align-items: center;" data-friend-click="test-friend-123">
+                <span style="color: var(--accent-green); margin-right: 4px;" data-friend-click="test-friend-123">●</span>點擊測試
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+      
+      console.log('🎯 Test friend added to DOM');
+      
+      // 然後載入真正的好友列表
+      loadFriendsList();
     });
     
     document.getElementById('edit-profile-btn')?.addEventListener('click', () => {
@@ -2741,13 +2863,16 @@ window.addEventListener('DOMContentLoaded', () => {
     
     // 添加一個短暫的延遲，讓 Firebase Auth 有時間初始化
     setTimeout(() => {
-      const currentUser = auth.currentUser;
-      if (currentUser) {
+      if (auth && auth.currentUser) {
         console.log('🔀 檢測到已登入用戶，準備跳轉到聊天室');
         // 不設置 sessionStorage，讓 onAuthStateChanged 處理跳轉
       } else {
         console.log('👤 用戶未登入，停留在登入頁面');
       }
-    }, 1000);
+    }, 2000); // 增加延遲時間，確保 Firebase 初始化完成
   }
 });
+
+// 🚀 啟動 Firebase 載入
+console.log('🔥 開始載入 Firebase...');
+loadFirebase();
