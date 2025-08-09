@@ -1488,7 +1488,7 @@ button:hover {
   }
   
   #input-area {
-    gap: 12px; /* 增加間距 */
+    gap: 8px; /* 減少間距讓輸入框有更多空間 */
     flex-direction: row; /* 改為水平排列 */
     padding: 12px 16px; /* 增加 padding */
     margin-top: 6px;
@@ -1508,13 +1508,14 @@ button:hover {
     min-width: 0; /* 確保 flex item 可以縮小 */
   }
   #send {
-    padding: 14px 20px !important; /* 調整 padding */
+    padding: 12px 16px !important; /* 減少 padding */
     font-size: 16px !important;
     white-space: nowrap; /* 防止文字換行 */
     min-height: 48px !important; /* 與輸入框同高 */
     border-radius: 8px !important; /* 稍微增加圓角 */
     flex-shrink: 0; /* 防止按鈕被壓縮 */
     width: auto; /* 讓按鈕寬度自適應 */
+    max-width: 80px; /* 限制最大寬度避免過大 */
   }
 }
   
