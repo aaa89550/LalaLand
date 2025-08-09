@@ -338,6 +338,21 @@ function loadFriendsList() {
     
     // 顯示好友列表在聊天區域
     displayFriendsInChat();
+    
+    // 添加窗口大小變化監聽器，重新載入好友列表以隱藏/顯示聊天按鈕
+    let resizeTimeout;
+    const handleResize = () => {
+        clearTimeout(resizeTimeout);
+        resizeTimeout = setTimeout(() => {
+            if (currentChat === "friends") {
+                displayFriendsInChat();
+            }
+        }, 250);
+    };
+    
+    // 移除舊的監聽器並添加新的
+    window.removeEventListener('resize', handleResize);
+    window.addEventListener('resize', handleResize);
 }
 
 // 在聊天區域顯示好友列表
@@ -394,6 +409,11 @@ function addFriendToList(friendId, friendData) {
     const friendDiv = document.createElement('div');
     friendDiv.className = 'friend-item';
     friendDiv.setAttribute('data-friend-id', friendId);
+    
+    // 檢查是否為手機版
+    const isMobile = window.innerWidth <= 600;
+    const chatButtonHtml = isMobile ? '' : `<button onclick="event.stopPropagation(); window.startPrivateChat('${friendId}')" class="desktop-only" style="background: linear-gradient(135deg, var(--sea-blue), var(--accent-green)); color: white; border: none; padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.2); transition: transform 0.2s ease;">💬 聊天</button>`;
+    
     friendDiv.innerHTML = `
         <div style="display: flex; align-items: center; padding: 15px; background: linear-gradient(135deg, #f8f9fa, #e3f2fd); border: 2px solid var(--accent-green); border-radius: 12px; margin-bottom: 12px; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 2px 6px rgba(0,0,0,0.1);">
             <img src="${friendData.avatar || 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'40\' height=\'40\' viewBox=\'0 0 40 40\'%3E%3Ccircle cx=\'20\' cy=\'20\' r=\'20\' fill=\'%23ddd\'/%3E%3Ctext x=\'20\' y=\'26\' text-anchor=\'middle\' fill=\'white\' font-size=\'16\'%3E👤%3C/text%3E%3C/svg%3E'}" 
@@ -404,7 +424,7 @@ function addFriendToList(friendId, friendData) {
                     <span style="color: var(--accent-green); margin-right: 4px;">●</span>好友
                 </div>
             </div>
-            <button onclick="event.stopPropagation(); window.startPrivateChat('${friendId}')" style="background: linear-gradient(135deg, var(--sea-blue), var(--accent-green)); color: white; border: none; padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.2); transition: transform 0.2s ease;">💬 聊天</button>
+            ${chatButtonHtml}
         </div>
     `;
     
@@ -2309,6 +2329,9 @@ function updateUserProfileDisplay() {
 window.switchChatRoom = function(room) {
   console.log('🔄 切換聊天室:', room);
   
+  // 退出手機版好友模式，顯示聊天相關元素
+  document.body.classList.remove('mobile-friends-mode');
+  
   // 移除所有標籤的active狀態
   document.querySelectorAll('.chat-tab').forEach(tab => {
     tab.classList.remove('active');
@@ -2452,6 +2475,8 @@ function initUserDropdownMenu() {
     document.getElementById('mobile-view-friends-btn')?.addEventListener('click', () => {
       closeMobileSidebar();
       loadFriendsList();
+      // 添加手機版好友模式類別，隱藏聊天相關元素
+      document.body.classList.add('mobile-friends-mode');
     });
     
     document.getElementById('edit-profile-btn')?.addEventListener('click', () => {
@@ -2476,6 +2501,24 @@ function initUserDropdownMenu() {
 // 頁面載入時的初始化檢查
 window.addEventListener('DOMContentLoaded', () => {
   console.log('🔄 頁面載入完成，檢查登入狀態');
+  
+  // 隱藏手機版聊天按鈕的函數
+  function hideMobileChatButtons() {
+    if (window.innerWidth <= 600) {
+      const chatButtons = document.querySelectorAll('button');
+      chatButtons.forEach(button => {
+        if (button.textContent.includes('💬 聊天')) {
+          button.style.display = 'none';
+        }
+      });
+    }
+  }
+  
+  // 頁面載入時執行一次
+  setTimeout(hideMobileChatButtons, 100);
+  
+  // 監聽窗口大小變化
+  window.addEventListener('resize', hideMobileChatButtons);
   
   // 如果在登入頁面，添加額外的保護
   const isLoginPage = window.location.pathname.includes('login.html') || 
