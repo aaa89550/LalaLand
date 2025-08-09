@@ -1420,13 +1420,14 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 });
 
-// 監聽登入狀態
-onAuthStateChanged(auth, async (user) => {
-  console.log('🔄 Auth state changed:', user ? `用戶已登入: ${user.uid}` : '用戶未登入');
-  
-  if (user) {
-    try {
-      console.log('🔐 處理已登入用戶:', user.uid);
+// 監聽登入狀態 - 確保 Firebase 已載入
+if (typeof window.onAuthStateChanged !== 'undefined' && auth) {
+  window.onAuthStateChanged(auth, async (user) => {
+    console.log('🔄 Auth state changed:', user ? `用戶已登入: ${user.uid}` : '用戶未登入');
+    
+    if (user) {
+      try {
+        console.log('🔐 處理已登入用戶:', user.uid);
       
       // 檢查當前頁面類型
       const isLoginPage = window.location.pathname.includes('login.html') || 
@@ -1612,7 +1613,10 @@ onAuthStateChanged(auth, async (user) => {
     }
     if (typeof hideLoading === 'function') hideLoading();
   }
-});
+  });
+} else {
+  console.log('⏳ onAuthStateChanged 尚未可用，稍後再設置');
+}
 
 document.addEventListener('click', (e) => {
   if (e.target.classList.contains('vote-option')) {
@@ -2117,13 +2121,14 @@ window.testPrivateNotification = function() {
 // ========= Firebase Auth 狀態監聽 & 用戶同步/好友機制 =========
 // 只在 login.html 才執行登入頁 UI 切換
 if (document.getElementById('login-page') && document.getElementById('register-page') && document.getElementById('auth-tabs')) {
-  onAuthStateChanged(auth, (user) => {
-    if (user) {
-      // ✅ 設定使用者資料
-      currentUser = {
-        uid: user.uid,
-        nickname: user.displayName ?? '',
-        avatar: user.photoURL ?? ''
+  if (typeof window.onAuthStateChanged !== 'undefined' && auth) {
+    window.onAuthStateChanged(auth, (user) => {
+      if (user) {
+        // ✅ 設定使用者資料
+        currentUser = {
+          uid: user.uid,
+          nickname: user.displayName ?? '',
+          avatar: user.photoURL ?? ''
       };
 
       // ✅ 初始化聊天室與監聽
@@ -2136,7 +2141,10 @@ if (document.getElementById('login-page') && document.getElementById('register-p
       document.getElementById('login-page').style.display = 'block';
       document.getElementById('register-page').style.display = 'none';
     }
-  });
+    });
+  } else {
+    console.log('⏳ 登入頁面 onAuthStateChanged 尚未可用');
+  }
 }
 
 
