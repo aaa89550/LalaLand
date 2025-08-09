@@ -1836,18 +1836,19 @@ function sendMessage() {
 }
 
 
-// 長按回覆設定
+// 長按回覆設定 - 只在聊天頁面執行
 const chatDiv = document.getElementById('chat');
-let holdTimer = null;
-let holdStartX = 0, holdStartY = 0;
+if (chatDiv) {
+  let holdTimer = null;
+  let holdStartX = 0, holdStartY = 0;
 
-chatDiv.addEventListener('touchstart', function(e) {
-  const bubble = e.target.closest('.bubble');
-  if (!bubble || window.innerWidth > 600) return;
+  chatDiv.addEventListener('touchstart', function(e) {
+    const bubble = e.target.closest('.bubble');
+    if (!bubble || window.innerWidth > 600) return;
 
-  const touch = e.touches[0];
-  holdStartX = touch.clientX;
-  holdStartY = touch.clientY;
+    const touch = e.touches[0];
+    holdStartX = touch.clientX;
+    holdStartY = touch.clientY;
 
   holdTimer = setTimeout(() => {
     const msgDiv = bubble.closest('.msg');
@@ -1860,32 +1861,35 @@ chatDiv.addEventListener('touchstart', function(e) {
   }, 500);
 });
 
-chatDiv.addEventListener('touchmove', function(e) {
-  const touch = e.touches[0];
-  const dx = Math.abs(touch.clientX - holdStartX);
-  const dy = Math.abs(touch.clientY - holdStartY);
-  if (dx > 10 || dy > 10) {
+  chatDiv.addEventListener('touchmove', function(e) {
+    const touch = e.touches[0];
+    const dx = Math.abs(touch.clientX - holdStartX);
+    const dy = Math.abs(touch.clientY - holdStartY);
+    if (dx > 10 || dy > 10) {
+      clearTimeout(holdTimer);
+    }
+  });
+
+  chatDiv.addEventListener('touchend', function() {
     clearTimeout(holdTimer);
-  }
-});
+  });
 
-chatDiv.addEventListener('touchend', function() {
-  clearTimeout(holdTimer);
-});
+  chatDiv.addEventListener('contextmenu', function(e) {
+    const bubble = e.target.closest('.bubble');
+    if (!bubble || window.innerWidth <= 600) return;
 
-chatDiv.addEventListener('contextmenu', function(e) {
-  const bubble = e.target.closest('.bubble');
-  if (!bubble || window.innerWidth <= 600) return;
-
-  e.preventDefault();
-  const msgDiv = bubble.closest('.msg');
-  const msgId = msgDiv?.getAttribute('data-msgid');
-  const msgObj = messageMap[msgId];
-  if (msgId && msgObj) {
-    console.log('🖱️ 桌機右鍵觸發 reply');
-    setReplyTarget(msgId, msgObj);
-  }
-});
+    e.preventDefault();
+    const msgDiv = bubble.closest('.msg');
+    const msgId = msgDiv?.getAttribute('data-msgid');
+    const msgObj = messageMap[msgId];
+    if (msgId && msgObj) {
+      console.log('🖱️ 桌機右鍵觸發 reply');
+      setReplyTarget(msgId, msgObj);
+    }
+  });
+} else {
+  console.log('⚠️ Chat div not found, skipping long-press reply setup');
+}
 
 
 // 回覆邏輯
