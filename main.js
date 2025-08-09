@@ -441,21 +441,22 @@ function addFriendToList(friendId, friendData) {
         </div>
     `;
     
-    // 使用更強大的事件處理
+    // 使用更強大的事件處理 - 移除 preventDefault 以避免與全域事件衝突
     friendDiv.addEventListener('click', (e) => {
-        console.log('👆 Friend clicked:', friendId, 'target:', e.target);
-        e.preventDefault();
-        e.stopPropagation();
-        startPrivateChat(friendId);
+        console.log('👆 Friend clicked (direct):', friendId, 'target:', e.target);
+        // 讓全域事件處理器來處理，不要在這裡阻止事件
+        // e.preventDefault();
+        // e.stopPropagation();
+        // startPrivateChat(friendId);
     });
     
-    // 添加觸摸事件支持手機版
-    friendDiv.addEventListener('touchend', (e) => {
-        console.log('📱 Friend touched:', friendId);
-        e.preventDefault();
-        e.stopPropagation();
-        startPrivateChat(friendId);
-    });
+    // 移除直接的觸摸事件，讓全域處理器統一處理
+    // friendDiv.addEventListener('touchend', (e) => {
+    //     console.log('📱 Friend touched (direct):', friendId);
+    //     e.preventDefault();
+    //     e.stopPropagation();
+    //     startPrivateChat(friendId);
+    // });
     
     chatContainer.appendChild(friendDiv);
     console.log('✅ Friend added to DOM:', friendId);
@@ -733,21 +734,22 @@ function addPrivateChatToList(chat, userData) {
         </div>
     `;
     
-    // 使用多重事件處理
+    // 使用更強大的事件處理 - 移除 preventDefault 以避免與全域事件衝突
     chatDiv.addEventListener('click', (e) => {
-        console.log('💬 Private chat clicked:', chat.roomId);
-        e.preventDefault();
-        e.stopPropagation();
-        enterRoom(chat.roomId, `與${userData.nickname}的對話`);
+        console.log('💬 Private chat clicked (direct):', chat.roomId);
+        // 讓全域事件處理器來處理，不要在這裡阻止事件
+        // e.preventDefault();
+        // e.stopPropagation();
+        // enterRoom(chat.roomId, `與${userData.nickname}的對話`);
     });
     
-    // 添加觸摸事件支持手機版
-    chatDiv.addEventListener('touchend', (e) => {
-        console.log('📱 Private chat touched:', chat.roomId);
-        e.preventDefault();
-        e.stopPropagation();
-        enterRoom(chat.roomId, `與${userData.nickname}的對話`);
-    });
+    // 移除直接的觸摸事件，讓全域處理器統一處理
+    // chatDiv.addEventListener('touchend', (e) => {
+    //     console.log('📱 Private chat touched (direct):', chat.roomId);
+    //     e.preventDefault();
+    //     e.stopPropagation();
+    //     enterRoom(chat.roomId, `與${userData.nickname}的對話`);
+    // });
     
     chatContainer.appendChild(chatDiv);
 }
@@ -2599,6 +2601,8 @@ window.addEventListener('DOMContentLoaded', () => {
   
   // 添加全域事件委派處理好友點擊
   document.body.addEventListener('click', (e) => {
+    console.log('🖱️ Global click event:', e.target, 'data-friend-click:', e.target.getAttribute('data-friend-click'), 'data-private-click:', e.target.getAttribute('data-private-click'));
+    
     const friendClickId = e.target.getAttribute('data-friend-click');
     if (friendClickId) {
       console.log('🎯 Global friend click detected:', friendClickId);
@@ -2620,8 +2624,10 @@ window.addEventListener('DOMContentLoaded', () => {
     }
   });
   
-  // 添加觸摸事件支持
-  document.body.addEventListener('touchend', (e) => {
+  // 使用 touchstart 而不是 touchend 獲得更好的響應
+  document.body.addEventListener('touchstart', (e) => {
+    console.log('📱 Global touchstart event:', e.target, 'data-friend-click:', e.target.getAttribute('data-friend-click'), 'data-private-click:', e.target.getAttribute('data-private-click'));
+    
     const friendClickId = e.target.getAttribute('data-friend-click');
     if (friendClickId) {
       console.log('📱 Global friend touch detected:', friendClickId);
@@ -2638,6 +2644,27 @@ window.addEventListener('DOMContentLoaded', () => {
       console.log('📱 Global private chat touch detected:', privateClickId);
       e.preventDefault();
       e.stopPropagation();
+      enterRoom(privateClickId, privateTitle || '私人對話');
+      return;
+    }
+  });
+  
+  // 保留 touchend 作為備用
+  document.body.addEventListener('touchend', (e) => {
+    const friendClickId = e.target.getAttribute('data-friend-click');
+    if (friendClickId) {
+      console.log('📱 Global friend touchend detected:', friendClickId);
+      // 不使用 preventDefault，避免干擾 touchstart
+      startPrivateChat(friendClickId);
+      return;
+    }
+    
+    // 處理私訊觸摸結束
+    const privateClickId = e.target.getAttribute('data-private-click');
+    const privateTitle = e.target.getAttribute('data-private-title');
+    if (privateClickId) {
+      console.log('📱 Global private chat touchend detected:', privateClickId);
+      // 不使用 preventDefault，避免干擾 touchstart
       enterRoom(privateClickId, privateTitle || '私人對話');
       return;
     }
