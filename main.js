@@ -118,9 +118,10 @@ function setupApplication() {
     setupLoginPage();
   }
   
-  // 設置認證狀態監聽器
-  if (typeof onAuthStateChanged !== 'undefined' && auth) {
-    onAuthStateChanged(auth, (user) => {
+  // 只有在 Firebase 完全載入後才設置認證監聽器
+  if (firebaseLoaded && typeof window.onAuthStateChanged !== 'undefined' && auth) {
+    console.log('🔐 設置認證狀態監聽器...');
+    window.onAuthStateChanged(auth, (user) => {
       console.log('🔐 認證狀態變更:', user ? '已登入' : '未登入');
       if (user) {
         console.log('👤 用戶ID:', user.uid);
@@ -134,9 +135,38 @@ function setupApplication() {
         }
       }
     });
+  } else {
+    console.log('⏳ Firebase 尚未載入完成，稍後再設置認證監聽器');
+    // 稍後再嘗試設置認證監聽器
+    setTimeout(() => {
+      if (firebaseLoaded && typeof window.onAuthStateChanged !== 'undefined' && auth) {
+        console.log('🔐 延遲設置認證狀態監聽器...');
+        window.onAuthStateChanged(auth, (user) => {
+          console.log('🔐 認證狀態變更:', user ? '已登入' : '未登入');
+          if (user) {
+            console.log('👤 用戶ID:', user.uid);
+            console.log('📧 用戶Email:', user.email);
+            
+            // 如果在登入頁面且有 sessionStorage 標記，則跳轉
+            if (window.location.pathname.includes('login.html') && 
+                sessionStorage.getItem('isLoginRedirect') === 'true') {
+              sessionStorage.removeItem('isLoginRedirect');
+              window.location.href = "announce.html";
+            }
+          }
+        });
+      }
+    }, 1000);
   }
   
   console.log('✅ 應用程式初始化完成');
+  
+  // 確保全域函數可用
+  if (typeof window.switchChatRoom === 'function') {
+    console.log('✅ switchChatRoom 函數已準備就緒');
+  } else {
+    console.error('❌ switchChatRoom 函數未正確載入');
+  }
 }
 
 // 設置登入頁面功能
@@ -190,7 +220,7 @@ function setupLoginPage() {
       console.log('📧 嘗試登入:', email);
       
       // 檢查 Firebase 是否已載入
-      if (!firebaseLoaded || !auth || typeof signInWithEmailAndPassword === 'undefined') {
+      if (!firebaseLoaded || !auth || typeof window.signInWithEmailAndPassword === 'undefined') {
         console.log('⏳ Firebase 尚未載入完成，等待...');
         alert('系統初始化中，請稍後再試');
         return;
@@ -198,7 +228,7 @@ function setupLoginPage() {
       
       try {
         console.log('🔐 開始驗證用戶...');
-        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        const userCredential = await window.signInWithEmailAndPassword(auth, email, password);
         console.log('✅ 登入成功:', userCredential.user.uid);
         
         // 設置跳轉標記

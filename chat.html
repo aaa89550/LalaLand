@@ -204,19 +204,28 @@
         document.getElementById('loader').classList.add('hide');
       }, 600);
       
-      // 檢查全域函數是否可用
+      // 檢查全域函數是否可用 - 增加延遲確保 main.js 完全載入
       setTimeout(() => {
         if (typeof window.switchChatRoom === 'function') {
           console.log('✅ switchChatRoom 函數已準備就緒');
         } else {
-          console.error('❌ switchChatRoom 函數未找到');
-          // 提供後備函數
-          window.switchChatRoom = function(room) {
-            console.log('🔄 後備：切換聊天室:', room);
-            alert('正在切換到：' + room + ' 聊天室');
-          };
+          console.error('❌ switchChatRoom 函數未找到，等待更長時間...');
+          
+          // 再等待一段時間
+          setTimeout(() => {
+            if (typeof window.switchChatRoom === 'function') {
+              console.log('✅ switchChatRoom 函數延遲載入成功');
+            } else {
+              console.error('❌ switchChatRoom 函數最終未找到');
+              // 提供後備函數
+              window.switchChatRoom = function(room) {
+                console.log('🔄 後備：切換聊天室:', room);
+                alert('正在切換到：' + room + ' 聊天室');
+              };
+            }
+          }, 2000);
         }
-      }, 1000);
+      }, 2000); // 增加到 2 秒
     });
   </script>
   <script src="splash.js"></script>
