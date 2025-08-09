@@ -1,3 +1,18 @@
+// 🚨 最基本的載入測試 - 放在文件最頂部
+console.log('🚀 MAIN.JS LOADED - JavaScript is working!');
+console.log('📅 Current time:', new Date().toLocaleString());
+console.log('📱 User agent:', navigator.userAgent);
+console.log('🌐 Window size:', window.innerWidth, 'x', window.innerHeight);
+
+// 添加全域錯誤處理
+window.addEventListener('error', (e) => {
+  console.error('🚨 JavaScript Error:', e.error, e.message, e.filename, e.lineno);
+});
+
+window.addEventListener('unhandledrejection', (e) => {
+  console.error('🚨 Unhandled Promise Rejection:', e.reason);
+});
+
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
   getDatabase, ref, push, get, onChildAdded, onValue, set, child, update, onDisconnect, query, limitToLast, off, onChildChanged, runTransaction, orderByKey
@@ -2611,6 +2626,12 @@ function initUserDropdownMenu() {
 // 頁面載入時的初始化檢查
 window.addEventListener('DOMContentLoaded', () => {
   console.log('🔄 頁面載入完成，檢查登入狀態');
+  
+  // 🚨 超級簡單的測試 - 立即執行
+  setTimeout(() => {
+    console.log('⏰ 延遲測試 - 1秒後執行');
+    alert('JavaScript 測試：如果看到這個彈窗，表示 JS 正常工作！');
+  }, 1000);
   
   // 基本點擊測試
   document.body.addEventListener('click', (e) => {
