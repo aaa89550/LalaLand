@@ -1352,9 +1352,8 @@ button:hover {
     display: none !important;
   }
   
-  /* 手機版我的好友模式 - 隱藏聊天相關元素 */
+  /* 手機版我的好友模式 - 隱藏聊天相關元素，但保留好友列表顯示 */
   body.mobile-friends-mode #chat-tabs,
-  body.mobile-friends-mode #chat,
   body.mobile-friends-mode #input-area,
   body.mobile-friends-mode #plus-menu,
   body.mobile-friends-mode #emoji-picker,

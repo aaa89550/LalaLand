@@ -358,22 +358,15 @@ function loadFriendsList() {
 // 在聊天區域顯示好友列表
 function displayFriendsInChat() {
     const user = auth.currentUser;
-    console.log('displayFriendsInChat called, user:', user);
-    if (!user) {
-        console.log('No authenticated user, returning');
-        return;
-    }
+    if (!user) return;
     
     const chatContainer = document.getElementById('chat');
-    console.log('Setting loading message');
     chatContainer.innerHTML = '<div style="text-align: center; color: #999; padding: 20px;">載入好友列表中...</div>';
     
     // 從Firebase獲取好友列表 - 修正路徑與addFriend函數一致
     const friendsRef = ref(db, `users/${user.uid}/friends`);
-    console.log('Listening to friends data at path:', `users/${user.uid}/friends`);
     onValue(friendsRef, (snapshot) => {
         const friends = snapshot.val() || {};
-        console.log('Friends data received:', friends);
         displayFriends(Object.keys(friends));
     });
 }
@@ -381,10 +374,8 @@ function displayFriendsInChat() {
 // 顯示好友列表
 function displayFriends(friendIds) {
     const chatContainer = document.getElementById('chat');
-    console.log('displayFriends called with friendIds:', friendIds);
     
     if (friendIds.length === 0) {
-        console.log('No friends found, showing empty message');
         chatContainer.innerHTML = `
             <div style="text-align: center; color: #999; padding: 40px;">
                 <p>還沒有好友</p>
@@ -394,16 +385,13 @@ function displayFriends(friendIds) {
         return;
     }
     
-    console.log('Setting up friends list header');
     chatContainer.innerHTML = '<div style="padding: 10px;"><h4 style="margin: 0 0 15px 0; color: var(--sea-blue); background: linear-gradient(135deg, var(--sea-light), var(--accent-green)); padding: 8px; border-radius: 6px; text-align: center;">👥 我的好友</h4></div>';
     
     friendIds.forEach(friendId => {
-        console.log('Processing friend:', friendId);
         // 獲取好友資料
         const userRef = ref(db, `users/${friendId}`);
         onValue(userRef, (snapshot) => {
             const friendData = snapshot.val();
-            console.log('Friend data received for', friendId, ':', friendData);
             if (friendData) {
                 addFriendToList(friendId, friendData);
             }
@@ -424,7 +412,6 @@ function addFriendToList(friendId, friendData) {
     
     // 檢查是否為手機版
     const isMobile = window.innerWidth <= 600;
-    console.log('addFriendToList - isMobile:', isMobile, 'window.innerWidth:', window.innerWidth);
     const chatButtonHtml = isMobile ? '' : `<button onclick="event.stopPropagation(); window.startPrivateChat('${friendId}')" class="desktop-only" style="background: linear-gradient(135deg, var(--sea-blue), var(--accent-green)); color: white; border: none; padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.2); transition: transform 0.2s ease;">💬 聊天</button>`;
     
     friendDiv.innerHTML = `
