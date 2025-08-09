@@ -374,6 +374,7 @@ function displayFriendsInChat() {
 // 顯示好友列表
 function displayFriends(friendIds) {
     const chatContainer = document.getElementById('chat');
+    console.log('💫 displayFriends called with', friendIds.length, 'friends:', friendIds);
     
     if (friendIds.length === 0) {
         chatContainer.innerHTML = `
@@ -388,14 +389,20 @@ function displayFriends(friendIds) {
     chatContainer.innerHTML = '<div style="padding: 10px;"><h4 style="margin: 0 0 15px 0; color: var(--sea-blue); background: linear-gradient(135deg, var(--sea-light), var(--accent-green)); padding: 8px; border-radius: 6px; text-align: center;">👥 我的好友</h4></div>';
     
     friendIds.forEach(friendId => {
-        // 獲取好友資料
+        console.log('🔍 Loading friend data for:', friendId);
+        // 使用 get 而不是 onValue 避免重複監聽器
         const userRef = ref(db, `users/${friendId}`);
-        onValue(userRef, (snapshot) => {
+        get(userRef).then((snapshot) => {
             const friendData = snapshot.val();
+            console.log('📥 Friend data received for', friendId, ':', friendData);
             if (friendData) {
                 addFriendToList(friendId, friendData);
+            } else {
+                console.warn('⚠️ No data found for friend:', friendId);
             }
-        }, { once: true });
+        }).catch(error => {
+            console.error('❌ Error loading friend data for', friendId, ':', error);
+        });
     });
 }
 
@@ -404,7 +411,12 @@ function addFriendToList(friendId, friendData) {
     const chatContainer = document.getElementById('chat');
     const existingFriend = chatContainer.querySelector(`[data-friend-id="${friendId}"]`);
     
-    if (existingFriend) return; // 避免重複添加
+    console.log('➕ Adding friend to list:', friendId, friendData);
+    
+    if (existingFriend) {
+        console.log('⚠️ Friend already exists in list:', friendId);
+        return; // 避免重複添加
+    }
     
     const friendDiv = document.createElement('div');
     friendDiv.className = 'friend-item';
@@ -412,6 +424,7 @@ function addFriendToList(friendId, friendData) {
     
     // 檢查是否為手機版
     const isMobile = window.innerWidth <= 600;
+    console.log('📱 Mobile check for friend', friendId, '- isMobile:', isMobile, 'width:', window.innerWidth);
     const chatButtonHtml = isMobile ? '' : `<button onclick="event.stopPropagation(); window.startPrivateChat('${friendId}')" class="desktop-only" style="background: linear-gradient(135deg, var(--sea-blue), var(--accent-green)); color: white; border: none; padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.2); transition: transform 0.2s ease;">💬 聊天</button>`;
     
     friendDiv.innerHTML = `
@@ -429,15 +442,23 @@ function addFriendToList(friendId, friendData) {
     `;
     
     friendDiv.addEventListener('click', () => {
+        console.log('👆 Friend clicked:', friendId);
         startPrivateChat(friendId);
     });
     
     chatContainer.appendChild(friendDiv);
+    console.log('✅ Friend added to DOM:', friendId);
 }
 
 // 開始私人對話
 window.startPrivateChat = function(friendId) {
-    if (!friendId || !currentUser) return;
+    console.log('🚀 startPrivateChat called with friendId:', friendId);
+    console.log('👤 currentUser:', currentUser);
+    
+    if (!friendId || !currentUser) {
+        console.error('❌ startPrivateChat failed - missing friendId or currentUser');
+        return;
+    }
     
     console.log('🔄 開始與好友聊天:', friendId);
     
@@ -446,11 +467,15 @@ window.startPrivateChat = function(friendId) {
         ? `${currentUser.uid}_${friendId}` 
         : `${friendId}_${currentUser.uid}`;
     
+    console.log('🏠 Generated roomId:', roomId);
+    
     // 獲取好友暱稱並進入聊天室
     get(ref(db, `users/${friendId}/nickname`)).then((snapshot) => {
         const friendNickname = snapshot.val() || '好友';
+        console.log('👋 Friend nickname:', friendNickname);
         enterRoom(roomId, `與${friendNickname}的對話`);
-    }).catch(() => {
+    }).catch((error) => {
+        console.error('⚠️ Error getting friend nickname:', error);
         enterRoom(roomId, '私人對話');
     });
 };
@@ -649,7 +674,6 @@ function addPrivateChatToList(chat, userData) {
                 <div style="font-size: 12px; color: #666; margin-bottom: 2px;">${lastMessageText}</div>
                 <div style="font-size: 10px; color: #999;">${timeStr}</div>
             </div>
-            <button class="desktop-enter-btn" onclick="event.stopPropagation(); enterRoom('${chat.roomId}', '與${userData.nickname}的對話')" style="background: var(--sea-blue); color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer;">開啟</button>
         </div>
     `;
     
