@@ -1514,8 +1514,9 @@ button:hover {
     min-height: 48px !important; /* 與輸入框同高 */
     border-radius: 8px !important; /* 稍微增加圓角 */
     flex-shrink: 0; /* 防止按鈕被壓縮 */
-    width: auto; /* 讓按鈕寬度自適應 */
+    width: auto !important; /* 覆蓋通用的width: 100%設定 */
     max-width: 80px; /* 限制最大寬度避免過大 */
+    margin: 0 !important; /* 覆蓋通用的margin設定 */
   }
 }
   
