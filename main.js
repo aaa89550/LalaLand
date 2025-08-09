@@ -459,6 +459,9 @@ window.startPrivateChat = function(friendId) {
 window.enterRoom = function(roomId, title) {
     console.log('🔄 進入聊天室:', roomId, title);
     
+    // 退出手機版好友模式，顯示聊天相關元素
+    document.body.classList.remove('mobile-friends-mode');
+    
     // 切換到私訊標籤
     const privateTab = document.querySelector('.chat-tab[data-room="private"]');
     if (privateTab) {
