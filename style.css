@@ -43,7 +43,6 @@
   --dark-card: #2a2a2a;
   --dark-text: #f0f0f0;
   --dark-accent: #78c6b0;
-}
 
 /* ========================================
    基礎重置與全域樣式
@@ -274,6 +273,7 @@ button:hover {
   margin-top: 9px;
   letter-spacing: 1px;
   box-shadow: 0 2px 8px #2877b91a;
+  position: relative; /* 確保菜單能相對定位 */
 }
 
 .plus-btn:hover {
@@ -982,8 +982,8 @@ button:hover {
    訊息輸入區域
 ======================================== */
 
-/* 手機版 + 按鈕區域 */
-#mobile-plus-area {
+/* 手機版 + 按鈕容器 */
+#plus-container {
   display: none; /* 桌機版隱藏 */
   padding: 8px 12px;
   background: transparent;
@@ -993,37 +993,50 @@ button:hover {
 /* 電腦版專用樣式 */
 .desktop-only {
   display: inline-block;
-  position: relative; /* 讓菜單能相對於按鈕定位 */
+  position: relative;
+  vertical-align: middle;
 }
 
-/* + 按鈕菜單 */
+/* 手機版專用樣式 */
+.mobile-only {
+  display: none;
+  position: relative;
+}
+
+/* 電腦版 + 按鈕菜單 */
 #plus-menu {
   position: absolute;
-  bottom: 100%; /* 電腦版顯示在按鈕上方 */
-  left: 0; /* 與按鈕對齊 */
+  top: 48px;
+  left: 0;
   background: white;
   border: 1px solid #ddd;
   border-radius: 8px;
   padding: 8px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-  z-index: 1000;
+  z-index: 2001;
   display: flex;
   gap: 8px;
-  margin-bottom: 8px; /* 添加間距 */
+  margin-top: 4px;
+  white-space: nowrap;
+  min-width: 120px;
 }
 
+/* 手機版 + 按鈕菜單 */
 #plus-menu-mobile {
   position: absolute;
-  top: 100%; /* 改回手機版原來的設定 */
-  left: 12px;
+  top: 44px;
+  left: 0;
   background: white;
   border: 1px solid #ddd;
   border-radius: 8px;
   padding: 8px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-  z-index: 1000;
+  z-index: 2001;
   display: flex;
   gap: 8px;
+  margin-top: 4px;
+  white-space: nowrap;
+  min-width: 120px;
 }
 
 #input-area {
@@ -1457,20 +1470,25 @@ button:hover {
     margin-bottom: 6px !important;
   }
   
-  /* 手機版顯示 + 按鈕區域 */
-  #mobile-plus-area {
+  /* 手機版顯示 + 按鈕區域在上方 */
+  #plus-container {
     display: block !important;
     padding: 8px 12px;
     text-align: left;
   }
   
-  /* 手機版隱藏電腦版的 + 按鈕 */
+  /* 手機版顯示手機版按鈕，隱藏電腦版按鈕 */
+  .mobile-only {
+    display: inline-block !important;
+    position: relative;
+  }
+  
   .desktop-only {
     display: none !important;
   }
   
   #input-area {
-    gap: 10px; /* 增加間距 */
+    gap: 12px; /* 增加間距 */
     flex-direction: row; /* 改為水平排列 */
     padding: 12px 16px; /* 增加 padding */
     margin-top: 6px;
@@ -1498,9 +1516,7 @@ button:hover {
     flex-shrink: 0; /* 防止按鈕被壓縮 */
     width: auto; /* 讓按鈕寬度自適應 */
   }
-  #send:hover {
-    background: var(--sea-blue);
-  }
+}
   
   /* 手機版隱藏私訊桌面按鈕 */
   .desktop-enter-btn {

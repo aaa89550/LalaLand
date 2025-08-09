@@ -17,8 +17,8 @@ export function initExtras() {
   const uploadBtnMobile = document.getElementById('upload-btn-mobile');
   const uploadInputMobile = document.getElementById('upload-input-mobile');
   
-  // 電腦版 emoji 按鈕
-  if (emojiBtn) {
+  // 電腦版事件
+  if (emojiBtn && emojiPicker && plusMenu) {
     emojiBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       emojiPicker.style.display = emojiPicker.style.display === 'block' ? 'none' : 'block';
@@ -26,8 +26,8 @@ export function initExtras() {
     });
   }
   
-  // 手機版 emoji 按鈕
-  if (emojiBtnMobile) {
+  // 手機版 emoji 事件
+  if (emojiBtnMobile && emojiPicker && plusMenuMobile) {
     emojiBtnMobile.addEventListener('click', (e) => {
       e.stopPropagation();
       emojiPicker.style.display = emojiPicker.style.display === 'block' ? 'none' : 'block';
@@ -35,40 +35,41 @@ export function initExtras() {
     });
   }
 
-  // 電腦版上傳按鈕
+  // 電腦版上傳
   if (uploadBtn && uploadInput) {
     uploadBtn.addEventListener('click', () => {
-      uploadInput.value = ''; // ✅ 重設檔案欄位
+      uploadInput.value = '';
       uploadInput.click();
     });
   }
   
-  // 手機版上傳按鈕
+  // 手機版上傳
   if (uploadBtnMobile && uploadInputMobile) {
     uploadBtnMobile.addEventListener('click', () => {
-      uploadInputMobile.value = ''; // ✅ 重設檔案欄位
+      uploadInputMobile.value = '';
       uploadInputMobile.click();
     });
   }
   
-
-  setupEmojiInsertion('#msg'); // 假設你的輸入框 id 是 msg
+  setupEmojiInsertion('#msg');
 
   // 電腦版 + 按鈕
-  if (plusBtn) {
+  if (plusBtn && plusMenu) {
     plusBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       plusMenu.style.display = plusMenu.style.display === 'block' ? 'none' : 'block';
-      emojiPicker.style.display = 'none';
+      if (emojiPicker) emojiPicker.style.display = 'none';
+      if (plusMenuMobile) plusMenuMobile.style.display = 'none';
     });
   }
   
   // 手機版 + 按鈕
-  if (plusBtnMobile) {
+  if (plusBtnMobile && plusMenuMobile) {
     plusBtnMobile.addEventListener('click', (e) => {
       e.stopPropagation();
       plusMenuMobile.style.display = plusMenuMobile.style.display === 'block' ? 'none' : 'block';
-      emojiPicker.style.display = 'none';
+      if (emojiPicker) emojiPicker.style.display = 'none';
+      if (plusMenu) plusMenu.style.display = 'none';
     });
   }
 
