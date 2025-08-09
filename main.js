@@ -428,21 +428,32 @@ function addFriendToList(friendId, friendData) {
     const chatButtonHtml = isMobile ? '' : `<button onclick="event.stopPropagation(); window.startPrivateChat('${friendId}')" class="desktop-only" style="background: linear-gradient(135deg, var(--sea-blue), var(--accent-green)); color: white; border: none; padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.2); transition: transform 0.2s ease;">💬 聊天</button>`;
     
     friendDiv.innerHTML = `
-        <div style="display: flex; align-items: center; padding: 15px; background: linear-gradient(135deg, #f8f9fa, #e3f2fd); border: 2px solid var(--accent-green); border-radius: 12px; margin-bottom: 12px; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 2px 6px rgba(0,0,0,0.1);">
+        <div style="display: flex; align-items: center; padding: 15px; background: linear-gradient(135deg, #f8f9fa, #e3f2fd); border: 2px solid var(--accent-green); border-radius: 12px; margin-bottom: 12px; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 2px 6px rgba(0,0,0,0.1);" data-friend-click="${friendId}">
             <img src="${friendData.avatar || 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'40\' height=\'40\' viewBox=\'0 0 40 40\'%3E%3Ccircle cx=\'20\' cy=\'20\' r=\'20\' fill=\'%23ddd\'/%3E%3Ctext x=\'20\' y=\'26\' text-anchor=\'middle\' fill=\'white\' font-size=\'16\'%3E👤%3C/text%3E%3C/svg%3E'}" 
-                 style="width: 60px; height: 60px; border-radius: 50%; margin-right: 15px; object-fit: cover; border: 3px solid var(--accent-green); box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
-            <div style="flex: 1;">
-                <div style="font-weight: 700; color: var(--sea-dark); margin-bottom: 4px; font-size: 16px;">👥 ${friendData.nickname || '匿名用戶'}</div>
-                <div style="font-size: 12px; color: #666; display: flex; align-items: center;">
-                    <span style="color: var(--accent-green); margin-right: 4px;">●</span>好友
+                 style="width: 60px; height: 60px; border-radius: 50%; margin-right: 15px; object-fit: cover; border: 3px solid var(--accent-green); box-shadow: 0 2px 4px rgba(0,0,0,0.2);" data-friend-click="${friendId}">
+            <div style="flex: 1;" data-friend-click="${friendId}">
+                <div style="font-weight: 700; color: var(--sea-dark); margin-bottom: 4px; font-size: 16px;" data-friend-click="${friendId}">👥 ${friendData.nickname || '匿名用戶'}</div>
+                <div style="font-size: 12px; color: #666; display: flex; align-items: center;" data-friend-click="${friendId}">
+                    <span style="color: var(--accent-green); margin-right: 4px;" data-friend-click="${friendId}">●</span>好友
                 </div>
             </div>
             ${chatButtonHtml}
         </div>
     `;
     
-    friendDiv.addEventListener('click', () => {
-        console.log('👆 Friend clicked:', friendId);
+    // 使用更強大的事件處理
+    friendDiv.addEventListener('click', (e) => {
+        console.log('👆 Friend clicked:', friendId, 'target:', e.target);
+        e.preventDefault();
+        e.stopPropagation();
+        startPrivateChat(friendId);
+    });
+    
+    // 添加觸摸事件支持手機版
+    friendDiv.addEventListener('touchend', (e) => {
+        console.log('📱 Friend touched:', friendId);
+        e.preventDefault();
+        e.stopPropagation();
         startPrivateChat(friendId);
     });
     
@@ -2528,6 +2539,28 @@ function initUserDropdownMenu() {
 // 頁面載入時的初始化檢查
 window.addEventListener('DOMContentLoaded', () => {
   console.log('🔄 頁面載入完成，檢查登入狀態');
+  
+  // 添加全域事件委派處理好友點擊
+  document.body.addEventListener('click', (e) => {
+    const friendClickId = e.target.getAttribute('data-friend-click');
+    if (friendClickId) {
+      console.log('🎯 Global friend click detected:', friendClickId);
+      e.preventDefault();
+      e.stopPropagation();
+      startPrivateChat(friendClickId);
+    }
+  });
+  
+  // 添加觸摸事件支持
+  document.body.addEventListener('touchend', (e) => {
+    const friendClickId = e.target.getAttribute('data-friend-click');
+    if (friendClickId) {
+      console.log('📱 Global friend touch detected:', friendClickId);
+      e.preventDefault();
+      e.stopPropagation();
+      startPrivateChat(friendClickId);
+    }
+  });
   
   // 隱藏手機版聊天按鈕的函數
   function hideMobileChatButtons() {
