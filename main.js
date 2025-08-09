@@ -441,6 +441,9 @@ function addFriendToList(friendId, friendData) {
         </div>
     `;
     
+    // 添加直接的 onclick 屬性作為備用
+    friendDiv.setAttribute('onclick', `console.log('🎯 ONCLICK BACKUP triggered for ${friendId}'); startPrivateChat('${friendId}');`);
+    
     // 使用更強大的事件處理 - 移除 preventDefault 以避免與全域事件衝突
     friendDiv.addEventListener('click', (e) => {
         console.log('👆 Friend clicked (direct):', friendId, 'target:', e.target);
@@ -460,6 +463,16 @@ function addFriendToList(friendId, friendData) {
     
     chatContainer.appendChild(friendDiv);
     console.log('✅ Friend added to DOM:', friendId);
+    
+    // 確認元素已正確添加並有正確的屬性
+    setTimeout(() => {
+        const addedElement = chatContainer.querySelector(`[data-friend-id="${friendId}"]`);
+        if (addedElement) {
+            console.log('✅ Element verification - found in DOM with data-friend-click:', addedElement.querySelector('[data-friend-click]'));
+        } else {
+            console.error('❌ Element verification - NOT found in DOM');
+        }
+    }, 100);
 }
 
 // 開始私人對話
@@ -2598,6 +2611,16 @@ function initUserDropdownMenu() {
 // 頁面載入時的初始化檢查
 window.addEventListener('DOMContentLoaded', () => {
   console.log('🔄 頁面載入完成，檢查登入狀態');
+  
+  // 基本點擊測試
+  document.body.addEventListener('click', (e) => {
+    console.log('🖱️ BASIC CLICK TEST - Any click detected:', e.target.tagName, e.target.className, e.target);
+  });
+  
+  // 基本觸摸測試
+  document.body.addEventListener('touchstart', (e) => {
+    console.log('📱 BASIC TOUCH TEST - Any touch detected:', e.target.tagName, e.target.className, e.target);
+  });
   
   // 添加全域事件委派處理好友點擊
   document.body.addEventListener('click', (e) => {
