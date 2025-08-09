@@ -1,275 +1,36 @@
-// 🚨 最基本的載入測試 - 放在文件最頂部
-console.log('🚀 MAIN.JS LOADED - JavaScript is working!');
-console.log('📅 Current time:', new Date().toLocaleString());
-console.log('📱 User agent:', navigator.userAgent);
-console.log('🌐 Window size:', window.innerWidth, 'x', window.innerHeight);
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import {
+  getDatabase, ref, push, get, onChildAdded, onValue, set, child, update, onDisconnect, query, limitToLast, off, onChildChanged, runTransaction, orderByKey
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+import {
+  getStorage, ref as sRef, uploadBytes, getDownloadURL
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
+import {
+  getAuth,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  onAuthStateChanged,
+  signOut,
+  updateProfile,
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-// 添加全域錯誤處理
-window.addEventListener('error', (e) => {
-  console.error('🚨 JavaScript Error:', e.error, e.message, e.filename, e.lineno);
-});
-
-window.addEventListener('unhandledrejection', (e) => {
-  console.error('🚨 Unhandled Promise Rejection:', e.reason);
-});
-
-// 嘗試修正 CORB 問題 - 使用動態 import
-let firebaseLoaded = false;
-let db, auth, storage;
-
-async function loadFirebase() {
-  try {
-    console.log('🔄 開始載入 Firebase...');
-    
-    const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js");
-    const firebaseDb = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js");
-    const firebaseStorage = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js");
-    const firebaseAuth = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js");
-    
-    console.log('✅ Firebase 模組載入成功');
-    
-    // Firebase configuration - 使用正確的配置
-    firebaseConfig = {
-      apiKey: "AIzaSyD9-_GYLQabcC3SPMTOG9zj2CcaPqzfOrI",
-      authDomain: "lalaland-24931.firebaseapp.com",
-      databaseURL: "https://lalaland-24931-default-rtdb.firebaseio.com",
-      projectId: "lalaland-24931",
-      storageBucket: "lalaland-24931.firebasestorage.app",
-      messagingSenderId: "45134876312",
-      appId: "1:45134876312:web:9e33e46c54cb7c9bfc8aed",
-      measurementId: "G-M04NRCY9FQ"
-    };
-    
-    app = initializeApp(firebaseConfig);
-    db = firebaseDb.getDatabase(app);
-    auth = firebaseAuth.getAuth(app);
-    storage = firebaseStorage.getStorage(app);
-    
-    // 匯出所有需要的函數到全域範圍
-    window.firebaseDb = firebaseDb;
-    window.firebaseStorage = firebaseStorage;
-    window.firebaseAuth = firebaseAuth;
-    window.db = db;
-    window.auth = auth;
-    window.storage = storage;
-    
-    // 匯出 Firebase Auth 函數到全域範圍
-    window.signInWithEmailAndPassword = firebaseAuth.signInWithEmailAndPassword;
-    window.createUserWithEmailAndPassword = firebaseAuth.createUserWithEmailAndPassword;
-    window.sendPasswordResetEmail = firebaseAuth.sendPasswordResetEmail;
-    window.signOut = firebaseAuth.signOut;
-    window.onAuthStateChanged = firebaseAuth.onAuthStateChanged;
-    
-    // 匯出 Firebase Database 函數到全域範圍
-    window.ref = firebaseDb.ref;
-    window.get = firebaseDb.get;
-    window.set = firebaseDb.set;
-    window.push = firebaseDb.push;
-    window.onValue = firebaseDb.onValue;
-    window.update = firebaseDb.update;
-    window.child = firebaseDb.child;
-    window.onChildAdded = firebaseDb.onChildAdded;
-    window.onChildChanged = firebaseDb.onChildChanged;
-    window.onDisconnect = firebaseDb.onDisconnect;
-    window.query = firebaseDb.query;
-    window.limitToLast = firebaseDb.limitToLast;
-    window.orderByKey = firebaseDb.orderByKey;
-    window.runTransaction = firebaseDb.runTransaction;
-    window.off = firebaseDb.off;
-    
-    // 匯出 Firebase Storage 函數到全域範圍
-    window.uploadBytes = firebaseStorage.uploadBytes;
-    window.getDownloadURL = firebaseStorage.getDownloadURL;
-    window.storageRef = firebaseStorage.ref;
-    
-    firebaseLoaded = true;
-    console.log('🎉 Firebase 初始化完成，所有函數已匯出到全域範圍');
-    
-    // 繼續執行應用程式初始化
-    initializeApp();
-    
-  } catch (error) {
-    console.error('❌ Firebase 載入失敗:', error);
-    alert('Firebase 載入失敗，請重新整理頁面');
-  }
-}
-
-// 主應用程式初始化函數
-function initializeApp() {
-  console.log('🚀 應用程式初始化中...');
-  
-  // 等待 DOM 完全載入
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', setupApplication);
-  } else {
-    setupApplication();
-  }
-}
-
-// 設置應用程式功能
-function setupApplication() {
-  console.log('📱 設置應用程式功能...');
-  
-  // 檢查是否在登入頁面
-  const isLoginPage = document.getElementById('login-form') && document.getElementById('register-form');
-  console.log('🔍 登入頁面檢測:', isLoginPage);
-  
-  if (isLoginPage) {
-    setupLoginPage();
-  }
-  
-  // 只有在 Firebase 完全載入後才設置認證監聽器
-  if (firebaseLoaded && typeof window.onAuthStateChanged !== 'undefined' && auth) {
-    console.log('🔐 設置認證狀態監聽器...');
-    window.onAuthStateChanged(auth, (user) => {
-      console.log('🔐 認證狀態變更:', user ? '已登入' : '未登入');
-      if (user) {
-        console.log('👤 用戶ID:', user.uid);
-        console.log('📧 用戶Email:', user.email);
-        
-        // 如果在登入頁面且有 sessionStorage 標記，則跳轉
-        if (window.location.pathname.includes('login.html') && 
-            sessionStorage.getItem('isLoginRedirect') === 'true') {
-          sessionStorage.removeItem('isLoginRedirect');
-          window.location.href = "announce.html";
-        }
-      }
-    });
-  } else {
-    console.log('⏳ Firebase 尚未載入完成，稍後再設置認證監聽器');
-    // 稍後再嘗試設置認證監聽器
-    setTimeout(() => {
-      if (firebaseLoaded && typeof window.onAuthStateChanged !== 'undefined' && auth) {
-        console.log('🔐 延遲設置認證狀態監聽器...');
-        window.onAuthStateChanged(auth, (user) => {
-          console.log('🔐 認證狀態變更:', user ? '已登入' : '未登入');
-          if (user) {
-            console.log('👤 用戶ID:', user.uid);
-            console.log('📧 用戶Email:', user.email);
-            
-            // 如果在登入頁面且有 sessionStorage 標記，則跳轉
-            if (window.location.pathname.includes('login.html') && 
-                sessionStorage.getItem('isLoginRedirect') === 'true') {
-              sessionStorage.removeItem('isLoginRedirect');
-              window.location.href = "announce.html";
-            }
-          }
-        });
-      }
-    }, 1000);
-  }
-  
-  console.log('✅ 應用程式初始化完成');
-  
-  // 確保全域函數可用
-  if (typeof window.switchChatRoom === 'function') {
-    console.log('✅ switchChatRoom 函數已準備就緒');
-  } else {
-    console.error('❌ switchChatRoom 函數未正確載入');
-  }
-}
-
-// 設置登入頁面功能
-function setupLoginPage() {
-  console.log('🔐 設置登入頁面功能...');
-  
-  // Tab 切換邏輯
-  const loginTabBtn = document.getElementById('login-tab-btn');
-  const registerTabBtn = document.getElementById('register-tab-btn');
-  const loginPage = document.getElementById('login-page');
-  const registerPage = document.getElementById('register-page');
-  
-  if (loginTabBtn) loginTabBtn.onclick = () => switchTab('login');
-  if (registerTabBtn) registerTabBtn.onclick = () => switchTab('register');
-  
-  function switchTab(tab) {
-    if (!loginTabBtn || !registerTabBtn || !loginPage || !registerPage) {
-      console.error('⚠️ 找不到必要的登入頁面元素');
-      return;
-    }
-    loginTabBtn.classList.remove('active');
-    registerTabBtn.classList.remove('active');
-    loginPage.style.display = 'none';
-    registerPage.style.display = 'none';
-    
-    if(tab==='login'){
-      loginTabBtn.classList.add('active');
-      loginPage.style.display = 'block';
-    } else if(tab==='register'){
-      registerTabBtn.classList.add('active');
-      registerPage.style.display = 'block';
-    }
-  }
-  
-  // 🔐 登入邏輯  
-  const loginForm = document.getElementById('login-form');
-  
-  if (loginForm) {
-    loginForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      console.log('🔐 登入表單提交');
-      
-      const email = document.getElementById('login-email').value.trim();
-      const password = document.getElementById('login-password').value;
-      
-      if (!email || !password) {
-        alert('請輸入帳號與密碼');
-        return;
-      }
-      
-      console.log('📧 嘗試登入:', email);
-      
-      // 檢查 Firebase 是否已載入
-      if (!firebaseLoaded || !auth || typeof window.signInWithEmailAndPassword === 'undefined') {
-        console.log('⏳ Firebase 尚未載入完成，等待...');
-        alert('系統初始化中，請稍後再試');
-        return;
-      }
-      
-      try {
-        console.log('🔐 開始驗證用戶...');
-        const userCredential = await window.signInWithEmailAndPassword(auth, email, password);
-        console.log('✅ 登入成功:', userCredential.user.uid);
-        
-        // 設置跳轉標記
-        sessionStorage.setItem('isLoginRedirect', 'true');
-        window.location.href = "announce.html";
-        
-      } catch (error) {
-        console.error('❌ 登入失敗:', error);
-        let errorMessage = '登入失敗';
-        
-        switch(error.code) {
-          case 'auth/user-not-found':
-            errorMessage = '找不到此帳號';
-            break;
-          case 'auth/wrong-password':
-            errorMessage = '密碼錯誤';
-            break;
-          case 'auth/invalid-email':
-            errorMessage = 'Email 格式不正確';
-            break;
-          case 'auth/too-many-requests':
-            errorMessage = '登入嘗試次數過多，請稍後再試';
-            break;
-          default:
-            errorMessage = `登入失敗: ${error.message}`;
-        }
-        
-        alert(errorMessage);
-      }
-    });
-    
-    console.log('✅ 登入表單事件監聽器已設置');
-  } else {
-    console.warn('⚠️ 找不到登入表單');
-  }
-  
-  console.log('✅ 登入頁面設置完成');
-}
-
-// Firebase 變數將在動態載入後設置
-let firebaseConfig, app;
+// Firebase config
+const firebaseConfig = {
+  apiKey: "AIzaSyD9-_GYLQabcC3SPMTOG9zj2CcaPqzfOrI",
+  authDomain: "lalaland-24931.firebaseapp.com",
+  databaseURL: "https://lalaland-24931-default-rtdb.firebaseio.com",
+  projectId: "lalaland-24931",
+  storageBucket: "lalaland-24931.firebasestorage.app", // <<<< 修正這裡
+  messagingSenderId: "45134876312",
+  appId: "1:45134876312:web:9e33e46c54cb7c9bfc8aed",
+  measurementId: "G-M04NRCY9FQ"
+};
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+const storage = getStorage(app);
+const auth = getAuth(app);
 
 // 狀態
 let currentUser = null;
@@ -643,16 +404,6 @@ function displayFriends(friendIds) {
             console.error('❌ Error loading friend data for', friendId, ':', error);
         });
     });
-    
-    // 檢查容器內容
-    setTimeout(() => {
-        console.log('🔍 Final chat container content:', chatContainer.innerHTML);
-        const friendItems = chatContainer.querySelectorAll('[data-friend-click]');
-        console.log('🔍 Found', friendItems.length, 'friend items with data-friend-click');
-        friendItems.forEach((item, index) => {
-            console.log(`🔍 Friend item ${index}:`, item, 'data-friend-click:', item.getAttribute('data-friend-click'));
-        });
-    }, 2000);
 }
 
 // 添加好友到列表
@@ -1376,6 +1127,70 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   });
 
+  // 🔐 登入邏輯
+  const loginForm = document.getElementById('login-form');
+  let isUserTriggeredSubmit = false; // 添加標記確保是用戶主動觸發
+  
+  // 監聽登入按鈕點擊
+  const loginBtn = loginForm.querySelector('.login-btn');
+  if (loginBtn) {
+    loginBtn.addEventListener('click', () => {
+      isUserTriggeredSubmit = true;
+    });
+  }
+  
+  // 監聽 Enter 鍵按下（但要求更明確的確認）
+  const loginEmailInput = document.getElementById('login-email');
+  const loginPasswordInput = document.getElementById('login-password');
+  
+  [loginEmailInput, loginPasswordInput].forEach(input => {
+    if (input) {
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          // 只有在密碼框中按 Enter 且兩個欄位都有值時才允許
+          if (e.target === loginPasswordInput && 
+              loginEmailInput.value.trim() && 
+              loginPasswordInput.value.trim()) {
+            isUserTriggeredSubmit = true;
+          } else {
+            e.preventDefault(); // 阻止其他情況下的 Enter 提交
+          }
+        }
+      });
+    }
+  });
+  
+  loginForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    // 檢查是否為用戶主動觸發
+    if (!isUserTriggeredSubmit) {
+      console.log('⚠️ 阻止非用戶觸發的登入嘗試');
+      return;
+    }
+    
+    const email = document.getElementById('login-email').value.trim();
+    const password = document.getElementById('login-password').value;
+    if (!email || !password) {
+      isUserTriggeredSubmit = false; // 重置標記
+      return alert('請輸入帳號與密碼');
+    }
+    
+    console.log('🔐 用戶主動觸發登入');
+    
+    try {
+      // 設置一個標記，表示這是從登入表單觸發的登入
+      sessionStorage.setItem('isLoginRedirect', 'true');
+      await signInWithEmailAndPassword(auth, email, password);
+      window.location.href = "announce.html";
+    } catch (err) {
+      // 登入失敗時清除標記
+      sessionStorage.removeItem('isLoginRedirect');
+      isUserTriggeredSubmit = false; // 重置標記
+      alert('登入失敗：' + err.message);
+    }
+  });
+
   // 打開 modal
   document.getElementById('forgot-password-link').onclick = function(e) {
     e.preventDefault();
@@ -1420,14 +1235,13 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 });
 
-// 監聽登入狀態 - 確保 Firebase 已載入
-if (typeof window.onAuthStateChanged !== 'undefined' && auth) {
-  window.onAuthStateChanged(auth, async (user) => {
-    console.log('🔄 Auth state changed:', user ? `用戶已登入: ${user.uid}` : '用戶未登入');
-    
-    if (user) {
-      try {
-        console.log('🔐 處理已登入用戶:', user.uid);
+// 監聽登入狀態
+onAuthStateChanged(auth, async (user) => {
+  console.log('🔄 Auth state changed:', user ? `用戶已登入: ${user.uid}` : '用戶未登入');
+  
+  if (user) {
+    try {
+      console.log('🔐 處理已登入用戶:', user.uid);
       
       // 檢查當前頁面類型
       const isLoginPage = window.location.pathname.includes('login.html') || 
@@ -1613,10 +1427,7 @@ if (typeof window.onAuthStateChanged !== 'undefined' && auth) {
     }
     if (typeof hideLoading === 'function') hideLoading();
   }
-  });
-} else {
-  console.log('⏳ onAuthStateChanged 尚未可用，稍後再設置');
-}
+});
 
 document.addEventListener('click', (e) => {
   if (e.target.classList.contains('vote-option')) {
@@ -1836,19 +1647,18 @@ function sendMessage() {
 }
 
 
-// 長按回覆設定 - 只在聊天頁面執行
+// 長按回覆設定
 const chatDiv = document.getElementById('chat');
-if (chatDiv) {
-  let holdTimer = null;
-  let holdStartX = 0, holdStartY = 0;
+let holdTimer = null;
+let holdStartX = 0, holdStartY = 0;
 
-  chatDiv.addEventListener('touchstart', function(e) {
-    const bubble = e.target.closest('.bubble');
-    if (!bubble || window.innerWidth > 600) return;
+chatDiv.addEventListener('touchstart', function(e) {
+  const bubble = e.target.closest('.bubble');
+  if (!bubble || window.innerWidth > 600) return;
 
-    const touch = e.touches[0];
-    holdStartX = touch.clientX;
-    holdStartY = touch.clientY;
+  const touch = e.touches[0];
+  holdStartX = touch.clientX;
+  holdStartY = touch.clientY;
 
   holdTimer = setTimeout(() => {
     const msgDiv = bubble.closest('.msg');
@@ -1861,35 +1671,32 @@ if (chatDiv) {
   }, 500);
 });
 
-  chatDiv.addEventListener('touchmove', function(e) {
-    const touch = e.touches[0];
-    const dx = Math.abs(touch.clientX - holdStartX);
-    const dy = Math.abs(touch.clientY - holdStartY);
-    if (dx > 10 || dy > 10) {
-      clearTimeout(holdTimer);
-    }
-  });
-
-  chatDiv.addEventListener('touchend', function() {
+chatDiv.addEventListener('touchmove', function(e) {
+  const touch = e.touches[0];
+  const dx = Math.abs(touch.clientX - holdStartX);
+  const dy = Math.abs(touch.clientY - holdStartY);
+  if (dx > 10 || dy > 10) {
     clearTimeout(holdTimer);
-  });
+  }
+});
 
-  chatDiv.addEventListener('contextmenu', function(e) {
-    const bubble = e.target.closest('.bubble');
-    if (!bubble || window.innerWidth <= 600) return;
+chatDiv.addEventListener('touchend', function() {
+  clearTimeout(holdTimer);
+});
 
-    e.preventDefault();
-    const msgDiv = bubble.closest('.msg');
-    const msgId = msgDiv?.getAttribute('data-msgid');
-    const msgObj = messageMap[msgId];
-    if (msgId && msgObj) {
-      console.log('🖱️ 桌機右鍵觸發 reply');
-      setReplyTarget(msgId, msgObj);
-    }
-  });
-} else {
-  console.log('⚠️ Chat div not found, skipping long-press reply setup');
-}
+chatDiv.addEventListener('contextmenu', function(e) {
+  const bubble = e.target.closest('.bubble');
+  if (!bubble || window.innerWidth <= 600) return;
+
+  e.preventDefault();
+  const msgDiv = bubble.closest('.msg');
+  const msgId = msgDiv?.getAttribute('data-msgid');
+  const msgObj = messageMap[msgId];
+  if (msgId && msgObj) {
+    console.log('🖱️ 桌機右鍵觸發 reply');
+    setReplyTarget(msgId, msgObj);
+  }
+});
 
 
 // 回覆邏輯
@@ -2125,14 +1932,13 @@ window.testPrivateNotification = function() {
 // ========= Firebase Auth 狀態監聽 & 用戶同步/好友機制 =========
 // 只在 login.html 才執行登入頁 UI 切換
 if (document.getElementById('login-page') && document.getElementById('register-page') && document.getElementById('auth-tabs')) {
-  if (typeof window.onAuthStateChanged !== 'undefined' && auth) {
-    window.onAuthStateChanged(auth, (user) => {
-      if (user) {
-        // ✅ 設定使用者資料
-        currentUser = {
-          uid: user.uid,
-          nickname: user.displayName ?? '',
-          avatar: user.photoURL ?? ''
+  onAuthStateChanged(auth, (user) => {
+    if (user) {
+      // ✅ 設定使用者資料
+      currentUser = {
+        uid: user.uid,
+        nickname: user.displayName ?? '',
+        avatar: user.photoURL ?? ''
       };
 
       // ✅ 初始化聊天室與監聽
@@ -2145,10 +1951,7 @@ if (document.getElementById('login-page') && document.getElementById('register-p
       document.getElementById('login-page').style.display = 'block';
       document.getElementById('register-page').style.display = 'none';
     }
-    });
-  } else {
-    console.log('⏳ 登入頁面 onAuthStateChanged 尚未可用');
-  }
+  });
 }
 
 
@@ -2781,34 +2584,9 @@ function initUserDropdownMenu() {
     // 手機版好友按鈕事件
     document.getElementById('mobile-view-friends-btn')?.addEventListener('click', () => {
       closeMobileSidebar();
-      
+      loadFriendsList();
       // 添加手機版好友模式類別，隱藏聊天相關元素
       document.body.classList.add('mobile-friends-mode');
-      
-      // 先添加測試好友項目以確保有東西可以點擊
-      const chatContainer = document.getElementById('chat');
-      chatContainer.innerHTML = `
-        <div style="padding: 10px;">
-          <h4 style="margin: 0 0 15px 0; color: var(--sea-blue); background: linear-gradient(135deg, var(--sea-light), var(--accent-green)); padding: 8px; border-radius: 6px; text-align: center;">👥 我的好友</h4>
-          
-          <!-- 測試好友項目 -->
-          <div style="display: flex; align-items: center; padding: 15px; background: linear-gradient(135deg, #f8f9fa, #e3f2fd); border: 2px solid var(--accent-green); border-radius: 12px; margin-bottom: 12px; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 2px 6px rgba(0,0,0,0.1);" data-friend-click="test-friend-123">
-            <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Ccircle cx='20' cy='20' r='20' fill='%2374b3ff'/%3E%3Ctext x='20' y='26' text-anchor='middle' fill='white' font-size='16'%3E😊%3C/text%3E%3C/svg%3E" 
-                 style="width: 60px; height: 60px; border-radius: 50%; margin-right: 15px; object-fit: cover; border: 3px solid var(--accent-green); box-shadow: 0 2px 4px rgba(0,0,0,0.2);" data-friend-click="test-friend-123">
-            <div style="flex: 1;" data-friend-click="test-friend-123">
-              <div style="font-weight: 700; color: var(--sea-dark); margin-bottom: 4px; font-size: 16px;" data-friend-click="test-friend-123">👥 測試好友</div>
-              <div style="font-size: 12px; color: #666; display: flex; align-items: center;" data-friend-click="test-friend-123">
-                <span style="color: var(--accent-green); margin-right: 4px;" data-friend-click="test-friend-123">●</span>點擊測試
-              </div>
-            </div>
-          </div>
-        </div>
-      `;
-      
-      console.log('🎯 Test friend added to DOM');
-      
-      // 然後載入真正的好友列表
-      loadFriendsList();
     });
     
     document.getElementById('edit-profile-btn')?.addEventListener('click', () => {
@@ -2833,12 +2611,6 @@ function initUserDropdownMenu() {
 // 頁面載入時的初始化檢查
 window.addEventListener('DOMContentLoaded', () => {
   console.log('🔄 頁面載入完成，檢查登入狀態');
-  
-  // 🚨 超級簡單的測試 - 立即執行
-  setTimeout(() => {
-    console.log('⏰ 延遲測試 - 1秒後執行');
-    alert('JavaScript 測試：如果看到這個彈窗，表示 JS 正常工作！');
-  }, 1000);
   
   // 基本點擊測試
   document.body.addEventListener('click', (e) => {
@@ -2948,16 +2720,13 @@ window.addEventListener('DOMContentLoaded', () => {
     
     // 添加一個短暫的延遲，讓 Firebase Auth 有時間初始化
     setTimeout(() => {
-      if (auth && auth.currentUser) {
+      const currentUser = auth.currentUser;
+      if (currentUser) {
         console.log('🔀 檢測到已登入用戶，準備跳轉到聊天室');
         // 不設置 sessionStorage，讓 onAuthStateChanged 處理跳轉
       } else {
         console.log('👤 用戶未登入，停留在登入頁面');
       }
-    }, 2000); // 增加延遲時間，確保 Firebase 初始化完成
+    }, 1000);
   }
 });
-
-// 🚀 啟動 Firebase 載入
-console.log('🔥 開始載入 Firebase...');
-loadFirebase();
