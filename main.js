@@ -599,29 +599,41 @@ function displayPrivateMessagesInChat() {
     const chatContainer = document.getElementById('chat');
     chatContainer.innerHTML = '<div style="text-align: center; color: #999; padding: 20px;">載入私訊列表中...</div>';
     
+    console.log('📝 Loading private messages list for user:', user.uid);
+    
     // 獲取所有私人聊天室
     const privateChatsRef = ref(db, 'privateChats');
     onValue(privateChatsRef, (snapshot) => {
         const privateChats = snapshot.val() || {};
         const userPrivateChats = [];
         
+        console.log('💬 All private chats:', privateChats);
+        
         // 篩選出包含當前用戶的聊天室
         Object.keys(privateChats).forEach(roomId => {
             if (roomId.includes(user.uid)) {
                 const otherUserId = roomId.replace(user.uid, '').replace('_', '');
                 if (otherUserId && otherUserId !== user.uid) {
-                    userPrivateChats.push({
+                    const chatData = {
                         roomId,
                         otherUserId,
                         lastMessage: privateChats[roomId].lastMessage || null,
                         lastTime: privateChats[roomId].lastTime || 0
-                    });
+                    };
+                    userPrivateChats.push(chatData);
+                    console.log('➕ Added private chat:', chatData);
                 }
             }
         });
         
-        // 按最後訊息時間排序
-        userPrivateChats.sort((a, b) => b.lastTime - a.lastTime);
+        // 按最後訊息時間排序（最新的在前）
+        userPrivateChats.sort((a, b) => {
+            const timeA = a.lastTime || 0;
+            const timeB = b.lastTime || 0;
+            return timeB - timeA;
+        });
+        
+        console.log('📋 Sorted private chats:', userPrivateChats);
         
         displayPrivateChats(userPrivateChats);
     });
@@ -677,18 +689,30 @@ function addPrivateChatToList(chat, userData) {
     chatDiv.className = 'private-chat-item';
     chatDiv.setAttribute('data-room-id', chat.roomId);
     chatDiv.innerHTML = `
-        <div class="private-chat-content" style="display: flex; align-items: center; padding: 12px; background: #f8f9fa; border-radius: 8px; margin-bottom: 8px; cursor: pointer; transition: background 0.2s ease;">
+        <div class="private-chat-content" style="display: flex; align-items: center; padding: 12px; background: #f8f9fa; border-radius: 8px; margin-bottom: 8px; cursor: pointer; transition: background 0.2s ease;" data-private-click="${chat.roomId}" data-private-title="與${userData.nickname}的對話">
             <img src="${userData.avatar || 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'40\' height=\'40\' viewBox=\'0 0 40 40\'%3E%3Ccircle cx=\'20\' cy=\'20\' r=\'20\' fill=\'%23ddd\'/%3E%3Ctext x=\'20\' y=\'26\' text-anchor=\'middle\' fill=\'white\' font-size=\'16\'%3E👤%3C/text%3E%3C/svg%3E'}" 
-                 class="private-chat-avatar" style="width: 50px; height: 50px; border-radius: 50%; margin-right: 12px; object-fit: cover; border: 2px solid var(--accent-green);">
-            <div style="flex: 1;">
-                <div style="font-weight: 600; color: var(--sea-dark); margin-bottom: 2px;">${userData.nickname || '匿名用戶'}</div>
-                <div style="font-size: 12px; color: #666; margin-bottom: 2px;">${lastMessageText}</div>
-                <div style="font-size: 10px; color: #999;">${timeStr}</div>
+                 class="private-chat-avatar" style="width: 50px; height: 50px; border-radius: 50%; margin-right: 12px; object-fit: cover; border: 2px solid var(--accent-green);" data-private-click="${chat.roomId}" data-private-title="與${userData.nickname}的對話">
+            <div style="flex: 1;" data-private-click="${chat.roomId}" data-private-title="與${userData.nickname}的對話">
+                <div style="font-weight: 600; color: var(--sea-dark); margin-bottom: 2px;" data-private-click="${chat.roomId}" data-private-title="與${userData.nickname}的對話">${userData.nickname || '匿名用戶'}</div>
+                <div style="font-size: 12px; color: #666; margin-bottom: 2px;" data-private-click="${chat.roomId}" data-private-title="與${userData.nickname}的對話">${lastMessageText}</div>
+                <div style="font-size: 10px; color: #999;" data-private-click="${chat.roomId}" data-private-title="與${userData.nickname}的對話">${timeStr}</div>
             </div>
         </div>
     `;
     
-    chatDiv.addEventListener('click', () => {
+    // 使用多重事件處理
+    chatDiv.addEventListener('click', (e) => {
+        console.log('💬 Private chat clicked:', chat.roomId);
+        e.preventDefault();
+        e.stopPropagation();
+        enterRoom(chat.roomId, `與${userData.nickname}的對話`);
+    });
+    
+    // 添加觸摸事件支持手機版
+    chatDiv.addEventListener('touchend', (e) => {
+        console.log('📱 Private chat touched:', chat.roomId);
+        e.preventDefault();
+        e.stopPropagation();
         enterRoom(chat.roomId, `與${userData.nickname}的對話`);
     });
     
@@ -2548,6 +2572,18 @@ window.addEventListener('DOMContentLoaded', () => {
       e.preventDefault();
       e.stopPropagation();
       startPrivateChat(friendClickId);
+      return;
+    }
+    
+    // 處理私訊點擊
+    const privateClickId = e.target.getAttribute('data-private-click');
+    const privateTitle = e.target.getAttribute('data-private-title');
+    if (privateClickId) {
+      console.log('🎯 Global private chat click detected:', privateClickId);
+      e.preventDefault();
+      e.stopPropagation();
+      enterRoom(privateClickId, privateTitle || '私人對話');
+      return;
     }
   });
   
@@ -2559,6 +2595,18 @@ window.addEventListener('DOMContentLoaded', () => {
       e.preventDefault();
       e.stopPropagation();
       startPrivateChat(friendClickId);
+      return;
+    }
+    
+    // 處理私訊觸摸
+    const privateClickId = e.target.getAttribute('data-private-click');
+    const privateTitle = e.target.getAttribute('data-private-title');
+    if (privateClickId) {
+      console.log('📱 Global private chat touch detected:', privateClickId);
+      e.preventDefault();
+      e.stopPropagation();
+      enterRoom(privateClickId, privateTitle || '私人對話');
+      return;
     }
   });
   
