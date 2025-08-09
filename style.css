@@ -1041,29 +1041,29 @@ button:hover {
 
 #input-area {
   display: flex;
-  gap: 12px; /* 增加間距 */
-  margin-top: 6px;
-  padding: 12px 16px; /* 增加padding */
+  gap: 14px; /* 進一步增加間距 */
+  margin-top: 8px; /* 稍微增加上邊距 */
+  padding: 16px 20px; /* 進一步增加padding */
   background: #f8f9fa;
-  border-radius: 8px; /* 增加圓角 */
+  border-radius: 10px; /* 增加圓角 */
   border: 1px solid #e9ecef;
   align-items: flex-end; /* 底部對齊 */
 }
 
 #msg {
   flex: 1;
-  padding: 12px 16px; /* 增加padding */
+  padding: 16px 20px; /* 進一步增加padding */
   border: 1px solid #ddd;
-  border-radius: 8px; /* 增加圓角 */
+  border-radius: 10px; /* 增加圓角 */
   font-size: 16px; /* 增加字體大小 */
   background: var(--white);
   outline: none;
   transition: border-color 0.2s ease;
   font-family: 'Segoe UI', 'Noto Sans TC', sans-serif;
   resize: none;
-  min-height: 44px; /* 增加最小高度 */
-  max-height: 120px; /* 增加最大高度 */
-  line-height: 1.4; /* 調整行高 */
+  min-height: 52px; /* 進一步增加最小高度 */
+  max-height: 140px; /* 增加最大高度 */
+  line-height: 1.5; /* 調整行高 */
 }
 
 #msg:focus {
@@ -1076,10 +1076,10 @@ button:hover {
 }
 
 #send {
-  padding: 12px 20px; /* 增加padding與輸入框匹配 */
+  padding: 16px 24px; /* 進一步增加padding與輸入框匹配 */
   font-size: 16px; /* 與輸入框字體大小匹配 */
   background: var(--sea-blue);
-  border-radius: 8px; /* 與輸入框圓角匹配 */
+  border-radius: 10px; /* 與輸入框圓角匹配 */
   border: none;
   color: var(--white);
   font-weight: 600;
@@ -1087,8 +1087,8 @@ button:hover {
   transition: background-color 0.2s ease;
   box-shadow: 0 1px 3px rgba(0,0,0,0.1);
   white-space: nowrap;
-  min-height: 44px; /* 與輸入框最小高度匹配 */
-  min-width: 80px; /* 設定最小寬度 */
+  min-height: 52px; /* 與輸入框最小高度匹配 */
+  min-width: 90px; /* 設定最小寬度 */
   flex-shrink: 0; /* 防止按鈕被壓縮 */
 }
 
