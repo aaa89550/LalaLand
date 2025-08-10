@@ -732,10 +732,12 @@ function addPrivateChatToList(chat, userData, containerOverride) {
         '開始對話';
     
     const timeStr = chat.lastTime ? new Date(chat.lastTime).toLocaleString('zh-TW', {
+        year: 'numeric',
         month: 'short',
         day: 'numeric',
         hour: '2-digit',
-        minute: '2-digit'
+        minute: '2-digit',
+        hour12: false
     }) : '';
     
   const chatDiv = document.createElement('div');
@@ -789,7 +791,14 @@ function appendMessage(msg, msgId) {
 
   const chatDiv = document.getElementById('chat');
   const dt = new Date(msg.time || Date.now());
-  const timeStr = dt.toLocaleTimeString();
+  const timeStr = dt.toLocaleString('zh-TW', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  });
 
   const div = document.createElement('div');
   const isMe = msg.from === currentUser.uid;
