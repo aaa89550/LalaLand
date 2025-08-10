@@ -418,17 +418,20 @@ function addFriendToList(friendId, friendData) {
         return; // 避免重複添加
     }
     
-    const friendDiv = document.createElement('div');
-    friendDiv.className = 'friend-item';
-    friendDiv.setAttribute('data-friend-id', friendId);
+  const friendDiv = document.createElement('div');
+  friendDiv.className = 'friend-item';
+  friendDiv.setAttribute('data-friend-id', friendId);
+  friendDiv.setAttribute('data-friend-click', friendId); // 外層也可點
+  friendDiv.style.position = 'relative';
+  friendDiv.style.pointerEvents = 'auto';
     
     // 檢查是否為手機版
     const isMobile = window.innerWidth <= 600;
     console.log('📱 Mobile check for friend', friendId, '- isMobile:', isMobile, 'width:', window.innerWidth);
     const chatButtonHtml = isMobile ? '' : `<button onclick="event.stopPropagation(); window.startPrivateChat('${friendId}')" class="desktop-only" style="background: linear-gradient(135deg, var(--sea-blue), var(--accent-green)); color: white; border: none; padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.2); transition: transform 0.2s ease;">💬 聊天</button>`;
     
-    friendDiv.innerHTML = `
-        <div style="display: flex; align-items: center; padding: 15px; background: linear-gradient(135deg, #f8f9fa, #e3f2fd); border: 2px solid var(--accent-green); border-radius: 12px; margin-bottom: 12px; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 2px 6px rgba(0,0,0,0.1);" data-friend-click="${friendId}">
+  friendDiv.innerHTML = `
+    <div class="friend-item-inner" style="display: flex; align-items: center; padding: 15px; background: linear-gradient(135deg, #f8f9fa, #e3f2fd); border: 2px solid var(--accent-green); border-radius: 12px; margin-bottom: 12px; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 2px 6px rgba(0,0,0,0.1);" data-friend-click="${friendId}">
             <img src="${friendData.avatar || 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'40\' height=\'40\' viewBox=\'0 0 40 40\'%3E%3Ccircle cx=\'20\' cy=\'20\' r=\'20\' fill=\'%23ddd\'/%3E%3Ctext x=\'20\' y=\'26\' text-anchor=\'middle\' fill=\'white\' font-size=\'16\'%3E👤%3C/text%3E%3C/svg%3E'}" 
                  style="width: 60px; height: 60px; border-radius: 50%; margin-right: 15px; object-fit: cover; border: 3px solid var(--accent-green); box-shadow: 0 2px 4px rgba(0,0,0,0.2);" data-friend-click="${friendId}">
             <div style="flex: 1;" data-friend-click="${friendId}">
@@ -688,7 +691,8 @@ function displayPrivateMessagesInChat() {
 
 // 顯示私訊對話列表
 function displayPrivateChats(privateChats) {
-    const chatContainer = document.getElementById('chat');
+  const chatContainer = document.getElementById('chat');
+  if (!chatContainer) return;
     
     if (privateChats.length === 0) {
         chatContainer.innerHTML = `
@@ -700,24 +704,26 @@ function displayPrivateChats(privateChats) {
         return;
     }
     
-    chatContainer.innerHTML = '<div style="padding: 10px;"><h4 style="margin: 0 0 15px 0; color: var(--sea-blue);">私訊對話</h4></div>';
+  chatContainer.innerHTML = '<div class="private-chat-list-wrapper" style="padding:10px;"><h4 style="margin: 0 0 15px 0; color: var(--sea-blue);">私訊對話</h4><div class="private-chat-list" id="private-chat-list" style="display:flex;flex-direction:column;gap:6px;"></div></div>';
     
-    privateChats.forEach(chat => {
+  const listEl = chatContainer.querySelector('#private-chat-list');
+  privateChats.forEach(chat => {
         // 獲取對方用戶資料
         const userRef = ref(db, `users/${chat.otherUserId}`);
         onValue(userRef, (snapshot) => {
             const userData = snapshot.val();
             if (userData) {
-                addPrivateChatToList(chat, userData);
+        addPrivateChatToList(chat, userData, listEl);
             }
         }, { once: true });
     });
 }
 
 // 添加私訊對話到列表
-function addPrivateChatToList(chat, userData) {
-    const chatContainer = document.getElementById('chat');
-    const existingChat = chatContainer.querySelector(`[data-room-id="${chat.roomId}"]`);
+function addPrivateChatToList(chat, userData, containerOverride) {
+  const container = containerOverride || document.getElementById('chat');
+  if (!container) return;
+  const existingChat = container.querySelector(`[data-room-id="${chat.roomId}"]`);
     
     if (existingChat) return; // 避免重複添加
     
@@ -732,11 +738,14 @@ function addPrivateChatToList(chat, userData) {
         minute: '2-digit'
     }) : '';
     
-    const chatDiv = document.createElement('div');
-    chatDiv.className = 'private-chat-item';
-    chatDiv.setAttribute('data-room-id', chat.roomId);
-    chatDiv.innerHTML = `
-        <div class="private-chat-content" style="display: flex; align-items: center; padding: 12px; background: #f8f9fa; border-radius: 8px; margin-bottom: 8px; cursor: pointer; transition: background 0.2s ease;" data-private-click="${chat.roomId}" data-private-title="與${userData.nickname}的對話">
+  const chatDiv = document.createElement('div');
+  chatDiv.className = 'private-chat-item';
+  chatDiv.setAttribute('data-room-id', chat.roomId);
+  chatDiv.setAttribute('data-private-click', chat.roomId);
+  chatDiv.setAttribute('data-private-title', `與${userData.nickname}的對話`);
+  chatDiv.style.pointerEvents = 'auto';
+  chatDiv.innerHTML = `
+    <div class="private-chat-content" style="display: flex; align-items: center; padding: 12px; background: #f8f9fa; border-radius: 8px; margin-bottom: 8px; cursor: pointer; transition: background 0.2s ease;" data-private-click="${chat.roomId}" data-private-title="與${userData.nickname}的對話">
             <img src="${userData.avatar || 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'40\' height=\'40\' viewBox=\'0 0 40 40\'%3E%3Ccircle cx=\'20\' cy=\'20\' r=\'20\' fill=\'%23ddd\'/%3E%3Ctext x=\'20\' y=\'26\' text-anchor=\'middle\' fill=\'white\' font-size=\'16\'%3E👤%3C/text%3E%3C/svg%3E'}" 
                  class="private-chat-avatar" style="width: 50px; height: 50px; border-radius: 50%; margin-right: 12px; object-fit: cover; border: 2px solid var(--accent-green);" data-private-click="${chat.roomId}" data-private-title="與${userData.nickname}的對話">
             <div style="flex: 1;" data-private-click="${chat.roomId}" data-private-title="與${userData.nickname}的對話">
@@ -764,7 +773,7 @@ function addPrivateChatToList(chat, userData) {
     //     enterRoom(chat.roomId, `與${userData.nickname}的對話`);
     // });
     
-    chatContainer.appendChild(chatDiv);
+    container.appendChild(chatDiv);
 }
 
 
@@ -1981,23 +1990,17 @@ document.addEventListener('DOMContentLoaded', function() {
   const friendListMobile = document.getElementById('friend-list-mobile');
   let showingFriendsMobile = false;
 
-// 切換顯示
-showFriendsBtnMobile.onclick = function() {
-  showingFriendsMobile = !showingFriendsMobile;
-  userListMobile.style.display = showingFriendsMobile ? 'none' : '';
-  friendAreaMobile.style.display = showingFriendsMobile ? '' : 'none';
-  showFriendsBtnMobile.textContent = showingFriendsMobile ? '返回在線成員' : '我的好友';
-  if (showingFriendsMobile) {
-    renderFriendList(); // 讓手機好友同步刷新
+  if (showFriendsBtnMobile && userListMobile && friendAreaMobile) {
+    showFriendsBtnMobile.addEventListener('click', () => {
+      showingFriendsMobile = !showingFriendsMobile;
+      userListMobile.style.display = showingFriendsMobile ? 'none' : '';
+      friendAreaMobile.style.display = showingFriendsMobile ? '' : 'none';
+      showFriendsBtnMobile.textContent = showingFriendsMobile ? '返回在線成員' : '我的好友';
+      if (showingFriendsMobile) renderFriendList();
+    });
+  } else {
+    console.warn('📱 手機好友切換相關元素缺失:', { showFriendsBtnMobile, userListMobile, friendAreaMobile });
   }
-};
-
-  showFriendsBtnMobile.onclick = function() {
-    showingFriendsMobile = !showingFriendsMobile;
-    userListMobile.style.display = showingFriendsMobile ? 'none' : '';
-    friendAreaMobile.style.display = showingFriendsMobile ? '' : 'none';
-    showFriendsBtnMobile.textContent = showingFriendsMobile ? '返回在線成員' : '我的好友';
-  };
 });
 
 // ====== 新增好友請求 ======
@@ -2585,8 +2588,6 @@ function initUserDropdownMenu() {
     document.getElementById('mobile-view-friends-btn')?.addEventListener('click', () => {
       closeMobileSidebar();
       loadFriendsList();
-      // 添加手機版好友模式類別，隱藏聊天相關元素
-      document.body.classList.add('mobile-friends-mode');
     });
     
     document.getElementById('edit-profile-btn')?.addEventListener('click', () => {
@@ -2622,76 +2623,137 @@ window.addEventListener('DOMContentLoaded', () => {
     console.log('📱 BASIC TOUCH TEST - Any touch detected:', e.target.tagName, e.target.className, e.target);
   });
   
-  // 添加全域事件委派處理好友點擊
+  // 改寫委派：使用 closest + elementFromPoint fallback
+  function resolveRealTarget(evt) {
+    // 如果 target = #chat，嘗試用座標再取一次實際元素
+    let t = evt.target;
+    if (t && t.id === 'chat') {
+      const touch = evt.changedTouches ? evt.changedTouches[0] : null;
+      const x = touch ? touch.clientX : evt.clientX;
+      const y = touch ? touch.clientY : evt.clientY;
+      const el = document.elementFromPoint(x, y);
+      if (el && el !== t) {
+        console.log('🔍 elementFromPoint fallback 命中:', el);
+        t = el;
+      }
+      // 追加：多層掃描，找出第一個含 data-friend-click / data-private-click / data-room-id 的元素
+      const stack = document.elementsFromPoint(x, y);
+      let candidate = null;
+      for (const node of stack) {
+        if (node.hasAttribute?.('data-friend-click') || node.hasAttribute?.('data-private-click') || node.hasAttribute?.('data-room-id')) {
+          candidate = node;
+          break;
+        }
+      }
+      if (candidate && candidate !== t) {
+        console.log('🧱 elementsFromPoint 選到候選節點:', candidate);
+        t = candidate;
+      } else if (!candidate) {
+        console.log('🧱 elementsFromPoint 未找到可點擊候選 stack=', stack.slice(0,6));
+      }
+    }
+    return t;
+  }
+
+  function handleActivate(evt, source) {
+    const target = resolveRealTarget(evt);
+    const friendNode = target.closest('[data-friend-click]');
+    let privateNode = target.closest('[data-private-click]');
+    // 備援：有些節點可能只有 data-room-id
+    if (!privateNode) {
+      const roomNode = target.closest('[data-room-id]');
+      if (roomNode) {
+        privateNode = roomNode;
+        // 若缺少 data-private-click，補上，方便後續點擊
+        if (!roomNode.getAttribute('data-private-click')) {
+          const ridTmp = roomNode.getAttribute('data-room-id');
+            roomNode.setAttribute('data-private-click', ridTmp);
+        }
+      }
+    }
+    if (friendNode) {
+      const id = friendNode.getAttribute('data-friend-click');
+      console.log(`🎯 ${source} friend activate:`, id, 'raw target:', evt.target, 'resolved:', target);
+      startPrivateChat(id);
+      return true;
+    }
+    if (privateNode) {
+      const rid = privateNode.getAttribute('data-private-click');
+      const title = privateNode.getAttribute('data-private-title') || '私人對話';
+      console.log(`💬 ${source} private activate:`, rid, 'raw target:', evt.target, 'resolved:', target);
+      enterRoom(rid, title);
+      return true;
+    }
+    return false;
+  }
+
   document.body.addEventListener('click', (e) => {
-    console.log('🖱️ Global click event:', e.target, 'data-friend-click:', e.target.getAttribute('data-friend-click'), 'data-private-click:', e.target.getAttribute('data-private-click'));
-    
-    const friendClickId = e.target.getAttribute('data-friend-click');
-    if (friendClickId) {
-      console.log('🎯 Global friend click detected:', friendClickId);
-      e.preventDefault();
-      e.stopPropagation();
-      startPrivateChat(friendClickId);
-      return;
-    }
-    
-    // 處理私訊點擊
-    const privateClickId = e.target.getAttribute('data-private-click');
-    const privateTitle = e.target.getAttribute('data-private-title');
-    if (privateClickId) {
-      console.log('🎯 Global private chat click detected:', privateClickId);
-      e.preventDefault();
-      e.stopPropagation();
-      enterRoom(privateClickId, privateTitle || '私人對話');
-      return;
-    }
+    handleActivate(e, 'click');
   });
-  
-  // 使用 touchstart 而不是 touchend 獲得更好的響應
-  document.body.addEventListener('touchstart', (e) => {
-    console.log('📱 Global touchstart event:', e.target, 'data-friend-click:', e.target.getAttribute('data-friend-click'), 'data-private-click:', e.target.getAttribute('data-private-click'));
-    
-    const friendClickId = e.target.getAttribute('data-friend-click');
-    if (friendClickId) {
-      console.log('📱 Global friend touch detected:', friendClickId);
-      e.preventDefault();
-      e.stopPropagation();
-      startPrivateChat(friendClickId);
-      return;
-    }
-    
-    // 處理私訊觸摸
-    const privateClickId = e.target.getAttribute('data-private-click');
-    const privateTitle = e.target.getAttribute('data-private-title');
-    if (privateClickId) {
-      console.log('📱 Global private chat touch detected:', privateClickId);
-      e.preventDefault();
-      e.stopPropagation();
-      enterRoom(privateClickId, privateTitle || '私人對話');
-      return;
-    }
-  });
-  
-  // 保留 touchend 作為備用
   document.body.addEventListener('touchend', (e) => {
-    const friendClickId = e.target.getAttribute('data-friend-click');
-    if (friendClickId) {
-      console.log('📱 Global friend touchend detected:', friendClickId);
-      // 不使用 preventDefault，避免干擾 touchstart
-      startPrivateChat(friendClickId);
-      return;
-    }
-    
-    // 處理私訊觸摸結束
-    const privateClickId = e.target.getAttribute('data-private-click');
-    const privateTitle = e.target.getAttribute('data-private-title');
-    if (privateClickId) {
-      console.log('📱 Global private chat touchend detected:', privateClickId);
-      // 不使用 preventDefault，避免干擾 touchstart
-      enterRoom(privateClickId, privateTitle || '私人對話');
-      return;
-    }
-  });
+    if (e.changedTouches && e.changedTouches.length > 1) return; // 忽略多指
+    handleActivate(e, 'touchend');
+  }, { passive: true });
+
+  // 動態插入臨時樣式：避免標題區攔截指標事件
+  if (!document.getElementById('private-chat-pointer-style')) {
+    const style = document.createElement('style');
+    style.id = 'private-chat-pointer-style';
+    style.textContent = `
+      #chat h4, #chat .private-chat-list-wrapper > h4 { pointer-events: none !important; }
+      #chat .private-chat-list-wrapper { position: relative; }
+    `;
+    document.head.appendChild(style);
+  }
+
+  // ===== 追加：在捕獲階段做一次命中測試（解決頂部幾個項目無法點擊問題） =====
+  const chatEl = document.getElementById('chat');
+  if (chatEl) {
+    ['click','touchend'].forEach(type => {
+      chatEl.addEventListener(type, (evt) => {
+        if (type === 'touchend' && evt.changedTouches && evt.changedTouches.length > 1) return;
+        const touch = evt.changedTouches ? evt.changedTouches[0] : null;
+        const cx = touch ? touch.clientX : evt.clientX;
+        const cy = touch ? touch.clientY : evt.clientY;
+        const el = document.elementFromPoint(cx, cy);
+        if (!el) return;
+        const friendNode = el.closest('[data-friend-click]');
+        const privateNode = el.closest('[data-private-click],[data-room-id]');
+        if (privateNode && !el.closest('.debug-hit-outline')) {
+          console.log('🧪 捕獲階段命中 private (fallback):', privateNode.getAttribute('data-private-click') || privateNode.getAttribute('data-room-id'), 'raw elementFromPoint:', el);
+          // 若主流程未觸發，手動進入房間
+          if (!privateNode.getAttribute('data-private-click')) {
+            const rid = privateNode.getAttribute('data-room-id');
+            privateNode.setAttribute('data-private-click', rid);
+          }
+          // 暫不阻止，交由主流程；如主流程仍未觸發，手動呼叫
+          setTimeout(() => {
+            // 偵測是否已經進入（可加入狀態判斷），此處直接觸發
+            const rid = privateNode.getAttribute('data-private-click');
+            const title = privateNode.getAttribute('data-private-title') || '私人對話';
+            // 加一個旗標避免重複
+            if (!privateNode.__activatedOnce) {
+              privateNode.__activatedOnce = true;
+              enterRoom(rid, title);
+            }
+          }, 0);
+        }
+      }, { capture: true, passive: true });
+    });
+
+    // Debug: 列出前 6 個私訊項目的位置與尺寸
+    setTimeout(() => {
+      const firstItems = chatEl.querySelectorAll('.private-chat-item');
+      firstItems.forEach((node, idx) => {
+        if (idx < 6) {
+          const r = node.getBoundingClientRect();
+            console.log(`📏 私訊項目[${idx}] box:`, r);
+            node.style.zIndex = 5; // 提升層級
+            node.style.position = 'relative';
+        }
+      });
+    }, 500);
+  }
   
   // 隱藏手機版聊天按鈕的函數
   function hideMobileChatButtons() {
