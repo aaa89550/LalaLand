@@ -2422,14 +2422,36 @@ function showNotification(title, body, fromUid, icon = null) {
 // 手機版頁面內通知
 function showMobileNotification(fromUid, message, nickname) {
     console.log('📱 顯示手機版通知:', { fromUid, message, nickname });
+    console.log('🔍 當前狀態檢查:', { 
+        currentChat, 
+        currentPrivateRoomId, 
+        currentPrivateUid,
+        isInPrivateMode: currentChat === 'private',
+        hasPrivateRoom: !!currentPrivateRoomId
+    });
     
-    // 避免在當前私訊對話中顯示通知（支援兩種檢查方式）
+    // 避免在當前私訊對話中顯示通知 - 更嚴格的檢查
     const currentRoomId = currentPrivateRoomId;
     const messageRoomId = `${[fromUid, currentUser.uid].sort().join('_')}`;
-    const isInCurrentPrivateChat = (currentRoomId === messageRoomId) || (currentPrivateUid === fromUid);
     
-    if (isInCurrentPrivateChat) {
-        console.log('⏭️ 跳過通知：正在與此用戶私訊中', { currentPrivateUid, currentPrivateRoomId, messageRoomId });
+    // 檢查是否在私訊模式且正在與此用戶對話
+    const isInPrivateChat = currentChat === 'private' && currentPrivateRoomId;
+    const isSameRoom = currentRoomId === messageRoomId;
+    const isSameUser = currentPrivateUid === fromUid;
+    const shouldSkipNotification = isInPrivateChat && (isSameRoom || isSameUser);
+    
+    console.log('🔍 通知檢查詳細:', {
+        fromUid,
+        currentRoomId,
+        messageRoomId,
+        isInPrivateChat,
+        isSameRoom,
+        isSameUser,
+        shouldSkipNotification
+    });
+    
+    if (shouldSkipNotification) {
+        console.log('⏭️ 跳過通知：正在與此用戶私訊中');
         return;
     }
 
