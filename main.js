@@ -1137,6 +1137,40 @@ document.addEventListener('DOMContentLoaded', function() {
     switchTab('login');
   }
 
+  // 添加即時密碼確認驗證
+  const registerPasswordInput = document.getElementById('register-password');
+  const registerPasswordConfirmInput = document.getElementById('register-password-confirm');
+  
+  if (registerPasswordInput && registerPasswordConfirmInput) {
+    registerPasswordConfirmInput.addEventListener('input', function() {
+      const password = registerPasswordInput.value;
+      const confirmPassword = this.value;
+      
+      // 如果確認密碼欄位有內容且與原密碼不符，改變邊框顏色
+      if (confirmPassword && password !== confirmPassword) {
+        this.style.borderColor = '#ff6b6b';
+        this.style.borderWidth = '2px';
+      } else {
+        this.style.borderColor = '';
+        this.style.borderWidth = '';
+      }
+    });
+    
+    // 當密碼欄位改變時，也檢查確認密碼
+    registerPasswordInput.addEventListener('input', function() {
+      const password = this.value;
+      const confirmPassword = registerPasswordConfirmInput.value;
+      
+      if (confirmPassword && password !== confirmPassword) {
+        registerPasswordConfirmInput.style.borderColor = '#ff6b6b';
+        registerPasswordConfirmInput.style.borderWidth = '2px';
+      } else {
+        registerPasswordConfirmInput.style.borderColor = '';
+        registerPasswordConfirmInput.style.borderWidth = '';
+      }
+    });
+  }
+
   // 註冊表單
   const registerForm = document.getElementById('register-form');
   registerForm.addEventListener('submit', async (e)=>{
@@ -1151,7 +1185,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     if(password !== passwordConfirm) {
-      return alert('密碼與確認密碼不一致');
+      return alert('二次密碼輸入錯誤！請確認兩次密碼輸入相同');
     }
     
     if(password.length < 6) {
