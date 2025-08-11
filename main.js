@@ -1617,6 +1617,12 @@ function sendMessage() {
     time: Date.now(),
     replyTo: currentReplyMsgId || null
   };
+  
+  // 如果是私訊，添加to字段
+  if (!currentChat.startsWith("group_")) {
+    msg.to = currentChat; // currentChat包含對方的uid
+  }
+  
   console.log('📤 Message object to send:', msg);
 
   if (currentChat && currentChat.startsWith("group_")) {
