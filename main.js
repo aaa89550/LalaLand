@@ -1869,6 +1869,7 @@ function setupPrivateChatListener(chatId) {
       // 獲取發送者昵稱
       get(ref(db, `users/${messageData.from}/nickname`)).then((snapshot) => {
         const senderNickname = snapshot.val() || '匿名用戶';
+        // 只顯示通知，不自動跳轉
         showPrivateMessageNotification(messageData.from, messageData.msg, senderNickname);
       }).catch((error) => {
         console.error('獲取發送者昵稱失敗:', error);
