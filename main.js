@@ -95,7 +95,16 @@ function switchChat(newChatId) {
     const msgId = snap.key;
     if (!renderedMessageIds.has(msgId)) {
       renderedMessageIds.add(msgId);
-      appendMessage(msg, msgId);
+      // 根據頻道型態帶入 sourceChannel
+      let sourceChannel = null;
+      if (currentChat.startsWith("group_")) {
+        sourceChannel = currentChat;
+      } else if (currentChat) {
+        // 私訊模式
+        const ids = [currentUser.uid, currentChat].sort();
+        sourceChannel = `private_${ids[0]}_${ids[1]}`;
+      }
+      appendMessage(msg, msgId, sourceChannel);
     }
   });
 }
