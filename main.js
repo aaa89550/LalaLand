@@ -1160,91 +1160,41 @@ document.addEventListener('DOMContentLoaded', function() {
     const password = document.getElementById('register-password').value;
     const nickname = document.getElementById('register-nickname').value.trim();
     const file = registerAvatar.files[0];
-    if(!email||!password||!nickname||!file) return alert('請輸入完整資料');
-    
-    // 顯示載入動畫
-    if (typeof showLoading === 'function') showLoading();
+    if(!email||!password||!nickname) return alert('請輸入完整資料');
     
     try{
       console.log('🔄 開始註冊流程...');
-      const userCred = await createUserWithEmailAndPassword(auth, email, password);
-      const user = userCred.user;
+      // 註冊流程
+      await createUserWithEmailAndPassword(auth, email, password);
       
-      console.log('📁 上傳頭像...');
-      // 上傳頭貼
-      const filename = 'avatars/' + Date.now() + '_' + file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
-      const imgRef = sRef(storage, filename);
-      await uploadBytes(imgRef, file);
-      const avatarURL = await getDownloadURL(imgRef);
-      console.log('✅ 頭像上傳成功:', avatarURL);
-      
-      console.log('🔄 更新 Firebase Auth Profile...');
-      // 更新profile
-      await updateProfile(user, { displayName: nickname, photoURL: avatarURL });
+      let avatarURL = '';
+      if (file) {
+        console.log('📁 上傳頭像...');
+        // 上傳頭貼
+        const filename = 'avatars/' + Date.now() + '_' + file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+        const imgRef = sRef(storage, filename);
+        await uploadBytes(imgRef, file);
+        avatarURL = await getDownloadURL(imgRef);
+        console.log('✅ 頭像上傳成功:', avatarURL);
+      }
       
       console.log('💾 寫入 Realtime Database...');
-      // 寫入users - 確保資料完整寫入
-      const userData = {
-        uid: user.uid,
+      await set(ref(db, 'users/' + auth.currentUser.uid), {
         nickname: nickname,
-        avatar: avatarURL,
+        avatar: avatarURL, // 或預設頭像
+        createdAt: Date.now(),
+        uid: auth.currentUser.uid,
         friends: {},
         online: true,
         lastActive: Date.now()
-      };
+      });
       
-      await update(ref(db, 'users/' + user.uid), userData);
-      await onDisconnect(ref(db, 'users/' + user.uid + '/online')).set(false);
-      console.log('✅ 資料寫入完成:', userData);
-      
-      console.log('🔍 強制驗證資料同步...');
-      // 強制等待直到成功獲取到完整資料
-      let verifyCount = 0;
-      const maxVerifyTries = 10; // 最多嘗試10次
-      const verifyDelay = 1000;  // 每次等待1秒
-      let verifiedData = null;
-      
-      while (verifyCount < maxVerifyTries) {
-        try {
-          console.log(`🔍 第 ${verifyCount + 1}/${maxVerifyTries} 次驗證資料...`);
-          const verifySnapshot = await get(ref(db, 'users/' + user.uid));
-          verifiedData = verifySnapshot.val();
-          
-          // 確保獲取到完整的 nickname 和 avatar
-          if (verifiedData && verifiedData.nickname && verifiedData.avatar) {
-            console.log('✅ 驗證成功！獲取到完整用戶資料:', verifiedData);
-            break;
-          } else {
-            console.log('⏳ 資料尚未完全同步，繼續等待...', verifiedData);
-          }
-        } catch (error) {
-          console.error('❌ 驗證過程中發生錯誤:', error);
-        }
-        
-        verifyCount++;
-        if (verifyCount < maxVerifyTries) {
-          await new Promise(resolve => setTimeout(resolve, verifyDelay));
-        }
-      }
-      
-      // 關閉載入動畫
-      if (typeof hideLoading === 'function') hideLoading();
-      
-      if (verifiedData && verifiedData.nickname && verifiedData.avatar) {
-        console.log('🎉 註冊完成！資料驗證成功，即將跳轉...');
-        alert('註冊成功！');
-        // 資料驗證成功，跳轉到聊天頁面
-        setTimeout(() => {
-          window.location.href = 'chat.html';
-        }, 500);
-      } else {
-        console.error('❌ 註冊失敗：無法驗證用戶資料完整性');
-        alert('註冊過程中發生問題，資料同步失敗，請重新嘗試');
-      }
+      console.log('✅ 註冊完成，即將跳轉...');
+      // 等資料寫入完成後再導向
+      sessionStorage.setItem('isLoginRedirect', 'true');
+      window.location.href = 'chat.html';
       
     }catch(err){
-      // 關閉載入動畫
-      if (typeof hideLoading === 'function') hideLoading();
       console.error('❌ 註冊失敗:', err);
       alert(err.message);
     }
