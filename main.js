@@ -1342,9 +1342,9 @@ onAuthStateChanged(auth, async (user) => {
       // 更新用戶顯示
       updateUserProfileDisplay();
       
-      // 初始化桌面通知系統
-      if (typeof initDesktopNotifications === 'function') {
-        initDesktopNotifications();
+      // 初始化通知系統（手機版和電腦版分別處理）
+      if (typeof initNotificationSystem === 'function') {
+        initNotificationSystem();
       }
       
       // 重新初始化事件處理器（登入後確保所有功能正常）
@@ -1785,56 +1785,8 @@ function openPrivateChat(uid) {
 function showPrivateMessageNotification(fromUid, message, nickname) {
   console.log('🔔 嘗試顯示私訊通知:', { fromUid, message, nickname, currentPrivateUid });
   
-  // 避免在當前私訊對話中顯示通知
-  if (currentPrivateUid === fromUid) {
-    console.log('⏭️ 跳過通知：正在與此用戶私訊中');
-    return;
-  }
-
-  // 防止通知過於頻繁（1秒內只顯示一次）
-  const now = Date.now();
-  if (now - lastNotificationTime < 1000) {
-    console.log('⏭️ 跳過通知：太頻繁');
-    return;
-  }
-  lastNotificationTime = now;
-
-  const notificationBar = document.getElementById('notification-bar');
-  const notificationText = document.getElementById('notification-text');
-  
-  if (!notificationBar || !notificationText) {
-    console.error('❌ 找不到通知欄元素');
-    return;
-  }
-
-  console.log('✅ 顯示私訊通知');
-
-  // 設置通知內容
-  const shortMessage = message.length > 30 ? message.substring(0, 30) + '...' : message;
-  notificationText.textContent = `${nickname || '匿名用戶'}: ${shortMessage}`;
-  
-  // 設置點擊事件
-  notificationBar.onclick = () => {
-    openPrivateChat(fromUid);
-    hidePrivateMessageNotification();
-  };
-  
-  // 顯示通知
-  notificationBar.style.display = 'block';
-  
-  // 存儲通知信息
-  activeNotifications.set(fromUid, {
-    message,
-    nickname,
-    timestamp: now
-  });
-  
-  // 3秒後自動隱藏通知
-  setTimeout(() => {
-    if (activeNotifications.has(fromUid)) {
-      hidePrivateMessageNotification();
-    }
-  }, 3000);
+  // 使用新的統一通知系統
+  showNotification('新私訊', message, fromUid);
 }
 
 function hidePrivateMessageNotification() {
@@ -1944,7 +1896,19 @@ function stopGlobalPrivateMessageMonitoring() {
 // 測試私訊通知功能
 window.testPrivateNotification = function() {
   console.log('🧪 測試私訊通知功能');
-  showPrivateMessageNotification('test-uid', '這是一個測試私訊通知', '測試用戶');
+  showNotification('測試通知', '這是一個測試私訊通知', 'test-uid');
+};
+
+// 測試手機版通知
+window.testMobileNotification = function() {
+  console.log('📱 測試手機版通知功能');
+  showMobileNotification('test-uid', '這是手機版測試訊息', '測試用戶');
+};
+
+// 測試桌面通知
+window.testDesktopNotification = function() {
+  console.log('💻 測試桌面通知功能');
+  showDesktopNotification('測試桌面通知', '這是桌面通知測試');
 };
 
 // ========= Firebase Auth 狀態監聽 & 用戶同步/好友機制 =========
@@ -2316,11 +2280,43 @@ window.addEventListener('DOMContentLoaded', () => {
   document.getElementById("toggle-night-mode-mobile")?.addEventListener("click", toggleNightMode);
 });
 
-// 桌面通知系統
+// 通知系統初始化 - 針對手機版和電腦版分別處理
+function initNotificationSystem() {
+    const isMobile = window.innerWidth <= 600;
+    
+    if (isMobile) {
+        console.log("🤳 初始化手機版通知系統");
+        initMobileNotifications();
+    } else {
+        console.log("💻 初始化電腦版通知系統");
+        initDesktopNotifications();
+    }
+    
+    // 響應式調整
+    window.addEventListener('resize', () => {
+        const newIsMobile = window.innerWidth <= 600;
+        if (newIsMobile !== isMobile) {
+            if (newIsMobile) {
+                initMobileNotifications();
+            } else {
+                initDesktopNotifications();
+            }
+        }
+    });
+}
+
+// 手機版通知系統 - 使用頁面內通知
+function initMobileNotifications() {
+    console.log("📱 手機版通知系統：使用頁面內通知");
+    checkForNewPrivateMessages();
+}
+
+// 電腦版通知系統 - 使用桌面通知
 function initDesktopNotifications() {
     // 檢查瀏覽器是否支援通知
     if (!("Notification" in window)) {
-        console.log("此瀏覽器不支援桌面通知");
+        console.log("此瀏覽器不支援桌面通知，回退到頁面內通知");
+        initMobileNotifications();
         return;
     }
     
@@ -2329,16 +2325,101 @@ function initDesktopNotifications() {
         Notification.requestPermission().then(permission => {
             if (permission === "granted") {
                 console.log("桌面通知權限已授予");
-                // 初始化私訊監聽
                 checkForNewPrivateMessages();
             } else {
-                console.log("桌面通知權限被拒絕");
+                console.log("桌面通知權限被拒絕，使用頁面內通知");
+                initMobileNotifications();
             }
         });
     } else if (Notification.permission === "granted") {
         // 如果已經有權限，直接初始化
         checkForNewPrivateMessages();
+    } else {
+        console.log("桌面通知權限被拒絕，使用頁面內通知");
+        initMobileNotifications();
     }
+}
+
+// 顯示通知 - 根據平台選擇通知方式
+function showNotification(title, body, fromUid, icon = null) {
+    const isMobile = window.innerWidth <= 600;
+    
+    if (isMobile || Notification.permission !== "granted") {
+        // 手機版或無桌面通知權限時使用頁面內通知
+        showMobileNotification(fromUid, body, title);
+    } else {
+        // 電腦版使用桌面通知
+        showDesktopNotification(title, body, icon);
+        // 同時顯示頁面內通知作為備用
+        showMobileNotification(fromUid, body, title);
+    }
+}
+
+// 手機版頁面內通知
+function showMobileNotification(fromUid, message, nickname) {
+    console.log('📱 顯示手機版通知:', { fromUid, message, nickname });
+    
+    // 避免在當前私訊對話中顯示通知
+    if (currentPrivateUid === fromUid) {
+        console.log('⏭️ 跳過通知：正在與此用戶私訊中');
+        return;
+    }
+
+    // 防止通知過於頻繁
+    const now = Date.now();
+    if (now - lastNotificationTime < 1000) {
+        console.log('⏭️ 跳過通知：太頻繁');
+        return;
+    }
+    lastNotificationTime = now;
+
+    const notificationBar = document.getElementById('notification-bar');
+    const notificationText = document.getElementById('notification-text');
+    
+    if (!notificationBar || !notificationText) {
+        console.error('❌ 找不到通知欄元素');
+        return;
+    }
+
+    // 設置通知內容
+    const shortMessage = message.length > 30 ? message.substring(0, 30) + '...' : message;
+    notificationText.textContent = `${nickname || '匿名用戶'}: ${shortMessage}`;
+    
+    // 手機版特殊樣式
+    if (window.innerWidth <= 600) {
+        notificationBar.style.position = 'fixed';
+        notificationBar.style.top = '10px';
+        notificationBar.style.left = '50%';
+        notificationBar.style.transform = 'translateX(-50%)';
+        notificationBar.style.width = '90%';
+        notificationBar.style.maxWidth = '400px';
+        notificationBar.style.zIndex = '10000';
+        notificationBar.style.margin = '0';
+    }
+    
+    // 設置點擊事件
+    notificationBar.onclick = () => {
+        openPrivateChat(fromUid);
+        hidePrivateMessageNotification();
+    };
+    
+    // 顯示通知
+    notificationBar.style.display = 'block';
+    
+    // 存儲通知信息
+    activeNotifications.set(fromUid, {
+        message,
+        nickname,
+        timestamp: now
+    });
+    
+    // 手機版顯示時間較長（5秒），電腦版較短（3秒）
+    const hideDelay = window.innerWidth <= 600 ? 5000 : 3000;
+    setTimeout(() => {
+        if (activeNotifications.has(fromUid)) {
+            hidePrivateMessageNotification();
+        }
+    }, hideDelay);
 }
 
 // 顯示桌面通知
@@ -2400,10 +2481,11 @@ function checkForNewPrivateMessages() {
                             privateTab.classList.add('has-unread');
                         }
                         
-                        // 顯示桌面通知
-                        showDesktopNotification(
+                        // 使用統一的通知系統
+                        showNotification(
                             '新私訊',
                             `${message.user || '匿名'}: ${message.message || '傳送了一則訊息'}`,
+                            message.from,
                             message.avatar
                         );
                     }
@@ -2541,8 +2623,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById('logout-btn')?.addEventListener('click', logoutHandler);
   
-  // 初始化桌面通知權限
-  initDesktopNotifications();
+  // 初始化通知系統
+  initNotificationSystem();
   
   // 初始化聊天標籤事件處理器
   initChatTabsEventHandlers();
