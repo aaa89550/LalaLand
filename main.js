@@ -554,6 +554,7 @@ window.enterRoom = function(roomId, title) {
     
     // 設置當前聊天室
     currentChatRoom = 'private';
+    currentChat = `private_${roomId}`; // 設置正確的頻道識別碼
     currentPrivateRoomId = roomId;
     
     // 更新聊天區域標題
@@ -610,7 +611,7 @@ function loadSpecificPrivateChat(roomId) {
     if (tipEl) tipEl.style.display = 'none';
     
     // 設置當前聊天狀態
-    currentChat = 'private';
+    currentChat = `private_${roomId}`; // 與 sourceChannel 一致
     currentPrivateRoomId = roomId;
     
     // 從 roomId 中提取對方的 UID，設置 currentPrivateUid 保持一致性
@@ -715,14 +716,14 @@ function displayPrivateMessagesInChat() {
             console.log('📋 Sorted private chats by actual message time:', validChats);
             
             // 只有在真正顯示私訊列表頁面時才更新列表，避免干擾當前私訊對話
-            // 檢查是否在私訊列表模式：currentChat為"private"且沒有具體的對話對象
-            const isInPrivateList = (currentChat === "private" && !currentPrivateRoomId);
+            // 檢查是否在私訊列表模式：currentChatRoom為"private"且沒有具體的對話對象
+            const isInPrivateList = (currentChatRoom === "private" && currentChat === "private" && !currentPrivateRoomId);
             console.log('🔍 檢查是否在私訊列表:', {
                 currentChat,
-                currentPrivateRoomId, 
                 currentChatRoom,
+                currentPrivateRoomId, 
                 isInPrivateList,
-                reason: currentChat === "private" ? 
+                reason: currentChatRoom === "private" ? 
                     (!currentPrivateRoomId ? "在私訊列表中" : "在具體私訊對話中") : 
                     "不在私訊模式"
             });
@@ -737,7 +738,7 @@ function displayPrivateMessagesInChat() {
             console.error('❌ 載入私訊列表時發生錯誤:', error);
             // 顯示錯誤訊息並提供重試選項
             const chatContainer = document.getElementById('chat');
-            if (chatContainer && currentChat === "private" && !currentPrivateRoomId) {
+            if (chatContainer && currentChatRoom === "private" && currentChat === "private" && !currentPrivateRoomId) {
                 chatContainer.innerHTML = `
                     <div style="text-align: center; color: #999; padding: 40px;">
                         <p>載入私訊列表失敗</p>
@@ -1944,13 +1945,13 @@ function openPrivateChat(uid) {
   stopAllListeners();  // 清除原本監聽器
   clearChat(); // 清空聊天室並重置已渲染訊息ID
 
-  currentChat = uid;
-  currentPrivateUid = uid;
-  currentChatRoom = 'private'; // 確保設置為私訊模式
-
   // 設置當前私訊房間ID
   const ids = [currentUser.uid, uid].sort();
   currentPrivateRoomId = `${ids[0]}_${ids[1]}`;
+  
+  currentChat = `private_${currentPrivateRoomId}`; // 與 sourceChannel 一致
+  currentPrivateUid = uid;
+  currentChatRoom = 'private'; // 確保設置為私訊模式
 
   // 確保私訊標籤是活躍的
   document.querySelectorAll('.chat-tab').forEach(tab => {
@@ -2614,9 +2615,10 @@ function showMobileNotification(fromUid, message, nickname) {
     console.log('📱 顯示手機版通知:', { fromUid, message, nickname });
     console.log('🔍 當前狀態檢查:', { 
         currentChat, 
+        currentChatRoom,
         currentPrivateRoomId, 
         currentPrivateUid,
-        isInPrivateMode: currentChat === 'private',
+        isInPrivateMode: currentChatRoom === 'private',
         hasPrivateRoom: !!currentPrivateRoomId
     });
     
@@ -2625,7 +2627,7 @@ function showMobileNotification(fromUid, message, nickname) {
     const messageRoomId = `${[fromUid, currentUser.uid].sort().join('_')}`;
     
     // 檢查是否在私訊模式且正在與此用戶對話
-    const isInPrivateChat = currentChat === 'private' && currentPrivateRoomId;
+    const isInPrivateChat = currentChatRoom === 'private' && currentPrivateRoomId;
     const isSameRoom = currentRoomId === messageRoomId;
     const isSameUser = currentPrivateUid === fromUid;
     const shouldSkipNotification = isInPrivateChat && (isSameRoom || isSameUser);
