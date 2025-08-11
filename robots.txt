@@ -1,0 +1,24 @@
+# Robots.txt for LalaLand 女同聊天室
+# 允許搜尋引擎索引公開頁面，保護私人聊天頁面
+
+User-agent: *
+
+# 允許索引的頁面
+Allow: /
+Allow: /index.html
+Allow: /login.html
+Allow: /*.css
+Allow: /*.js
+Allow: /icon-512.png
+
+# 禁止索引的頁面（保護隱私）
+Disallow: /chat.html
+Disallow: /announce.html
+Disallow: /test-*.html
+Disallow: /*.backup
+
+# 網站地圖位置
+Sitemap: https://www.lalaland-chat.tw/sitemap.xml
+
+# 爬取延遲（秒）
+Crawl-delay: 1
