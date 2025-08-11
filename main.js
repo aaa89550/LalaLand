@@ -58,6 +58,7 @@ let voteUpdateRef = null;
 // 私訊通知相關變數
 let globalPrivateMessageListeners = new Map(); // 存儲所有私訊監聽器
 let activeNotifications = new Map(); // 存儲活動的通知
+let lastReadMessages = {}; // 記錄每個用戶的最後已讀訊息時間
 let privateChatsListRef = null; // 私訊列表監聽器引用
 let privateChatsListListener = null; // 私訊列表監聽器
 let lastNotificationTime = 0; // 防止通知過於頻繁
@@ -783,6 +784,10 @@ function addPrivateChatToList(chat, userData, containerOverride) {
         hour12: false
     }) : '';
     
+    // 檢查是否有未讀訊息
+    const hasUnread = chat.lastTime && !isMessageRead(chat.otherUserId, chat.lastTime);
+    const unreadIndicator = hasUnread ? '<div class="unread-indicator" style="width: 10px; height: 10px; background: var(--accent-coral); border-radius: 50%; margin-left: 8px;"></div>' : '';
+    
   const chatDiv = document.createElement('div');
   chatDiv.className = 'private-chat-item';
   chatDiv.setAttribute('data-room-id', chat.roomId);
@@ -790,14 +795,15 @@ function addPrivateChatToList(chat, userData, containerOverride) {
   chatDiv.setAttribute('data-private-title', `與${userData.nickname}的對話`);
   chatDiv.style.pointerEvents = 'auto';
   chatDiv.innerHTML = `
-    <div class="private-chat-content" style="display: flex; align-items: center; padding: 12px; background: #f8f9fa; border-radius: 8px; margin-bottom: 8px; cursor: pointer; transition: background 0.2s ease;" data-private-click="${chat.roomId}" data-private-title="與${userData.nickname}的對話">
+    <div class="private-chat-content" style="display: flex; align-items: center; padding: 12px; background: ${hasUnread ? '#fff5f5' : '#f8f9fa'}; border-radius: 8px; margin-bottom: 8px; cursor: pointer; transition: background 0.2s ease; border-left: ${hasUnread ? '4px solid var(--accent-coral)' : 'none'};" data-private-click="${chat.roomId}" data-private-title="與${userData.nickname}的對話">
             <img src="${userData.avatar || 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'40\' height=\'40\' viewBox=\'0 0 40 40\'%3E%3Ccircle cx=\'20\' cy=\'20\' r=\'20\' fill=\'%23ddd\'/%3E%3Ctext x=\'20\' y=\'26\' text-anchor=\'middle\' fill=\'white\' font-size=\'16\'%3E👤%3C/text%3E%3C/svg%3E'}" 
-                 class="private-chat-avatar" style="width: 50px; height: 50px; border-radius: 50%; margin-right: 12px; object-fit: cover; border: 2px solid var(--accent-green);" data-private-click="${chat.roomId}" data-private-title="與${userData.nickname}的對話">
+                 class="private-chat-avatar" style="width: 50px; height: 50px; border-radius: 50%; margin-right: 12px; object-fit: cover; border: 2px solid ${hasUnread ? 'var(--accent-coral)' : 'var(--accent-green)'};" data-private-click="${chat.roomId}" data-private-title="與${userData.nickname}的對話">
             <div style="flex: 1;" data-private-click="${chat.roomId}" data-private-title="與${userData.nickname}的對話">
-                <div style="font-weight: 600; color: var(--sea-dark); margin-bottom: 2px;" data-private-click="${chat.roomId}" data-private-title="與${userData.nickname}的對話">${userData.nickname || '匿名用戶'}</div>
-                <div style="font-size: 12px; color: #666; margin-bottom: 2px;" data-private-click="${chat.roomId}" data-private-title="與${userData.nickname}的對話">${lastMessageText}</div>
+                <div style="font-weight: ${hasUnread ? '700' : '600'}; color: var(--sea-dark); margin-bottom: 2px;" data-private-click="${chat.roomId}" data-private-title="與${userData.nickname}的對話">${userData.nickname || '匿名用戶'}</div>
+                <div style="font-size: 12px; color: ${hasUnread ? '#333' : '#666'}; margin-bottom: 2px; font-weight: ${hasUnread ? '600' : 'normal'};" data-private-click="${chat.roomId}" data-private-title="與${userData.nickname}的對話">${lastMessageText}</div>
                 <div style="font-size: 10px; color: #999;" data-private-click="${chat.roomId}" data-private-title="與${userData.nickname}的對話">${timeStr}</div>
             </div>
+            ${unreadIndicator}
         </div>
     `;
     
@@ -1529,6 +1535,8 @@ onAuthStateChanged(auth, async (user) => {
 
     // 啟動私訊通知監聽（只在 chat.html 頁面）
     if (document.getElementById('main') && document.getElementById('chat')) {
+      // 載入已讀狀態
+      loadReadStates();
       startGlobalPrivateMessageMonitoring();
     }
 
@@ -1923,9 +1931,69 @@ function openPrivateChat(uid) {
     if(dot) dot.style.display = 'none';
   }
   privateChatNotificationStates[uid] = false;
+  
+  // 記錄已讀狀態
+  markMessagesAsRead(uid);
 }
 
 // ========= 私訊通知功能 =========
+// 記錄已讀狀態
+function markMessagesAsRead(fromUid) {
+  if (!currentUser?.uid || !fromUid) return;
+  
+  const now = Date.now();
+  lastReadMessages[fromUid] = now;
+  
+  // 儲存到 localStorage 以持久化
+  const readStateKey = `lastRead_${currentUser.uid}_${fromUid}`;
+  localStorage.setItem(readStateKey, now.toString());
+  
+  console.log('📖 標記已讀:', { fromUid, timestamp: now });
+}
+
+// 檢查訊息是否已讀
+function isMessageRead(fromUid, messageTime) {
+  if (!currentUser?.uid || !fromUid || !messageTime) return false;
+  
+  // 先檢查記憶體中的狀態
+  if (lastReadMessages[fromUid] && messageTime <= lastReadMessages[fromUid]) {
+    return true;
+  }
+  
+  // 檢查 localStorage
+  const readStateKey = `lastRead_${currentUser.uid}_${fromUid}`;
+  const lastReadTime = localStorage.getItem(readStateKey);
+  
+  if (lastReadTime) {
+    const lastRead = parseInt(lastReadTime, 10);
+    lastReadMessages[fromUid] = lastRead; // 同步到記憶體
+    return messageTime <= lastRead;
+  }
+  
+  return false;
+}
+
+// 載入已讀狀態
+function loadReadStates() {
+  if (!currentUser?.uid) return;
+  
+  lastReadMessages = {};
+  
+  // 從 localStorage 載入所有已讀狀態
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key && key.startsWith(`lastRead_${currentUser.uid}_`)) {
+      const fromUid = key.replace(`lastRead_${currentUser.uid}_`, '');
+      const timestamp = localStorage.getItem(key);
+      if (timestamp) {
+        lastReadMessages[fromUid] = parseInt(timestamp, 10);
+      }
+    }
+  }
+  
+  console.log('📚 載入已讀狀態:', lastReadMessages);
+}
+
 function showPrivateMessageNotification(fromUid, message, nickname) {
   console.log('🔔 嘗試顯示私訊通知:', { fromUid, message, nickname, currentPrivateRoomId });
   
@@ -2019,7 +2087,8 @@ function setupPrivateChatListener(chatId) {
     
     if (messageData.from !== currentUser.uid && 
         messageData.to === currentUser.uid && 
-        !isInCurrentPrivateChat) {
+        !isInCurrentPrivateChat &&
+        !isMessageRead(messageData.from, messageData.time)) { // 加入已讀檢查
       
       console.log('🔔 顯示私訊通知:', messageData.from);
       
@@ -2608,42 +2677,8 @@ function checkForNewPrivateMessages() {
     const user = auth.currentUser;
     if (!user) return;
     
-    // 監聽所有私人聊天室的新訊息
-    const privateChatsRef = ref(db, 'privateChats');
-    onValue(privateChatsRef, (snapshot) => {
-        const privateChats = snapshot.val() || {};
-        
-        Object.keys(privateChats).forEach(roomId => {
-            if (roomId.includes(user.uid)) {
-                const messagesRef = ref(db, `privateChats/${roomId}/messages`);
-                
-                // 監聽新訊息
-                onChildAdded(messagesRef, (messageSnapshot) => {
-                    const message = messageSnapshot.val();
-                    
-                    // 如果不是自己發送的訊息且在最近5秒內發送
-                    if (message && message.from !== user.uid && 
-                        message.time && 
-                        (Date.now() - message.time) < 5000) {
-                        
-                        // 標記私訊標籤有未讀
-                        const privateTab = document.querySelector('.chat-tab[data-room="private"]');
-                        if (privateTab) {
-                            privateTab.classList.add('has-unread');
-                        }
-                        
-                        // 使用統一的通知系統
-                        showNotification(
-                            '新私訊',
-                            `${message.user || '匿名'}: ${message.message || '傳送了一則訊息'}`,
-                            message.from,
-                            message.avatar
-                        );
-                    }
-                });
-            }
-        });
-    });
+    console.log('🔍 檢查新私訊 - 跳過，使用統一的全域監聽器');
+    // 移除重複的監聽邏輯，只使用 startGlobalPrivateMessageMonitoring 的統一監聽器
 }
 
 // 更新用戶個人資料顯示

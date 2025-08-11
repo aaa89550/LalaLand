@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>測試私訊通知修復</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #f5f5f5;
+        }
+        .test-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-case {
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            background: #fafafa;
+        }
+        .test-result {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>私訊通知修復測試</h1>
+        <p>此頁面用於測試私訊通知重複跳出問題的修復效果。</p>
+        
+        <div class="test-case">
+            <h3>測試 1: 已讀狀態儲存功能</h3>
+            <p>測試 localStorage 中的已讀狀態是否正確儲存和讀取。</p>
+            <button onclick="testReadStateStorage()">執行測試</button>
+            <div id="test1-result" class="test-result" style="display: none;"></div>
+        </div>
+        
+        <div class="test-case">
+            <h3>測試 2: 訊息已讀檢查</h3>
+            <p>測試訊息是否會被正確標記為已讀。</p>
+            <button onclick="testMessageReadCheck()">執行測試</button>
+            <div id="test2-result" class="test-result" style="display: none;"></div>
+        </div>
+        
+        <div class="test-case">
+            <h3>測試 3: 清除已讀狀態</h3>
+            <p>清除所有已讀狀態進行重置測試。</p>
+            <button onclick="clearAllReadStates()">清除已讀狀態</button>
+            <div id="test3-result" class="test-result" style="display: none;"></div>
+        </div>
+        
+        <div class="test-case">
+            <h3>改進說明</h3>
+            <ul>
+                <li><strong>問題原因：</strong>缺乏持久化的已讀狀態記錄，重新登入後會重置</li>
+                <li><strong>修復方案：</strong>
+                    <ul>
+                        <li>新增 <code>lastReadMessages</code> 變數記錄已讀時間</li>
+                        <li>使用 localStorage 持久化已讀狀態</li>
+                        <li>在通知檢查時過濾已讀訊息</li>
+                        <li>在打開私訊時自動標記為已讀</li>
+                        <li>移除重複的通知監聽器</li>
+                    </ul>
+                </li>
+                <li><strong>視覺改進：</strong>在私訊列表中顯示未讀指示器</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        // 模擬修復後的函數（簡化版本用於測試）
+        let lastReadMessages = {};
+        
+        function markMessagesAsRead(fromUid) {
+            const now = Date.now();
+            lastReadMessages[fromUid] = now;
+            
+            // 模擬儲存到 localStorage
+            const readStateKey = `lastRead_testUser_${fromUid}`;
+            localStorage.setItem(readStateKey, now.toString());
+            
+            return now;
+        }
+        
+        function isMessageRead(fromUid, messageTime) {
+            if (lastReadMessages[fromUid] && messageTime <= lastReadMessages[fromUid]) {
+                return true;
+            }
+            
+            const readStateKey = `lastRead_testUser_${fromUid}`;
+            const lastReadTime = localStorage.getItem(readStateKey);
+            
+            if (lastReadTime) {
+                const lastRead = parseInt(lastReadTime, 10);
+                lastReadMessages[fromUid] = lastRead;
+                return messageTime <= lastRead;
+            }
+            
+            return false;
+        }
+        
+        function loadReadStates() {
+            lastReadMessages = {};
+            
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key && key.startsWith('lastRead_testUser_')) {
+                    const fromUid = key.replace('lastRead_testUser_', '');
+                    const timestamp = localStorage.getItem(key);
+                    if (timestamp) {
+                        lastReadMessages[fromUid] = parseInt(timestamp, 10);
+                    }
+                }
+            }
+            
+            return lastReadMessages;
+        }
+        
+        // 測試函數
+        function testReadStateStorage() {
+            const result = document.getElementById('test1-result');
+            result.style.display = 'block';
+            
+            try {
+                // 測試用戶 ID
+                const testUid = 'testUser123';
+                
+                // 標記為已讀
+                const readTime = markMessagesAsRead(testUid);
+                
+                // 檢查是否正確儲存
+                const stored = localStorage.getItem(`lastRead_testUser_${testUid}`);
+                
+                if (stored && parseInt(stored, 10) === readTime) {
+                    result.className = 'test-result success';
+                    result.innerHTML = `✅ 測試通過！已讀狀態已正確儲存到 localStorage<br>時間戳記: ${readTime}`;
+                } else {
+                    result.className = 'test-result error';
+                    result.innerHTML = `❌ 測試失敗！儲存的時間不符合預期`;
+                }
+            } catch (error) {
+                result.className = 'test-result error';
+                result.innerHTML = `❌ 測試失敗！錯誤: ${error.message}`;
+            }
+        }
+        
+        function testMessageReadCheck() {
+            const result = document.getElementById('test2-result');
+            result.style.display = 'block';
+            
+            try {
+                const testUid = 'testUser456';
+                const now = Date.now();
+                
+                // 模擬舊訊息（1小時前）
+                const oldMessageTime = now - (60 * 60 * 1000);
+                
+                // 檢查未讀狀態
+                const isOldUnread = !isMessageRead(testUid, oldMessageTime);
+                
+                // 標記為已讀
+                markMessagesAsRead(testUid);
+                
+                // 再次檢查
+                const isOldRead = isMessageRead(testUid, oldMessageTime);
+                
+                // 檢查新訊息（未來）
+                const newMessageTime = now + 1000;
+                const isNewUnread = !isMessageRead(testUid, newMessageTime);
+                
+                if (isOldUnread && isOldRead && isNewUnread) {
+                    result.className = 'test-result success';
+                    result.innerHTML = `✅ 測試通過！<br>
+                        - 舊訊息初始狀態: 未讀 ✓<br>
+                        - 標記後舊訊息: 已讀 ✓<br>
+                        - 新訊息狀態: 未讀 ✓`;
+                } else {
+                    result.className = 'test-result error';
+                    result.innerHTML = `❌ 測試失敗！狀態檢查不符合預期`;
+                }
+            } catch (error) {
+                result.className = 'test-result error';
+                result.innerHTML = `❌ 測試失敗！錯誤: ${error.message}`;
+            }
+        }
+        
+        function clearAllReadStates() {
+            const result = document.getElementById('test3-result');
+            result.style.display = 'block';
+            
+            try {
+                // 清除記憶體狀態
+                lastReadMessages = {};
+                
+                // 清除 localStorage 中的已讀狀態
+                const keysToRemove = [];
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    if (key && key.startsWith('lastRead_testUser_')) {
+                        keysToRemove.push(key);
+                    }
+                }
+                
+                keysToRemove.forEach(key => localStorage.removeItem(key));
+                
+                result.className = 'test-result success';
+                result.innerHTML = `✅ 已清除 ${keysToRemove.length} 個已讀狀態記錄`;
+            } catch (error) {
+                result.className = 'test-result error';
+                result.innerHTML = `❌ 清除失敗！錯誤: ${error.message}`;
+            }
+        }
+        
+        // 頁面載入時顯示當前已讀狀態
+        window.addEventListener('load', () => {
+            const states = loadReadStates();
+            console.log('當前已讀狀態:', states);
+        });
+    </script>
+</body>
+</html>
