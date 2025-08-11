@@ -1359,15 +1359,13 @@ onAuthStateChanged(auth, async (user) => {
         return;
       }
       
-      // 檢查是否是從登入表單觸發的登入
-      const isLoginRedirect = sessionStorage.getItem('isLoginRedirect') === 'true';
-      if (isLoginRedirect) {
-        console.log('⏭️ 登入跳轉模式，跳過UI處理');
-        sessionStorage.removeItem('isLoginRedirect');
-        // 仍然初始化用戶資料，但不處理 UI 切換
-      }
-      
-      // 顯示 loading（建議放在進聊天室前，UI 更穩定）
+    // 檢查是否是從登入表單觸發的登入
+    const isLoginRedirect = sessionStorage.getItem('isLoginRedirect') === 'true';
+    if (isLoginRedirect) {
+      console.log('⏭️ 登入跳轉模式，清除標記');
+      sessionStorage.removeItem('isLoginRedirect');
+      // 繼續正常的 UI 處理邏輯，不跳過
+    }      // 顯示 loading（建議放在進聊天室前，UI 更穩定）
       if (typeof showLoading === 'function') showLoading();
 
       let userDb = null;
@@ -1487,11 +1485,6 @@ onAuthStateChanged(auth, async (user) => {
       } catch (error) {
         console.error('❌ 更新用戶狀態失敗:', error);
       }
-
-    // 如果是登入跳轉，跳過 UI 處理，讓頁面跳轉邏輯執行
-    if (isLoginRedirect) {
-      return;
-    }
 
     // UI 切換 - 只在相關元素存在時執行
     const loginPageEl = document.getElementById('login-page');
