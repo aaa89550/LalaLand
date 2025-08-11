@@ -1161,29 +1161,91 @@ document.addEventListener('DOMContentLoaded', function() {
     const nickname = document.getElementById('register-nickname').value.trim();
     const file = registerAvatar.files[0];
     if(!email||!password||!nickname||!file) return alert('請輸入完整資料');
+    
+    // 顯示載入動畫
+    if (typeof showLoading === 'function') showLoading();
+    
     try{
+      console.log('🔄 開始註冊流程...');
       const userCred = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCred.user;
+      
+      console.log('📁 上傳頭像...');
       // 上傳頭貼
       const filename = 'avatars/' + Date.now() + '_' + file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
       const imgRef = sRef(storage, filename);
       await uploadBytes(imgRef, file);
       const avatarURL = await getDownloadURL(imgRef);
+      console.log('✅ 頭像上傳成功:', avatarURL);
+      
+      console.log('🔄 更新 Firebase Auth Profile...');
       // 更新profile
       await updateProfile(user, { displayName: nickname, photoURL: avatarURL });
-      // 寫入users
-      await update(ref(db, 'users/' + user.uid), {
+      
+      console.log('💾 寫入 Realtime Database...');
+      // 寫入users - 確保資料完整寫入
+      const userData = {
         uid: user.uid,
-        nickname: nickname || '新用戶',
-        avatar: avatarURL || 'default-avatar.png',
+        nickname: nickname,
+        avatar: avatarURL,
         friends: {},
         online: true,
         lastActive: Date.now()
-      });
+      };
+      
+      await update(ref(db, 'users/' + user.uid), userData);
       await onDisconnect(ref(db, 'users/' + user.uid + '/online')).set(false);
-      location.reload();
-      switchChat("group_chat");
+      console.log('✅ 資料寫入完成:', userData);
+      
+      console.log('🔍 強制驗證資料同步...');
+      // 強制等待直到成功獲取到完整資料
+      let verifyCount = 0;
+      const maxVerifyTries = 10; // 最多嘗試10次
+      const verifyDelay = 1000;  // 每次等待1秒
+      let verifiedData = null;
+      
+      while (verifyCount < maxVerifyTries) {
+        try {
+          console.log(`🔍 第 ${verifyCount + 1}/${maxVerifyTries} 次驗證資料...`);
+          const verifySnapshot = await get(ref(db, 'users/' + user.uid));
+          verifiedData = verifySnapshot.val();
+          
+          // 確保獲取到完整的 nickname 和 avatar
+          if (verifiedData && verifiedData.nickname && verifiedData.avatar) {
+            console.log('✅ 驗證成功！獲取到完整用戶資料:', verifiedData);
+            break;
+          } else {
+            console.log('⏳ 資料尚未完全同步，繼續等待...', verifiedData);
+          }
+        } catch (error) {
+          console.error('❌ 驗證過程中發生錯誤:', error);
+        }
+        
+        verifyCount++;
+        if (verifyCount < maxVerifyTries) {
+          await new Promise(resolve => setTimeout(resolve, verifyDelay));
+        }
+      }
+      
+      // 關閉載入動畫
+      if (typeof hideLoading === 'function') hideLoading();
+      
+      if (verifiedData && verifiedData.nickname && verifiedData.avatar) {
+        console.log('🎉 註冊完成！資料驗證成功，即將跳轉...');
+        alert('註冊成功！');
+        // 資料驗證成功，跳轉到聊天頁面
+        setTimeout(() => {
+          window.location.href = 'chat.html';
+        }, 500);
+      } else {
+        console.error('❌ 註冊失敗：無法驗證用戶資料完整性');
+        alert('註冊過程中發生問題，資料同步失敗，請重新嘗試');
+      }
+      
     }catch(err){
+      // 關閉載入動畫
+      if (typeof hideLoading === 'function') hideLoading();
+      console.error('❌ 註冊失敗:', err);
       alert(err.message);
     }
   });
@@ -1360,8 +1422,8 @@ onAuthStateChanged(auth, async (user) => {
 
       let userDb = null;
       let tryCount = 0;
-      const maxTries = 6;   // 增加重試次數，更積極等待 Realtime Database
-      const delay = 2000;   // 增加延遲時間，給 Realtime Database 更多同步時間
+      const maxTries = 10;   // 進一步增加重試次數
+      const delay = 3000;    // 增加延遲時間到 3 秒
 
       // 使用 try-catch 包裝獲取用戶資料的邏輯
       try {
@@ -1370,7 +1432,7 @@ onAuthStateChanged(auth, async (user) => {
           
           // 添加超時機制
           const timeoutPromise = new Promise((_, reject) => {
-            setTimeout(() => reject(new Error('獲取用戶資料超時')), 6000); // 增加超時時間
+            setTimeout(() => reject(new Error('獲取用戶資料超時')), 8000); // 增加超時時間到 8 秒
           });
           
           const userDataPromise = onValuePromise(ref(db, 'users/' + user.uid));
@@ -1420,15 +1482,15 @@ onAuthStateChanged(auth, async (user) => {
         avatar = userDb.avatar || user.photoURL || defaultAvatar;
         console.log('✅ 使用 Realtime Database 的暱稱，頭像用 fallback');
       } else {
-        // 完全 fallback 到 Firebase Auth 或預設值
-        nickname = user.displayName || user.email?.split('@')[0] || '新用戶';
+        // 完全 fallback - 優先顯示「新用戶」而不是 email
+        nickname = user.displayName || '新用戶';  // 移除 email fallback
         avatar = user.photoURL || defaultAvatar;
-        console.log('⚠️ 使用 Firebase Auth fallback 資料');
+        console.log('⚠️ 使用 Firebase Auth fallback 資料 (避免顯示 email)');
       }
 
       console.log('🔍 用戶資料來源:', {
         nickname: {
-          from: userDb?.nickname ? 'realtime-database' : (user.displayName ? 'firebase-auth' : 'email'),
+          from: userDb?.nickname ? 'realtime-database' : (user.displayName ? 'firebase-auth' : 'default-new-user'),
           value: nickname
         },
         avatar: {
