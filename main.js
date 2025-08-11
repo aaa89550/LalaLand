@@ -569,6 +569,9 @@ function loadPrivateMessages(specificRoomId = null) {
     } else {
         // 顯示私訊列表
         currentPrivateRoomId = null; // 重置房間ID，因為我們在列表模式
+        currentPrivateUid = null; // 同時重置 UID，保持一致性
+        console.log('🔧 重置私訊狀態為列表模式:', { currentChat, currentPrivateRoomId, currentPrivateUid });
+        
         // 設置提示
         const tipEl = document.getElementById('chat-tip');
         tipEl.style.display = 'block';
@@ -593,6 +596,12 @@ function loadSpecificPrivateChat(roomId) {
     // 設置當前聊天狀態
     currentChat = 'private';
     currentPrivateRoomId = roomId;
+    
+    // 從 roomId 中提取對方的 UID，設置 currentPrivateUid 保持一致性
+    const [uid1, uid2] = roomId.split('_');
+    currentPrivateUid = (uid1 === currentUser.uid) ? uid2 : uid1;
+    
+    console.log('🔧 設置私訊狀態:', { currentChat, currentPrivateRoomId, currentPrivateUid });
     
     // 監聽該聊天室的訊息
     const messagesRef = ref(db, `privateChats/${roomId}/messages`);
@@ -706,6 +715,18 @@ function displayPrivateMessagesInChat() {
                 displayPrivateChats(validChats);
             } else {
                 console.log('⏭️ 跳過私訊列表更新 - 當前在私訊對話中或其他模式');
+            }
+        }).catch(error => {
+            console.error('❌ 載入私訊列表時發生錯誤:', error);
+            // 顯示錯誤訊息並提供重試選項
+            const chatContainer = document.getElementById('chat');
+            if (chatContainer && currentChat === "private" && !currentPrivateRoomId) {
+                chatContainer.innerHTML = `
+                    <div style="text-align: center; color: #999; padding: 40px;">
+                        <p>載入私訊列表失敗</p>
+                        <button onclick="loadPrivateMessages()" style="background: var(--sea-blue); color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">重試</button>
+                    </div>
+                `;
             }
         });
     });
@@ -1829,7 +1850,7 @@ function openPrivateChat(uid) {
 
 // ========= 私訊通知功能 =========
 function showPrivateMessageNotification(fromUid, message, nickname) {
-  console.log('🔔 嘗試顯示私訊通知:', { fromUid, message, nickname, currentPrivateUid });
+  console.log('🔔 嘗試顯示私訊通知:', { fromUid, message, nickname, currentPrivateRoomId });
   
   // 使用新的統一通知系統
   showNotification('新私訊', message, fromUid);
@@ -1906,9 +1927,22 @@ function setupPrivateChatListener(chatId) {
     });
     
     // 只處理別人發送給我的訊息，且不是當前正在查看的私訊
+    // 檢查是否在當前私訊房間中（支援兩種檢查方式）
+    const currentRoomId = currentPrivateRoomId;
+    const messageRoomId = `${[messageData.from, messageData.to].sort().join('_')}`;
+    const isInCurrentPrivateChat = (currentRoomId === messageRoomId) || (currentPrivateUid === messageData.from);
+    
+    console.log('🔍 私訊通知檢查:', {
+      fromUid: messageData.from,
+      currentPrivateUid,
+      currentPrivateRoomId,
+      messageRoomId,
+      isInCurrentPrivateChat
+    });
+    
     if (messageData.from !== currentUser.uid && 
         messageData.to === currentUser.uid && 
-        messageData.from !== currentPrivateUid) {
+        !isInCurrentPrivateChat) {
       
       console.log('🔔 顯示私訊通知:', messageData.from);
       
@@ -2389,9 +2423,13 @@ function showNotification(title, body, fromUid, icon = null) {
 function showMobileNotification(fromUid, message, nickname) {
     console.log('📱 顯示手機版通知:', { fromUid, message, nickname });
     
-    // 避免在當前私訊對話中顯示通知
-    if (currentPrivateUid === fromUid) {
-        console.log('⏭️ 跳過通知：正在與此用戶私訊中');
+    // 避免在當前私訊對話中顯示通知（支援兩種檢查方式）
+    const currentRoomId = currentPrivateRoomId;
+    const messageRoomId = `${[fromUid, currentUser.uid].sort().join('_')}`;
+    const isInCurrentPrivateChat = (currentRoomId === messageRoomId) || (currentPrivateUid === fromUid);
+    
+    if (isInCurrentPrivateChat) {
+        console.log('⏭️ 跳過通知：正在與此用戶私訊中', { currentPrivateUid, currentPrivateRoomId, messageRoomId });
         return;
     }
 
