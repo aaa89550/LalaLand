@@ -1369,47 +1369,27 @@ onAuthStateChanged(auth, async (user) => {
       if (typeof showLoading === 'function') showLoading();
 
       let userDb = null;
-      let tryCount = 0;
-      const maxTries = 10;   // 進一步增加重試次數
-      const delay = 3000;    // 增加延遲時間到 3 秒
-
+      
       // 使用 try-catch 包裝獲取用戶資料的邏輯
       try {
-        while (tryCount < maxTries) {
-          console.log(`📡 嘗試獲取 Realtime Database 用戶資料 (${tryCount + 1}/${maxTries}) for UID: ${user.uid}`);
+        console.log(`📡 嘗試獲取 Realtime Database 用戶資料 for UID: ${user.uid}`);
+        
+        // 直接獲取，不使用超時機制
+        const userSnapshot = await get(ref(db, 'users/' + user.uid));
+        userDb = userSnapshot.val();
+        
+        console.log(`📊 獲取的 Realtime Database 資料:`, userDb);
+        
+        // 如果沒有資料，等待一下再試一次
+        if (!userDb) {
+          console.log('⏳ 未獲取到資料，等待3秒後重試...');
+          await new Promise(r => setTimeout(r, 3000));
           
-          // 添加超時機制
-          const timeoutPromise = new Promise((_, reject) => {
-            setTimeout(() => reject(new Error('獲取用戶資料超時')), 8000); // 增加超時時間到 8 秒
-          });
-          
-          const userDataPromise = onValuePromise(ref(db, 'users/' + user.uid));
-          
-          userDb = await Promise.race([userDataPromise, timeoutPromise]);
-          
-          console.log(`📊 第 ${tryCount + 1} 次獲取的 Realtime Database 資料:`, userDb);
-          
-          // 如果獲得完整的資料（暱稱和頭像），立即結束
-          if (userDb && userDb.nickname && userDb.avatar) {
-            console.log('✅ 成功獲取 Realtime Database 完整資料');
-            break;
-          }
-          // 如果至少有暱稱，繼續嘗試但可以使用
-          else if (userDb && userDb.nickname) {
-            console.log('⚠️ 獲取到部分 Realtime Database 資料，繼續嘗試');
-            // 如果已經嘗試了一半次數，可以使用部分資料
-            if (tryCount >= Math.floor(maxTries / 2)) {
-              console.log('✅ 使用部分 Realtime Database 資料');
-              break;
-            }
-          }
-          
-          tryCount++;
-          if (tryCount < maxTries) {
-            console.log(`⏳ 等待 ${delay}ms 後重試 Realtime Database...`);
-            await new Promise(r => setTimeout(r, delay));
-          }
+          const retrySnapshot = await get(ref(db, 'users/' + user.uid));
+          userDb = retrySnapshot.val();
+          console.log(`📊 重試獲取的資料:`, userDb);
         }
+        
       } catch (error) {
         console.error('❌ 獲取 Realtime Database 用戶資料失敗:', error);
         userDb = null; // 確保使用 fallback
@@ -1419,21 +1399,26 @@ onAuthStateChanged(auth, async (user) => {
       let nickname, avatar;
       const defaultAvatar = 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'40\' height=\'40\' viewBox=\'0 0 40 40\'%3E%3Ccircle cx=\'20\' cy=\'20\' r=\'20\' fill=\'%23ddd\'/%3E%3Ctext x=\'20\' y=\'26\' text-anchor=\'middle\' fill=\'white\' font-size=\'16\'%3E👤%3C/text%3E%3C/svg%3E';
       
-      if (userDb && userDb.nickname && userDb.avatar) {
-        // 優先使用 Realtime Database 的完整資料
-        nickname = userDb.nickname;
-        avatar = userDb.avatar;
-        console.log('✅ 使用 Realtime Database 的完整資料');
-      } else if (userDb && userDb.nickname) {
-        // 使用 Realtime Database 的暱稱，頭像用 fallback
+      if (userDb && userDb.nickname) {
+        // 有 Realtime Database 資料，優先使用
         nickname = userDb.nickname;
         avatar = userDb.avatar || user.photoURL || defaultAvatar;
-        console.log('✅ 使用 Realtime Database 的暱稱，頭像用 fallback');
+        console.log('✅ 使用 Realtime Database 資料', { 
+          nickname: userDb.nickname, 
+          avatar: userDb.avatar ? '有頭像' : '無頭像，使用 fallback' 
+        });
+      } else if (userDb) {
+        // 有 userDb 但沒有 nickname，檢查其他欄位
+        console.log('⚠️ Realtime Database 資料不完整:', userDb);
+        nickname = user.displayName || '新用戶';
+        avatar = userDb.avatar || user.photoURL || defaultAvatar;
+        console.log('✅ 使用混合資料 (Firebase Auth + DB avatar)');
       } else {
-        // 完全 fallback - 優先顯示「新用戶」而不是 email
-        nickname = user.displayName || '新用戶';  // 移除 email fallback
+        // 完全沒有 Realtime Database 資料
+        console.log('❌ 沒有 Realtime Database 資料，使用 Firebase Auth');
+        nickname = user.displayName || '新用戶';
         avatar = user.photoURL || defaultAvatar;
-        console.log('⚠️ 使用 Firebase Auth fallback 資料 (避免顯示 email)');
+        console.log('⚠️ 使用 Firebase Auth fallback 資料');
       }
 
       console.log('🔍 用戶資料來源:', {
