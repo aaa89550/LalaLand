@@ -1746,8 +1746,9 @@ button:hover {
   padding: 0 16px 16px;
   margin-bottom: 16px;
   border-bottom: 1px solid #eee;
-  flex: 1;
+  flex: 1 1 auto;
   min-height: 0;
+  overflow-y: auto;
 }
 
 .mobile-online-section h4 {
@@ -1823,18 +1824,6 @@ button:hover {
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
-}
-
-/* 登出鈕吸底 */
-#logout-btn-mobile {
-  flex-shrink: 0;
-  width: 100%;
-  margin-bottom: 16px; /* 可自行調整 */
-  background: #2877b9;
-  padding: 12px;
-  font-size: 1rem;
-  border: none;
-  border-radius: 6px;
 }
   .close-mobile-sidebar {
     /* 移除絕對定位，使用 flexbox 布局 */

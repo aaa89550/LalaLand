@@ -1137,51 +1137,40 @@ document.addEventListener('DOMContentLoaded', function() {
     switchTab('login');
   }
 
-  // 註冊預覽頭貼
-  const registerAvatar = document.getElementById('register-avatar');
-  const registerAvatarPreview = document.getElementById('register-avatar-preview');
-  registerAvatar.addEventListener('change', (e)=>{
-    const file = e.target.files[0];
-    if(file){
-      const reader = new FileReader();
-      reader.onload = ev => {
-        registerAvatarPreview.src = ev.target.result;
-        registerAvatarPreview.style.display = 'block';
-      };
-      reader.readAsDataURL(file);
-    }
-  });
-
   // 註冊表單
   const registerForm = document.getElementById('register-form');
   registerForm.addEventListener('submit', async (e)=>{
     e.preventDefault();
     const email = document.getElementById('register-email').value.trim();
     const password = document.getElementById('register-password').value;
-    const nickname = document.getElementById('register-nickname').value.trim();
-    const file = registerAvatar.files[0];
-    if(!email||!password||!nickname) return alert('請輸入完整資料');
+    const passwordConfirm = document.getElementById('register-password-confirm').value;
+    
+    // 驗證輸入
+    if(!email || !password || !passwordConfirm) {
+      return alert('請輸入完整資料');
+    }
+    
+    if(password !== passwordConfirm) {
+      return alert('密碼與確認密碼不一致');
+    }
+    
+    if(password.length < 6) {
+      return alert('密碼至少需要6個字元');
+    }
     
     try{
       console.log('🔄 開始註冊流程...');
       // 註冊流程
       await createUserWithEmailAndPassword(auth, email, password);
       
-      let avatarURL = '';
-      if (file) {
-        console.log('📁 上傳頭像...');
-        // 上傳頭貼
-        const filename = 'avatars/' + Date.now() + '_' + file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
-        const imgRef = sRef(storage, filename);
-        await uploadBytes(imgRef, file);
-        avatarURL = await getDownloadURL(imgRef);
-        console.log('✅ 頭像上傳成功:', avatarURL);
-      }
+      // 設置預設暱稱和頭像
+      const defaultNickname = '新用戶';
+      const defaultAvatar = 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'40\' height=\'40\' viewBox=\'0 0 40 40\'%3E%3Ccircle cx=\'20\' cy=\'20\' r=\'20\' fill=\'%23ddd\'/%3E%3Ctext x=\'20\' y=\'26\' text-anchor=\'middle\' fill=\'white\' font-size=\'16\'%3E👤%3C/text%3E%3C/svg%3E';
       
       console.log('💾 寫入 Realtime Database...');
       await set(ref(db, 'users/' + auth.currentUser.uid), {
-        nickname: nickname,
-        avatar: avatarURL, // 或預設頭像
+        nickname: defaultNickname,
+        avatar: defaultAvatar,
         createdAt: Date.now(),
         uid: auth.currentUser.uid,
         friends: {},
@@ -2215,8 +2204,12 @@ if (editProfileBtnMobile) {
     document.getElementById('edit-avatar-preview').style.display = 'none';
     document.getElementById('edit-profile-modal').style.display = 'block';
     // 關掉手機 drawer
-    document.getElementById('mobile-sidebar-drawer').classList.remove('open');
-    document.body.style.overflow = '';
+    if (typeof closeMobileSidebar === 'function') {
+      closeMobileSidebar();
+    } else {
+      document.getElementById('mobile-sidebar-drawer').classList.remove('open');
+      document.body.style.overflow = '';
+    }
   };
 }
 
@@ -2803,6 +2796,12 @@ function initUserDropdownMenu() {
     document.getElementById('mobile-view-friends-btn')?.addEventListener('click', () => {
       closeMobileSidebar();
       loadFriendsList();
+    });
+    
+    // 手機版登出按鈕事件
+    document.getElementById('logout-btn-mobile')?.addEventListener('click', () => {
+      closeMobileSidebar();
+      logoutHandler();
     });
     
     document.getElementById('edit-profile-btn')?.addEventListener('click', () => {
