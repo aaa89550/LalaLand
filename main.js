@@ -1296,6 +1296,33 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 });
 
+// Debug 函數：檢查當前用戶資料
+window.debugUserData = async function() {
+  if (!auth.currentUser) {
+    console.log('❌ 沒有登入用戶');
+    return;
+  }
+  
+  const user = auth.currentUser;
+  console.log('🔍 Debug 用戶資料：');
+  console.log('Firebase Auth 資料:', {
+    uid: user.uid,
+    email: user.email,
+    displayName: user.displayName,
+    photoURL: user.photoURL
+  });
+  
+  try {
+    const dbSnapshot = await get(ref(db, 'users/' + user.uid));
+    const dbData = dbSnapshot.val();
+    console.log('資料庫資料:', dbData);
+    
+    console.log('當前 currentUser:', currentUser);
+  } catch (error) {
+    console.error('❌ 獲取資料庫資料失敗:', error);
+  }
+};
+
 // 監聽登入狀態
 onAuthStateChanged(auth, async (user) => {
   console.log('🔄 Auth state changed:', user ? `用戶已登入: ${user.uid}` : '用戶未登入');
@@ -1333,46 +1360,83 @@ onAuthStateChanged(auth, async (user) => {
 
       let userDb = null;
       let tryCount = 0;
-      const maxTries = 3;   // 進一步減少重試次數
-      const delay = 1000;   // 增加延遲時間
+      const maxTries = 6;   // 增加重試次數，更積極等待 Realtime Database
+      const delay = 2000;   // 增加延遲時間，給 Realtime Database 更多同步時間
 
       // 使用 try-catch 包裝獲取用戶資料的邏輯
       try {
         while (tryCount < maxTries) {
-          console.log(`📡 嘗試獲取用戶資料 (${tryCount + 1}/${maxTries})`);
+          console.log(`📡 嘗試獲取 Realtime Database 用戶資料 (${tryCount + 1}/${maxTries}) for UID: ${user.uid}`);
           
           // 添加超時機制
           const timeoutPromise = new Promise((_, reject) => {
-            setTimeout(() => reject(new Error('獲取用戶資料超時')), 3000); // 減少超時時間
+            setTimeout(() => reject(new Error('獲取用戶資料超時')), 6000); // 增加超時時間
           });
           
           const userDataPromise = onValuePromise(ref(db, 'users/' + user.uid));
           
           userDb = await Promise.race([userDataPromise, timeoutPromise]);
           
+          console.log(`📊 第 ${tryCount + 1} 次獲取的 Realtime Database 資料:`, userDb);
+          
+          // 如果獲得完整的資料（暱稱和頭像），立即結束
           if (userDb && userDb.nickname && userDb.avatar) {
-            console.log('✅ 成功獲取用戶資料');
+            console.log('✅ 成功獲取 Realtime Database 完整資料');
             break;
+          }
+          // 如果至少有暱稱，繼續嘗試但可以使用
+          else if (userDb && userDb.nickname) {
+            console.log('⚠️ 獲取到部分 Realtime Database 資料，繼續嘗試');
+            // 如果已經嘗試了一半次數，可以使用部分資料
+            if (tryCount >= Math.floor(maxTries / 2)) {
+              console.log('✅ 使用部分 Realtime Database 資料');
+              break;
+            }
           }
           
           tryCount++;
           if (tryCount < maxTries) {
-            console.log(`⏳ 等待 ${delay}ms 後重試...`);
+            console.log(`⏳ 等待 ${delay}ms 後重試 Realtime Database...`);
             await new Promise(r => setTimeout(r, delay));
           }
         }
       } catch (error) {
-        console.error('❌ 獲取用戶資料失敗:', error);
+        console.error('❌ 獲取 Realtime Database 用戶資料失敗:', error);
         userDb = null; // 確保使用 fallback
       }
 
-      // fallback - 使用 Firebase Auth 的資料或預設值
-      const nickname = (userDb && userDb.nickname) 
-        ? userDb.nickname 
-        : (user.displayName || user.email?.split('@')[0] || '新用戶');
-      const avatar = (userDb && userDb.avatar) 
-        ? userDb.avatar 
-        : (user.photoURL || 'default-avatar.png');
+      // fallback - 優先採用 Realtime Database 的資料
+      let nickname, avatar;
+      const defaultAvatar = 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'40\' height=\'40\' viewBox=\'0 0 40 40\'%3E%3Ccircle cx=\'20\' cy=\'20\' r=\'20\' fill=\'%23ddd\'/%3E%3Ctext x=\'20\' y=\'26\' text-anchor=\'middle\' fill=\'white\' font-size=\'16\'%3E👤%3C/text%3E%3C/svg%3E';
+      
+      if (userDb && userDb.nickname && userDb.avatar) {
+        // 優先使用 Realtime Database 的完整資料
+        nickname = userDb.nickname;
+        avatar = userDb.avatar;
+        console.log('✅ 使用 Realtime Database 的完整資料');
+      } else if (userDb && userDb.nickname) {
+        // 使用 Realtime Database 的暱稱，頭像用 fallback
+        nickname = userDb.nickname;
+        avatar = userDb.avatar || user.photoURL || defaultAvatar;
+        console.log('✅ 使用 Realtime Database 的暱稱，頭像用 fallback');
+      } else {
+        // 完全 fallback 到 Firebase Auth 或預設值
+        nickname = user.displayName || user.email?.split('@')[0] || '新用戶';
+        avatar = user.photoURL || defaultAvatar;
+        console.log('⚠️ 使用 Firebase Auth fallback 資料');
+      }
+
+      console.log('🔍 用戶資料來源:', {
+        nickname: {
+          from: userDb?.nickname ? 'realtime-database' : (user.displayName ? 'firebase-auth' : 'email'),
+          value: nickname
+        },
+        avatar: {
+          from: userDb?.avatar ? 'realtime-database' : (user.photoURL ? 'firebase-auth' : 'default'),
+          value: avatar
+        },
+        databaseData: userDb
+      });
 
       currentUser = {
         uid: user.uid,
@@ -1976,29 +2040,8 @@ function stopGlobalPrivateMessageMonitoring() {
 
 
 // ========= Firebase Auth 狀態監聽 & 用戶同步/好友機制 =========
-// 只在 login.html 才執行登入頁 UI 切換
-if (document.getElementById('login-page') && document.getElementById('register-page') && document.getElementById('auth-tabs')) {
-  onAuthStateChanged(auth, (user) => {
-    if (user) {
-      // ✅ 設定使用者資料
-      currentUser = {
-        uid: user.uid,
-        nickname: user.displayName ?? '',
-        avatar: user.photoURL ?? ''
-      };
-
-      // ✅ 初始化聊天室與監聽
-      listenAllUsers();
-      listenFriends();
-      listenFriendRequestsPopup();
-
-      // ✅ 顯示登入頁，隱藏主畫面
-      document.getElementById('main').style.display = 'none';
-      document.getElementById('login-page').style.display = 'block';
-      document.getElementById('register-page').style.display = 'none';
-    }
-  });
-}
+// 注意：主要的 onAuthStateChanged 已在上方處理，這裡不需要重複設定
+// 用戶資料由主要的 onAuthStateChanged 統一處理，確保 Realtime Database 優先級
 
 
 
@@ -2778,7 +2821,11 @@ function initUserDropdownMenu() {
     
     document.getElementById('edit-profile-btn')?.addEventListener('click', () => {
       document.querySelector('.user-dropdown-menu').classList.remove('show');
-      console.log('編輯個人資料功能待開發');
+      // 顯示編輯個人資料 modal
+      document.getElementById('edit-profile-modal').style.display = 'block';
+      
+      // 預填目前的用戶資料
+      document.getElementById('edit-nickname').value = currentUser.nickname || '';
     });
     
     document.getElementById('toggle-notification-btn')?.addEventListener('click', () => {
