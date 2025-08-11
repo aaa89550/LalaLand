@@ -1907,23 +1907,6 @@ function stopGlobalPrivateMessageMonitoring() {
   hidePrivateMessageNotification();
 }
 
-// 測試私訊通知功能
-window.testPrivateNotification = function() {
-  console.log('🧪 測試私訊通知功能');
-  showNotification('測試通知', '這是一個測試私訊通知', 'test-uid');
-};
-
-// 測試手機版通知
-window.testMobileNotification = function() {
-  console.log('📱 測試手機版通知功能');
-  showMobileNotification('test-uid', '這是手機版測試訊息', '測試用戶');
-};
-
-// 測試桌面通知
-window.testDesktopNotification = function() {
-  console.log('💻 測試桌面通知功能');
-  showDesktopNotification('測試桌面通知', '這是桌面通知測試');
-};
 
 // ========= Firebase Auth 狀態監聽 & 用戶同步/好友機制 =========
 // 只在 login.html 才執行登入頁 UI 切換
