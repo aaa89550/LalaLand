@@ -2215,13 +2215,6 @@ document.getElementById('edit-avatar').onchange = function() {
   };
   reader.readAsDataURL(file);
 };
-// 資料送出（你可依你的 Firebase 寫法補上真實更新程式）
-document.getElementById('edit-profile-form').onsubmit = async function(e) {
-  e.preventDefault();
-  // 補充: 實作更新Firebase邏輯
-  document.getElementById('edit-profile-modal').style.display = 'none';
-  alert('已儲存！（這裡可加上真實的資料更新程式）');
-};
 // 手機 drawer 版
 const editProfileBtnMobile = document.getElementById('edit-profile-btn-mobile');
 if (editProfileBtnMobile) {
@@ -2306,10 +2299,13 @@ document.getElementById('edit-profile-form').onsubmit = async function(e) {
   currentUser.nickname = nickname;
   currentUser.avatar = avatarURL;
 
-  // 立即更新聊天室頁面的暱稱/頭像（如果有需要）
-  // document.getElementById('sidebar-my-nickname').textContent = nickname;
-  // document.getElementById('sidebar-my-avatar').src = avatarURL;
-  loadUserList(); // 重新載入左側成員
+  // 立即更新 UI 顯示
+  updateUserProfileDisplay();
+  
+  // 重新載入左側成員列表
+  if (typeof loadUserList === 'function') {
+    loadUserList();
+  }
 
   alert('個人資料已更新！');
   document.getElementById('edit-profile-modal').style.display = 'none';
