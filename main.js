@@ -685,20 +685,23 @@ function displayPrivateMessagesInChat() {
             console.log('📋 Sorted private chats by actual message time:', validChats);
             
             // 只有在真正顯示私訊列表頁面時才更新列表，避免干擾當前私訊對話
-            // 檢查是否在私訊列表模式：currentChatRoom為private且currentChat為"private"
-            const isInPrivateList = (currentChatRoom === 'private' && currentChat === "private");
+            // 檢查是否在私訊列表模式：currentChat為"private"且沒有具體的對話對象
+            const isInPrivateList = (currentChat === "private" && !currentPrivateUid);
             console.log('🔍 檢查是否在私訊列表:', {
                 currentChat,
                 currentPrivateUid, 
                 currentChatRoom,
-                isInPrivateList
+                isInPrivateList,
+                reason: currentChat === "private" ? 
+                    (!currentPrivateUid ? "在私訊列表中" : "在具體私訊對話中") : 
+                    "不在私訊模式"
             });
             
             if (isInPrivateList) {
                 console.log('📝 更新私訊列表顯示');
                 displayPrivateChats(validChats);
             } else {
-                console.log('⏭️ 跳過私訊列表更新 - 當前在私訊對話中');
+                console.log('⏭️ 跳過私訊列表更新 - 當前在私訊對話中或其他模式');
             }
         });
     });
@@ -1645,8 +1648,15 @@ function sendMessage() {
   });
 
   if (currentChat && currentChat.startsWith("group_")) {
-    const room = currentGroupRoom || "chat";
+    // 從currentChat中提取room名稱，而不是依賴currentGroupRoom
+    const room = currentChat.replace("group_", "");
     console.log('📨 Sending to group chat:', room);
+    console.log('📊 Chat routing details:', {
+      currentChat,
+      extractedRoom: room,
+      currentGroupRoom,
+      finalRoom: room
+    });
     push(ref(db, `groupChats/${room}/messages`), msg)
       .then(() => console.log('✅ Group message sent successfully!'))
       .catch(error => console.error('❌ Error sending group message:', error));
