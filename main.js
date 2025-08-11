@@ -246,6 +246,9 @@ function stopAllListeners() {
 
   // 清理全域私訊監聽器
   stopGlobalPrivateMessageMonitoring();
+  
+  // 重置私訊房間狀態
+  currentPrivateRoomId = null;
 }
 
 // 初始化已載入聊天室的 Set
@@ -565,6 +568,7 @@ function loadPrivateMessages(specificRoomId = null) {
         loadSpecificPrivateChat(specificRoomId);
     } else {
         // 顯示私訊列表
+        currentPrivateRoomId = null; // 重置房間ID，因為我們在列表模式
         // 設置提示
         const tipEl = document.getElementById('chat-tip');
         tipEl.style.display = 'block';
@@ -1687,17 +1691,8 @@ function sendMessage() {
     push(ref(db, privateChatPath), msg)
       .then(() => {
         console.log('✅ Private message sent successfully!');
-        
-        // 更新私訊聊天室的最後訊息時間
-        const roomId = currentPrivateRoomId || privateChatPath.split('/')[1];
-        const chatUpdateData = {
-          lastMessage: text,
-          lastTime: msg.time
-        };
-        
-        update(ref(db, `privateChats/${roomId}`), chatUpdateData)
-          .then(() => console.log('✅ Private chat metadata updated'))
-          .catch(error => console.error('❌ Error updating chat metadata:', error));
+        // ✅ 移除metadata更新，避免觸發其他監聽器導致跳轉
+        // 讓onChildAdded監聽器自動處理新訊息顯示
       })
       .catch(error => console.error('❌ Error sending private message:', error));
   }
@@ -1795,6 +1790,10 @@ function openPrivateChat(uid) {
   currentPrivateUid = uid;
   currentChatRoom = 'private'; // 確保設置為私訊模式
 
+  // 設置當前私訊房間ID
+  const ids = [currentUser.uid, uid].sort();
+  currentPrivateRoomId = `${ids[0]}_${ids[1]}`;
+
   // 確保私訊標籤是活躍的
   document.querySelectorAll('.chat-tab').forEach(tab => {
     tab.classList.remove('active');
@@ -1817,7 +1816,6 @@ function openPrivateChat(uid) {
 
   highlightUserList?.();
 
-  const ids = [currentUser.uid, uid].sort();
   const privatePath = `privateChats/${ids[0]}_${ids[1]}/messages`;
   privateChatRef = query(ref(db, privatePath), limitToLast(200));
 
