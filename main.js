@@ -752,7 +752,10 @@ function displayPrivateMessagesInChat() {
 // 顯示私訊對話列表
 function displayPrivateChats(privateChats) {
   const chatContainer = document.getElementById('chat');
-  if (!chatContainer) return;
+  if (!chatContainer) {
+    console.error('❌ 找不到聊天容器 #chat');
+    return;
+  }
     
     if (privateChats.length === 0) {
         chatContainer.innerHTML = `
@@ -761,10 +764,19 @@ function displayPrivateChats(privateChats) {
                 <p style="font-size: 12px;">點擊其他用戶開始私人對話</p>
             </div>
         `;
+        console.log('📱 顯示空私訊列表');
         return;
     }
     
-  chatContainer.innerHTML = '<div class="private-chat-list-wrapper" style="padding:10px;"><h4 style="margin: 0 0 15px 0; color: var(--sea-blue);">私訊對話</h4><div class="private-chat-list" id="private-chat-list" style="display:flex;flex-direction:column;gap:6px;"></div></div>';
+  console.log('📱 顯示私訊列表，數量:', privateChats.length);
+  
+  // 手機版優化樣式
+  const isMobile = window.innerWidth <= 600;
+  const wrapperStyle = isMobile ? 
+    'padding: 8px; background: #fff; min-height: 200px;' : 
+    'padding: 10px;';
+    
+  chatContainer.innerHTML = `<div class="private-chat-list-wrapper" style="${wrapperStyle}"><h4 style="margin: 0 0 15px 0; color: var(--sea-blue); font-size: ${isMobile ? '16px' : '18px'};">私訊對話</h4><div class="private-chat-list" id="private-chat-list" style="display:flex;flex-direction:column;gap:${isMobile ? '8px' : '6px'};"></div></div>`;
     
   const listEl = chatContainer.querySelector('#private-chat-list');
   privateChats.forEach(chat => {
@@ -810,35 +822,48 @@ function addPrivateChatToList(chat, userData, containerOverride) {
   chatDiv.setAttribute('data-private-click', chat.roomId);
   chatDiv.setAttribute('data-private-title', `與${userData.nickname}的對話`);
   chatDiv.style.pointerEvents = 'auto';
+  
+  // 手機版優化樣式
+  const isMobile = window.innerWidth <= 600;
+  const itemStyle = isMobile ? 
+    'touch-action: manipulation; -webkit-tap-highlight-color: rgba(0,0,0,0.1);' : '';
+  
   chatDiv.innerHTML = `
-    <div class="private-chat-content" style="display: flex; align-items: center; padding: 12px; background: ${hasUnread ? '#fff5f5' : '#f8f9fa'}; border-radius: 8px; margin-bottom: 8px; cursor: pointer; transition: background 0.2s ease; border-left: ${hasUnread ? '4px solid var(--accent-coral)' : 'none'};" data-private-click="${chat.roomId}" data-private-title="與${userData.nickname}的對話">
+    <div class="private-chat-content" style="display: flex; align-items: center; padding: ${isMobile ? '16px 12px' : '12px'}; background: ${hasUnread ? '#fff5f5' : '#f8f9fa'}; border-radius: 8px; margin-bottom: 8px; cursor: pointer; transition: background 0.2s ease; border-left: ${hasUnread ? '4px solid var(--accent-coral)' : 'none'}; ${itemStyle}" data-private-click="${chat.roomId}" data-private-title="與${userData.nickname}的對話">
             <img src="${userData.avatar || 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'40\' height=\'40\' viewBox=\'0 0 40 40\'%3E%3Ccircle cx=\'20\' cy=\'20\' r=\'20\' fill=\'%23ddd\'/%3E%3Ctext x=\'20\' y=\'26\' text-anchor=\'middle\' fill=\'white\' font-size=\'16\'%3E👤%3C/text%3E%3C/svg%3E'}" 
-                 class="private-chat-avatar" style="width: 50px; height: 50px; border-radius: 50%; margin-right: 12px; object-fit: cover; border: 2px solid ${hasUnread ? 'var(--accent-coral)' : 'var(--accent-green)'};" data-private-click="${chat.roomId}" data-private-title="與${userData.nickname}的對話">
+                 class="private-chat-avatar" style="width: ${isMobile ? '56px' : '50px'}; height: ${isMobile ? '56px' : '50px'}; border-radius: 50%; margin-right: 12px; object-fit: cover; border: 2px solid ${hasUnread ? 'var(--accent-coral)' : 'var(--accent-green)'};" data-private-click="${chat.roomId}" data-private-title="與${userData.nickname}的對話">
             <div style="flex: 1;" data-private-click="${chat.roomId}" data-private-title="與${userData.nickname}的對話">
-                <div style="font-weight: ${hasUnread ? '700' : '600'}; color: var(--sea-dark); margin-bottom: 2px;" data-private-click="${chat.roomId}" data-private-title="與${userData.nickname}的對話">${userData.nickname || '匿名用戶'}</div>
-                <div style="font-size: 12px; color: ${hasUnread ? '#333' : '#666'}; margin-bottom: 2px; font-weight: ${hasUnread ? '600' : 'normal'};" data-private-click="${chat.roomId}" data-private-title="與${userData.nickname}的對話">${lastMessageText}</div>
-                <div style="font-size: 10px; color: #999;" data-private-click="${chat.roomId}" data-private-title="與${userData.nickname}的對話">${timeStr}</div>
+                <div style="font-weight: ${hasUnread ? '700' : '600'}; color: var(--sea-dark); margin-bottom: 2px; font-size: ${isMobile ? '16px' : '14px'};" data-private-click="${chat.roomId}" data-private-title="與${userData.nickname}的對話">${userData.nickname || '匿名用戶'}</div>
+                <div style="font-size: ${isMobile ? '14px' : '12px'}; color: ${hasUnread ? '#333' : '#666'}; margin-bottom: 2px; font-weight: ${hasUnread ? '600' : 'normal'};" data-private-click="${chat.roomId}" data-private-title="與${userData.nickname}的對話">${lastMessageText}</div>
+                <div style="font-size: ${isMobile ? '12px' : '10px'}; color: #999;" data-private-click="${chat.roomId}" data-private-title="與${userData.nickname}的對話">${timeStr}</div>
             </div>
             ${unreadIndicator}
         </div>
     `;
     
-    // 使用更強大的事件處理 - 移除 preventDefault 以避免與全域事件衝突
+    // 使用更強大的事件處理
     chatDiv.addEventListener('click', (e) => {
         console.log('💬 Private chat clicked (direct):', chat.roomId);
-        // 讓全域事件處理器來處理，不要在這裡阻止事件
-        // e.preventDefault();
-        // e.stopPropagation();
-        // enterRoom(chat.roomId, `與${userData.nickname}的對話`);
+        e.preventDefault();
+        e.stopPropagation();
+        enterRoom(chat.roomId, `與${userData.nickname}的對話`);
     });
     
-    // 移除直接的觸摸事件，讓全域處理器統一處理
-    // chatDiv.addEventListener('touchend', (e) => {
-    //     console.log('📱 Private chat touched (direct):', chat.roomId);
-    //     e.preventDefault();
-    //     e.stopPropagation();
-    //     enterRoom(chat.roomId, `與${userData.nickname}的對話`);
-    // });
+    // 手機版觸摸事件
+    chatDiv.addEventListener('touchend', (e) => {
+        console.log('📱 Private chat touched (direct):', chat.roomId);
+        e.preventDefault();
+        e.stopPropagation();
+        enterRoom(chat.roomId, `與${userData.nickname}的對話`);
+    });
+    
+    // 調試資訊
+    console.log('📱 私訊項目已添加:', {
+        roomId: chat.roomId,
+        nickname: userData.nickname,
+        isMobile: window.innerWidth <= 600,
+        containerExists: !!container
+    });
     
     container.appendChild(chatDiv);
 }
