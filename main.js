@@ -685,8 +685,20 @@ function displayPrivateMessagesInChat() {
             console.log('📋 Sorted private chats by actual message time:', validChats);
             
             // 只有在真正顯示私訊列表頁面時才更新列表，避免干擾當前私訊對話
-            if (currentChat === "private" && !currentPrivateUid) {
+            // 檢查是否在私訊列表模式：currentChatRoom為private且currentChat為"private"
+            const isInPrivateList = (currentChatRoom === 'private' && currentChat === "private");
+            console.log('🔍 檢查是否在私訊列表:', {
+                currentChat,
+                currentPrivateUid, 
+                currentChatRoom,
+                isInPrivateList
+            });
+            
+            if (isInPrivateList) {
+                console.log('📝 更新私訊列表顯示');
                 displayPrivateChats(validChats);
+            } else {
+                console.log('⏭️ 跳過私訊列表更新 - 當前在私訊對話中');
             }
         });
     });
@@ -1618,12 +1630,19 @@ function sendMessage() {
     replyTo: currentReplyMsgId || null
   };
   
-  // 如果是私訊，添加to字段
+  // 如果是私訊，添加to字段和msg字段
   if (!currentChat.startsWith("group_")) {
     msg.to = currentChat; // currentChat包含對方的uid
+    msg.msg = text; // 添加msg字段用於通知顯示
   }
   
   console.log('📤 Message object to send:', msg);
+  console.log('📊 Current state:', {
+    currentChat,
+    currentPrivateUid,
+    currentChatRoom,
+    isGroup: currentChat && currentChat.startsWith("group_")
+  });
 
   if (currentChat && currentChat.startsWith("group_")) {
     const room = currentGroupRoom || "chat";
