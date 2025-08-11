@@ -684,7 +684,10 @@ function displayPrivateMessagesInChat() {
             
             console.log('📋 Sorted private chats by actual message time:', validChats);
             
-            displayPrivateChats(validChats);
+            // 只有在真正顯示私訊列表頁面時才更新列表，避免干擾當前私訊對話
+            if (currentChat === "private" && !currentPrivateUid) {
+                displayPrivateChats(validChats);
+            }
         });
     });
 }
@@ -1746,6 +1749,16 @@ function openPrivateChat(uid) {
 
   currentChat = uid;
   currentPrivateUid = uid;
+  currentChatRoom = 'private'; // 確保設置為私訊模式
+
+  // 確保私訊標籤是活躍的
+  document.querySelectorAll('.chat-tab').forEach(tab => {
+    tab.classList.remove('active');
+  });
+  const privateTab = document.querySelector('.chat-tab[data-room="private"]');
+  if (privateTab) {
+    privateTab.classList.add('active');
+  }
 
   // 移除對 chat-title 的引用，因為該元素已被移除
   const chatTip = document.getElementById('chat-tip');
@@ -1754,7 +1767,7 @@ function openPrivateChat(uid) {
     if (snapshot.exists()) {
       const nickname = snapshot.val();
       // 只設置提示文字，不設置標題
-      if (chatTip) chatTip.textContent = `你正在私訊中`;
+      if (chatTip) chatTip.textContent = `你正在與 ${nickname} 私訊中`;
     }
   });
 
@@ -2350,7 +2363,7 @@ function showNotification(title, body, fromUid, icon = null) {
         showMobileNotification(fromUid, body, title);
     } else {
         // 電腦版使用桌面通知
-        showDesktopNotification(title, body, icon);
+        showDesktopNotification(title, body, fromUid, icon);
         // 同時顯示頁面內通知作為備用
         showMobileNotification(fromUid, body, title);
     }
@@ -2424,7 +2437,7 @@ function showMobileNotification(fromUid, message, nickname) {
 }
 
 // 顯示桌面通知
-function showDesktopNotification(title, body, icon = null) {
+function showDesktopNotification(title, body, fromUid = null, icon = null) {
     if (Notification.permission !== "granted") {
         console.log("無桌面通知權限");
         return;
@@ -2441,10 +2454,15 @@ function showDesktopNotification(title, body, icon = null) {
     
     const notification = new Notification(title, options);
     
-    // 點擊通知時聚焦到視窗
+    // 點擊通知時聚焦到視窗並導航到私訊
     notification.onclick = function() {
         window.focus();
         notification.close();
+        
+        // 如果有fromUid，導航到該私訊
+        if (fromUid) {
+            openPrivateChat(fromUid);
+        }
     };
     
     // 自動關閉通知
