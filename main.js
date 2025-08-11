@@ -58,6 +58,8 @@ let voteUpdateRef = null;
 // 私訊通知相關變數
 let globalPrivateMessageListeners = new Map(); // 存儲所有私訊監聽器
 let activeNotifications = new Map(); // 存儲活動的通知
+let privateChatsListRef = null; // 私訊列表監聽器引用
+let privateChatsListListener = null; // 私訊列表監聽器
 let lastNotificationTime = 0; // 防止通知過於頻繁
 
 
@@ -233,6 +235,13 @@ function stopAllListeners() {
     off(voteUpdateRef, 'child_changed', voteUpdateListener);
     voteUpdateListener = null;
     voteUpdateRef = null;
+  }
+
+  // 清理私訊列表監聽器
+  if (privateChatsListRef && privateChatsListListener) {
+    off(privateChatsListRef, 'value', privateChatsListListener);
+    privateChatsListListener = null;
+    privateChatsListRef = null;
   }
 
   // 清理全域私訊監聽器
@@ -619,8 +628,8 @@ function displayPrivateMessagesInChat() {
     console.log('📝 Loading private messages list for user:', user.uid);
     
     // 獲取所有私人聊天室
-    const privateChatsRef = ref(db, 'privateChats');
-    onValue(privateChatsRef, (snapshot) => {
+    privateChatsListRef = ref(db, 'privateChats');
+    privateChatsListListener = onValue(privateChatsListRef, (snapshot) => {
         const privateChats = snapshot.val() || {};
         const userPrivateChats = [];
         
