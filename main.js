@@ -1285,15 +1285,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   };
   }
-
-  // 私訊通知欄關閉按鈕事件
-  const notificationClose = document.getElementById('notification-close');
-  if (notificationClose) {
-    notificationClose.onclick = (e) => {
-      e.stopPropagation(); // 防止觸發通知欄的點擊事件
-      hidePrivateMessageNotification();
-    };
-  }
 });
 
 // Debug 函數：檢查當前用戶資料
@@ -1315,9 +1306,18 @@ window.debugUserData = async function() {
   try {
     const dbSnapshot = await get(ref(db, 'users/' + user.uid));
     const dbData = dbSnapshot.val();
-    console.log('資料庫資料:', dbData);
+    console.log('Realtime Database 資料:', dbData);
     
-    console.log('當前 currentUser:', currentUser);
+    console.log('當前 currentUser (應該使用 Realtime DB 資料):', currentUser);
+    
+    // 顯示資料來源分析
+    console.log('📊 資料來源分析:');
+    console.log('- Nickname 來源:', dbData?.nickname ? '✅ Realtime DB' : '⚠️ Firebase Auth');
+    console.log('- Avatar 來源:', dbData?.avatar ? '✅ Realtime DB' : '⚠️ Firebase Auth');
+    
+    if (!dbData?.nickname || !dbData?.avatar) {
+      console.warn('⚠️ 建議確保 Realtime Database 中有完整的 nickname 和 avatar 資料');
+    }
   } catch (error) {
     console.error('❌ 獲取資料庫資料失敗:', error);
   }
