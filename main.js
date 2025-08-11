@@ -596,25 +596,16 @@ function loadSpecificPrivateChat(roomId) {
     
     // 監聽該聊天室的訊息
     const messagesRef = ref(db, `privateChats/${roomId}/messages`);
-    privateChatRef = messagesRef;
-    privateChatListener = onValue(messagesRef, (snapshot) => {
-        const messages = snapshot.val() || {};
-        clearChat();
+    privateChatRef = query(messagesRef, limitToLast(200)); // 限制最新200條訊息
+    
+    // 使用onChildAdded監聽新訊息，避免重複渲染
+    privateChatListener = onChildAdded(privateChatRef, (snapshot) => {
+        const msgId = snapshot.key;
+        const msg = snapshot.val();
         
-        // 按時間排序訊息
-        const sortedMessages = Object.entries(messages)
-            .map(([id, msg]) => ({ id, ...msg }))
-            .sort((a, b) => a.time - b.time);
-        
-        // 顯示訊息
-        sortedMessages.forEach(msg => {
-            appendMessage(msg, msg.id);
-        });
-        
-        // 滾動到底部
-        const chatDiv = document.getElementById('chat');
-        if (chatDiv) {
-            chatDiv.scrollTop = chatDiv.scrollHeight;
+        if (!renderedMessageIds.has(msgId)) {
+            renderedMessageIds.add(msgId);
+            appendMessage(msg, msgId);
         }
     });
     
