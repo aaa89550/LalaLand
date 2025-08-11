@@ -1378,7 +1378,7 @@ onAuthStateChanged(auth, async (user) => {
       // 如果在登入頁面且用戶已登入，直接跳轉到聊天室
       if (isLoginPage && !sessionStorage.getItem('isLoginRedirect')) {
         console.log('🔀 用戶已登入但在登入頁面，跳轉到聊天室');
-        window.location.href = 'chat.html';
+        window.location.href = 'announce.html';
         return;
       }
       
