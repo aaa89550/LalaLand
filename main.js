@@ -690,14 +690,14 @@ function displayPrivateMessagesInChat() {
             
             // 只有在真正顯示私訊列表頁面時才更新列表，避免干擾當前私訊對話
             // 檢查是否在私訊列表模式：currentChat為"private"且沒有具體的對話對象
-            const isInPrivateList = (currentChat === "private" && !currentPrivateUid);
+            const isInPrivateList = (currentChat === "private" && !currentPrivateRoomId);
             console.log('🔍 檢查是否在私訊列表:', {
                 currentChat,
-                currentPrivateUid, 
+                currentPrivateRoomId, 
                 currentChatRoom,
                 isInPrivateList,
                 reason: currentChat === "private" ? 
-                    (!currentPrivateUid ? "在私訊列表中" : "在具體私訊對話中") : 
+                    (!currentPrivateRoomId ? "在私訊列表中" : "在具體私訊對話中") : 
                     "不在私訊模式"
             });
             
