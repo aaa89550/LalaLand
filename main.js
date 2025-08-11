@@ -1185,7 +1185,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     if(password !== passwordConfirm) {
-      return alert('二次密碼輸入錯誤！請確認兩次密碼輸入相同');
+      return alert('請確認兩次密碼輸入相同');
     }
     
     if(password.length < 6) {
@@ -1215,7 +1215,7 @@ document.addEventListener('DOMContentLoaded', function() {
       console.log('✅ 註冊完成，即將跳轉...');
       // 等資料寫入完成後再導向
       sessionStorage.setItem('isLoginRedirect', 'true');
-      window.location.href = 'chat.html';
+      window.location.href = 'announce.html';
       
     }catch(err){
       console.error('❌ 註冊失敗:', err);
