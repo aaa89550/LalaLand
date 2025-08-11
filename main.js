@@ -854,26 +854,21 @@ function escapeHTML(str) {
 function appendMessage(msg, msgId, sourceChannel = null) {
   // 驗證訊息是否屬於當前頻道，防止錯頻道顯示
   if (sourceChannel) {
-    const isGroupMessage = sourceChannel.startsWith('group_');
-    const isPrivateMessage = sourceChannel.startsWith('private_') || sourceChannel.includes('_');
+    console.log('🔍 頻道驗證:', { sourceChannel, currentChat, msgId });
     
-    if (currentChat.startsWith('group_') && !isGroupMessage) {
-      console.log('⚠️ 跳過非群組訊息在群組頻道中顯示:', { sourceChannel, currentChat });
-      return;
-    }
-    
-    if (currentChat === 'private' && !isPrivateMessage) {
-      console.log('⚠️ 跳過非私訊訊息在私訊頻道中顯示:', { sourceChannel, currentChat });
-      return;
-    }
-    
-    if (currentChat !== 'private' && !currentChat.startsWith('group_') && currentChat !== sourceChannel) {
-      console.log('⚠️ 跳過不匹配的訊息:', { sourceChannel, currentChat });
+    // 精確匹配：sourceChannel 必須與 currentChat 完全一致
+    if (sourceChannel !== currentChat) {
+      console.log('⚠️ 跳過不匹配的訊息:', { 
+        sourceChannel, 
+        currentChat, 
+        msgId,
+        reason: `${sourceChannel} !== ${currentChat}` 
+      });
       return;
     }
   }
 
-  console.log('📝 渲染訊息:', { msgId, sourceChannel, currentChat });
+  console.log('✅ 渲染訊息:', { msgId, sourceChannel, currentChat });
   if (msgId) messageMap[msgId] = msg;
 
   const chatDiv = document.getElementById('chat');
