@@ -65,11 +65,11 @@ let lastNotificationTime = 0; // 防止通知過於頻繁
 
 
 function clearChat() {
-  document.getElementById('chat').innerHTML = '';
-  renderedMessageIds.clear(); // 每次清空聊天室時，也清空已渲染的訊息ID追蹤
-}
-
-// 移除 initializeGroupChatsIfAuthed 相關內容，避免重複 onAuthStateChanged
+  document.getElementById('chat').innerHTML = '';
+  renderedMessageIds.clear(); // 每次清空聊天室時，也清空已渲染的訊息ID追蹤
+  messageMap = {}; // 也清空訊息映射
+  console.log('🧹 聊天內容已清空，已渲染訊息ID已重置');
+}// 移除 initializeGroupChatsIfAuthed 相關內容，避免重複 onAuthStateChanged
 
 function switchChat(newChatId) {
   // 停用所有監聽器
@@ -250,6 +250,9 @@ function stopAllListeners() {
   
   // 重置私訊房間狀態
   currentPrivateRoomId = null;
+  currentPrivateUid = null; // 也重置這個變數
+  
+  console.log('🧹 所有監聽器已清理完成');
 }
 
 // 初始化已載入聊天室的 Set
@@ -301,7 +304,8 @@ function loadGroupChat(room) {
             // 但為保險起見，可以加一個檢查，防止極端情況下的重複渲染
             if (!renderedMessageIds.has(msgId)) {
                 renderedMessageIds.add(msgId);
-                appendMessage?.(childSnap.val(), msgId);
+                // 加入頻道標識以防止錯頻道顯示
+                appendMessage?.(childSnap.val(), msgId, `group_${room}`);
             }
         });
 
@@ -314,7 +318,8 @@ function loadGroupChat(room) {
             // 所以保留這個檢查仍是好的實踐
             if (!renderedMessageIds.has(msgId)) {
                 renderedMessageIds.add(msgId);
-                appendMessage?.(snap.val(), msgId);
+                // 加入頻道標識以防止錯頻道顯示
+                appendMessage?.(snap.val(), msgId, `group_${room}`);
             }
         });
     }).catch(error => {
@@ -324,7 +329,8 @@ function loadGroupChat(room) {
             const msgId = snap.key;
             if (!renderedMessageIds.has(msgId)) {
                 renderedMessageIds.add(msgId);
-                appendMessage?.(snap.val(), msgId);
+                // 加入頻道標識以防止錯頻道顯示
+                appendMessage?.(snap.val(), msgId, `group_${room}`);
             }
         });
     });
@@ -615,7 +621,8 @@ function loadSpecificPrivateChat(roomId) {
         
         if (!renderedMessageIds.has(msgId)) {
             renderedMessageIds.add(msgId);
-            appendMessage(msg, msgId);
+            // 加入頻道標識以防止錯頻道顯示
+            appendMessage(msg, msgId, `private_${roomId}`);
         }
     });
     
@@ -835,7 +842,29 @@ function escapeHTML(str) {
   }[m]));
 }
 
-function appendMessage(msg, msgId) {
+function appendMessage(msg, msgId, sourceChannel = null) {
+  // 驗證訊息是否屬於當前頻道，防止錯頻道顯示
+  if (sourceChannel) {
+    const isGroupMessage = sourceChannel.startsWith('group_');
+    const isPrivateMessage = sourceChannel.startsWith('private_') || sourceChannel.includes('_');
+    
+    if (currentChat.startsWith('group_') && !isGroupMessage) {
+      console.log('⚠️ 跳過非群組訊息在群組頻道中顯示:', { sourceChannel, currentChat });
+      return;
+    }
+    
+    if (currentChat === 'private' && !isPrivateMessage) {
+      console.log('⚠️ 跳過非私訊訊息在私訊頻道中顯示:', { sourceChannel, currentChat });
+      return;
+    }
+    
+    if (currentChat !== 'private' && !currentChat.startsWith('group_') && currentChat !== sourceChannel) {
+      console.log('⚠️ 跳過不匹配的訊息:', { sourceChannel, currentChat });
+      return;
+    }
+  }
+
+  console.log('📝 渲染訊息:', { msgId, sourceChannel, currentChat });
   if (msgId) messageMap[msgId] = msg;
 
   const chatDiv = document.getElementById('chat');
@@ -972,7 +1001,10 @@ function listenToVoteUpdates(room = 'chat') {
     const msgId = snap.key;
 
     // 只有在當前聊天室才更新投票
-    if (currentChat !== `group_${room}`) return;
+    if (currentChat !== `group_${room}`) {
+      console.log('⚠️ 跳過投票更新：不在對應群組聊天室中', { currentChat, targetRoom: `group_${room}` });
+      return;
+    }
 
     const msgDiv = document.querySelector(`[data-msgid="${msgId}"]`);
     if (!msgDiv) return;
@@ -983,7 +1015,7 @@ function listenToVoteUpdates(room = 'chat') {
     renderedMessageIds.delete(msgId);
 
     // 重新渲染訊息（會自動顯示投票結果）
-    appendMessage(msg, msgId);
+    appendMessage(msg, msgId, `group_${room}`);
   });
 }
 
@@ -1920,7 +1952,8 @@ function openPrivateChat(uid) {
     const msgId = snap.key;
     if (!renderedMessageIds.has(msgId)) {
       renderedMessageIds.add(msgId);
-      appendMessage?.(snap.val(), msgId);
+      // 加入頻道標識以防止錯頻道顯示
+      appendMessage?.(snap.val(), msgId, `private_${currentPrivateRoomId}`);
     }
   });
 
@@ -2017,6 +2050,9 @@ function startGlobalPrivateMessageMonitoring() {
   }
   
   console.log('📢 啟動全域私訊監聽，用戶 UID:', currentUser.uid);
+  
+  // 先停止現有的監聽器，避免重複
+  stopGlobalPrivateMessageMonitoring();
   
   // 監聽所有與當前用戶相關的私訊路徑
   const privateChatsRef = ref(db, 'privateChats');
@@ -2718,6 +2754,9 @@ function updateUserProfileDisplay() {
 // 全域聊天室切換函數 - 移到全域範圍確保HTML onclick可以調用
 window.switchChatRoom = function(room) {
   console.log('🔄 切換聊天室:', room);
+  
+  // 先停止所有監聽器，確保乾淨切換
+  stopAllListeners();
   
   // 退出手機版好友模式，顯示聊天相關元素
   document.body.classList.remove('mobile-friends-mode');

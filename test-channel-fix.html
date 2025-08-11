@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>訊息錯頻道問題修復測試</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #f5f5f5;
+        }
+        .test-container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .fix-details {
+            background: #f8f9fa;
+            border-left: 4px solid #28a745;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        .problem-item {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 10px;
+            margin: 10px 0;
+        }
+        .solution-item {
+            background: #d4edda;
+            border-left: 4px solid #28a745;
+            padding: 10px;
+            margin: 10px 0;
+        }
+        .code-snippet {
+            background: #f1f3f4;
+            border: 1px solid #ddd;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            overflow-x: auto;
+        }
+        .test-result {
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border-color: #c3e6cb;
+        }
+        .warning {
+            background: #fff3cd;
+            color: #856404;
+            border-color: #ffeaa7;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🔧 訊息錯頻道問題修復報告</h1>
+        
+        <div class="fix-details">
+            <h2>問題描述</h2>
+            <p><strong>原問題：</strong>用的人變多後，訊息顯示錯頻道的狀況大增，雖然重整就會不見，代表寫入沒問題，但提取有錯誤。</p>
+        </div>
+
+        <h2>🔍 問題原因分析</h2>
+        
+        <div class="problem-item">
+            <h3>1. 缺乏頻道驗證機制</h3>
+            <p><code>appendMessage</code> 函數沒有檢查訊息是否屬於當前頻道，任何監聽器都可以往聊天區域添加訊息。</p>
+        </div>
+        
+        <div class="problem-item">
+            <h3>2. 多重監聽器衝突</h3>
+            <p>全域私訊監聽器一直在運行，即使在群組聊天中也會嘗試顯示私訊訊息。</p>
+        </div>
+        
+        <div class="problem-item">
+            <h3>3. 狀態未完全清理</h3>
+            <p>切換頻道時 <code>renderedMessageIds</code> 和相關狀態變數沒有完全重置。</p>
+        </div>
+
+        <h2>✅ 修復方案</h2>
+        
+        <div class="solution-item">
+            <h3>1. 新增頻道驗證機制</h3>
+            <p>修改 <code>appendMessage</code> 函數，加入 <code>sourceChannel</code> 參數：</p>
+            <div class="code-snippet">
+function appendMessage(msg, msgId, sourceChannel = null) {
+  // 驗證訊息是否屬於當前頻道，防止錯頻道顯示
+  if (sourceChannel) {
+    const isGroupMessage = sourceChannel.startsWith('group_');
+    const isPrivateMessage = sourceChannel.startsWith('private_') || sourceChannel.includes('_');
+    
+    if (currentChat.startsWith('group_') && !isGroupMessage) {
+      console.log('⚠️ 跳過非群組訊息在群組頻道中顯示');
+      return;
+    }
+    
+    if (currentChat === 'private' && !isPrivateMessage) {
+      console.log('⚠️ 跳過非私訊訊息在私訊頻道中顯示');
+      return;
+    }
+  }
+  // ... 其餘渲染邏輯
+}
+            </div>
+        </div>
+        
+        <div class="solution-item">
+            <h3>2. 監聽器頻道標識</h3>
+            <p>所有監聽器呼叫 <code>appendMessage</code> 時都加入頻道標識：</p>
+            <div class="code-snippet">
+// 群組聊天監聽器
+appendMessage(snap.val(), msgId, `group_${room}`);
+
+// 私訊監聽器  
+appendMessage(msg, msgId, `private_${roomId}`);
+
+// 投票更新監聽器
+appendMessage(msg, msgId, `group_${room}`);
+            </div>
+        </div>
+        
+        <div class="solution-item">
+            <h3>3. 改善狀態清理</h3>
+            <p>強化 <code>clearChat</code> 和 <code>stopAllListeners</code> 函數：</p>
+            <div class="code-snippet">
+function clearChat() {
+  document.getElementById('chat').innerHTML = '';
+  renderedMessageIds.clear();
+  messageMap = {}; // 也清空訊息映射
+  console.log('🧹 聊天內容已清空，已渲染訊息ID已重置');
+}
+
+function stopAllListeners() {
+  // ... 清理所有監聽器
+  currentPrivateRoomId = null;
+  currentPrivateUid = null; // 重置所有狀態變數
+  console.log('🧹 所有監聽器已清理完成');
+}
+            </div>
+        </div>
+        
+        <div class="solution-item">
+            <h3>4. 切換頻道時強制清理</h3>
+            <p>修改 <code>switchChatRoom</code> 函數，確保切換前清理：</p>
+            <div class="code-snippet">
+window.switchChatRoom = function(room) {
+  console.log('🔄 切換聊天室:', room);
+  
+  // 先停止所有監聽器，確保乾淨切換
+  stopAllListeners();
+  
+  // ... 其餘切換邏輯
+};
+            </div>
+        </div>
+
+        <h2>📊 預期修復效果</h2>
+        
+        <div class="test-result success">
+            <h3>✅ 問題解決</h3>
+            <ul>
+                <li><strong>防止錯頻道顯示：</strong>訊息只會在對應的頻道中顯示</li>
+                <li><strong>清理監聽器衝突：</strong>切換頻道時完全清理舊監聽器</li>
+                <li><strong>狀態一致性：</strong>確保 UI 狀態與實際頻道一致</li>
+                <li><strong>效能提升：</strong>減少不必要的監聽器和渲染</li>
+            </ul>
+        </div>
+
+        <div class="test-result warning">
+            <h3>⚠️ 測試建議</h3>
+            <ol>
+                <li>多用戶同時在不同頻道發送訊息</li>
+                <li>快速切換群組聊天室和私訊</li>
+                <li>檢查訊息是否只出現在正確的頻道</li>
+                <li>觀察 console 日誌確認頻道驗證生效</li>
+                <li>測試投票功能在正確頻道更新</li>
+            </ol>
+        </div>
+
+        <h2>🔧 技術改進細節</h2>
+        
+        <div class="code-snippet">
+主要修改的函數：
+- appendMessage()          - 新增頻道驗證邏輯
+- clearChat()             - 完全重置狀態
+- stopAllListeners()      - 清理所有監聽器和狀態
+- loadGroupChat()         - 加入頻道標識
+- loadSpecificPrivateChat() - 加入頻道標識
+- listenToVoteUpdates()   - 加入頻道驗證
+- switchChatRoom()        - 強制清理後切換
+- startGlobalPrivateMessageMonitoring() - 防重複啟動
+        </div>
+
+        <h2>📈 監控要點</h2>
+        <ul>
+            <li>觀察 console 中是否出現 "跳過非群組訊息" 或 "跳過非私訊訊息" 的日誌</li>
+            <li>確認切換頻道時能看到 "所有監聽器已清理完成" 的日誌</li>
+            <li>檢查高併發情況下是否還有錯頻道顯示</li>
+            <li>驗證投票更新是否只在對應的群組頻道生效</li>
+        </ul>
+    </div>
+</body>
+</html>
