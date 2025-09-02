@@ -1932,9 +1932,11 @@ function openPrivateChat(uid) {
 
 // ========= 私訊通知功能 =========
 function showPrivateMessageNotification(fromUid, message, nickname) {
-  console.log('🔔 嘗試顯示私訊通知:', { fromUid, message, nickname, currentPrivateRoomId });
+  console.log('🔔 showPrivateMessageNotification 被調用:', { fromUid, message, nickname, currentPrivateRoomId });
+  console.log('🔍 當前聊天狀態:', { currentChat, currentPrivateUid, currentPrivateRoomId });
   
   // 使用新的統一通知系統
+  console.log('📞 調用 showNotification...');
   showNotification('新私訊', message, fromUid);
 }
 
@@ -2525,18 +2527,29 @@ function showNotification(title, body, fromUid, icon = null) {
     const isMobileWidth = window.innerWidth <= 768;
     const isMobile = isIOS || isAndroid || isMobileUserAgent || isMobileWidth;
     
-    console.log('📱 showNotification 設備檢測:', { isMobile, isIOS, isAndroid, width: window.innerWidth });
+    console.log('� showNotification 被調用:', { title, body, fromUid });
+    console.log('�📱 showNotification 設備檢測:', { isMobile, isIOS, isAndroid, width: window.innerWidth });
     
     // 檢查是否有系統通知權限
     const hasSystemNotification = "Notification" in window && Notification.permission === "granted";
     console.log('🔔 系統通知狀態:', hasSystemNotification, 'Permission:', Notification.permission);
+    console.log('🔔 Notification API 支援:', "Notification" in window);
     
     if (hasSystemNotification) {
+        console.log('✅ 有系統通知權限，嘗試顯示系統通知');
         // 有系統通知權限時，使用系統通知
-        showDesktopNotification(title, body, fromUid, icon);
+        try {
+            showDesktopNotification(title, body, fromUid, icon);
+            console.log('✅ 系統通知已觸發');
+        } catch (error) {
+            console.error('❌ 系統通知失敗:', error);
+        }
+    } else {
+        console.log('⚠️ 無系統通知權限:', Notification.permission);
     }
     
     // 同時顯示頁面內通知作為備用（手機版主要依賴這個，電腦版作為補充）
+    console.log('📱 顯示頁面內通知作為備用');
     showMobileNotification(fromUid, body, title);
 }
 
@@ -2635,37 +2648,62 @@ function showMobileNotification(fromUid, message, nickname) {
 
 // 顯示桌面通知
 function showDesktopNotification(title, body, fromUid = null, icon = null) {
+    console.log('🖥️ showDesktopNotification 被調用:', { title, body, fromUid, permission: Notification.permission });
+    
     if (Notification.permission !== "granted") {
-        console.log("無桌面通知權限");
+        console.log("❌ 無桌面通知權限:", Notification.permission);
         return;
     }
     
-    const options = {
-        body: body,
-        icon: icon || '/icon-512.png',
-        badge: '/icon-512.png',
-        tag: 'lalaland-chat',
-        requireInteraction: false,
-        silent: false
-    };
-    
-    const notification = new Notification(title, options);
-    
-    // 點擊通知時聚焦到視窗並導航到私訊
-    notification.onclick = function() {
-        window.focus();
-        notification.close();
+    try {
+        const options = {
+            body: body,
+            icon: icon || '/icon-512.png',
+            badge: '/icon-512.png',
+            tag: 'lalaland-chat',
+            requireInteraction: false,
+            silent: false
+        };
         
-        // 如果有fromUid，導航到該私訊
-        if (fromUid) {
-            openPrivateChat(fromUid);
-        }
-    };
-    
-    // 自動關閉通知
-    setTimeout(() => {
-        notification.close();
-    }, 5000);
+        console.log('🔔 創建系統通知，選項:', options);
+        const notification = new Notification(title, options);
+        
+        console.log('✅ 系統通知已創建:', notification);
+        
+        // 點擊通知時聚焦到視窗並導航到私訊
+        notification.onclick = function() {
+            console.log('👆 通知被點擊');
+            window.focus();
+            notification.close();
+            
+            // 如果有fromUid，導航到該私訊
+            if (fromUid) {
+                openPrivateChat(fromUid);
+            }
+        };
+        
+        // 監聽通知事件
+        notification.onshow = function() {
+            console.log('✅ 通知已顯示');
+        };
+        
+        notification.onerror = function(error) {
+            console.error('❌ 通知顯示錯誤:', error);
+        };
+        
+        notification.onclose = function() {
+            console.log('🔕 通知已關閉');
+        };
+        
+        // 自動關閉通知
+        setTimeout(() => {
+            notification.close();
+            console.log('⏰ 通知自動關閉（5秒後）');
+        }, 5000);
+        
+    } catch (error) {
+        console.error('❌ 創建桌面通知時發生錯誤:', error);
+    }
 }
 
 // 檢查是否有新私訊並顯示通知
