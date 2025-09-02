@@ -90,6 +90,7 @@
       <div class="mobile-actions">
         <button id="mobile-view-friends-btn" class="mobile-action-btn">我的好友</button>
         <button id="edit-profile-btn-mobile" class="mobile-action-btn">編輯資料</button>
+        <button id="notification-settings-btn-mobile" class="mobile-action-btn">🔔 通知設定</button>
         <button id="logout-btn-mobile" class="mobile-action-btn logout">登出</button>
       </div>
     </div>
@@ -109,6 +110,7 @@
     <div id="user-dropdown-menu" class="user-dropdown-menu" style="display: none;">
       <button id="view-friends-btn" class="dropdown-item">我的好友</button>
       <button id="edit-profile-btn" class="dropdown-item">編輯個人資料</button>
+      <button id="notification-settings-btn" class="dropdown-item">🔔 通知設定</button>
       <button id="logout-btn" class="dropdown-item logout-btn">登出</button>
     </div>
   </div>
@@ -121,6 +123,7 @@
   <div class="tip-small">
     點選成員可進入一對一私訊
   </div>
+  
   <ul id="user-list"></ul>
 
   <!-- 隱藏原有按鈕 -->
@@ -194,6 +197,32 @@
       </form>
     </div>
   </div>
+  
+  <!-- 通知設定彈窗 -->
+  <div id="notification-settings-modal" class="modal" style="display:none;">
+    <div class="modal-content">
+      <span class="close" id="close-notification-modal">&times;</span>
+      <h3>🔔 通知設定</h3>
+      
+      <div style="margin: 20px 0;">
+        <h4>系統通知</h4>
+        <p id="notification-status" style="margin: 10px 0; padding: 10px; border-radius: 5px;"></p>
+        <button id="request-notification-btn" style="margin: 10px 0; padding: 10px 20px;">
+          啟用系統通知
+        </button>
+        <p style="font-size: 14px; color: #666; margin-top: 10px;">
+          啟用後，即使不在聊天頁面也會收到新私訊的系統通知
+        </p>
+      </div>
+      <div style="margin: 20px 0;">
+        <h4>測試通知</h4>
+        <button id="test-notification-btn" style="padding: 10px 20px;">
+          發送測試通知
+        </button>
+      </div>
+    </div>
+  </div>
+  
   <div id="vote-modal" class="modal" style="display:none;">
   <div class="modal-content" style="max-width:400px;">
     <span class="close" id="close-vote-modal">&times;</span>

@@ -58,18 +58,18 @@ let voteUpdateRef = null;
 // 私訊通知相關變數
 let globalPrivateMessageListeners = new Map(); // 存儲所有私訊監聽器
 let activeNotifications = new Map(); // 存儲活動的通知
-let lastReadMessages = {}; // 記錄每個用戶的最後已讀訊息時間
 let privateChatsListRef = null; // 私訊列表監聽器引用
 let privateChatsListListener = null; // 私訊列表監聽器
 let lastNotificationTime = 0; // 防止通知過於頻繁
+let processedNotificationIds = new Set(); // 追蹤已處理的通知訊息ID
 
 
 function clearChat() {
-  document.getElementById('chat').innerHTML = '';
-  renderedMessageIds.clear(); // 每次清空聊天室時，也清空已渲染的訊息ID追蹤
-  messageMap = {}; // 也清空訊息映射
-  console.log('🧹 聊天內容已清空，已渲染訊息ID已重置');
-}// 移除 initializeGroupChatsIfAuthed 相關內容，避免重複 onAuthStateChanged
+  document.getElementById('chat').innerHTML = '';
+  renderedMessageIds.clear(); // 每次清空聊天室時，也清空已渲染的訊息ID追蹤
+}
+
+// 移除 initializeGroupChatsIfAuthed 相關內容，避免重複 onAuthStateChanged
 
 function switchChat(newChatId) {
   // 停用所有監聽器
@@ -95,16 +95,7 @@ function switchChat(newChatId) {
     const msgId = snap.key;
     if (!renderedMessageIds.has(msgId)) {
       renderedMessageIds.add(msgId);
-      // 根據頻道型態帶入 sourceChannel
-      let sourceChannel = null;
-      if (currentChat.startsWith("group_")) {
-        sourceChannel = currentChat;
-      } else if (currentChat) {
-        // 私訊模式
-        const ids = [currentUser.uid, currentChat].sort();
-        sourceChannel = `private_${ids[0]}_${ids[1]}`;
-      }
-      appendMessage(msg, msgId, sourceChannel);
+      appendMessage(msg, msgId);
     }
   });
 }
@@ -259,9 +250,6 @@ function stopAllListeners() {
   
   // 重置私訊房間狀態
   currentPrivateRoomId = null;
-  currentPrivateUid = null; // 也重置這個變數
-  
-  console.log('🧹 所有監聽器已清理完成');
 }
 
 // 初始化已載入聊天室的 Set
@@ -313,8 +301,7 @@ function loadGroupChat(room) {
             // 但為保險起見，可以加一個檢查，防止極端情況下的重複渲染
             if (!renderedMessageIds.has(msgId)) {
                 renderedMessageIds.add(msgId);
-                // 加入頻道標識以防止錯頻道顯示
-                appendMessage?.(childSnap.val(), msgId, `group_${room}`);
+                appendMessage?.(childSnap.val(), msgId);
             }
         });
 
@@ -327,8 +314,7 @@ function loadGroupChat(room) {
             // 所以保留這個檢查仍是好的實踐
             if (!renderedMessageIds.has(msgId)) {
                 renderedMessageIds.add(msgId);
-                // 加入頻道標識以防止錯頻道顯示
-                appendMessage?.(snap.val(), msgId, `group_${room}`);
+                appendMessage?.(snap.val(), msgId);
             }
         });
     }).catch(error => {
@@ -338,8 +324,7 @@ function loadGroupChat(room) {
             const msgId = snap.key;
             if (!renderedMessageIds.has(msgId)) {
                 renderedMessageIds.add(msgId);
-                // 加入頻道標識以防止錯頻道顯示
-                appendMessage?.(snap.val(), msgId, `group_${room}`);
+                appendMessage?.(snap.val(), msgId);
             }
         });
     });
@@ -539,11 +524,6 @@ window.startPrivateChat = function(friendId) {
 // 進入私人聊天室函數
 window.enterRoom = function(roomId, title) {
     console.log('🔄 進入聊天室:', roomId, title);
-    console.log('📱 設備檢測:', {
-        isMobile: window.innerWidth <= 600,
-        userAgent: navigator.userAgent,
-        viewport: window.innerWidth + 'x' + window.innerHeight
-    });
     
     // 退出手機版好友模式，顯示聊天相關元素
     document.body.classList.remove('mobile-friends-mode');
@@ -555,19 +535,11 @@ window.enterRoom = function(roomId, title) {
             tab.classList.remove('active');
         });
         privateTab.classList.add('active');
-        console.log('✅ 私訊標籤已啟用');
     }
     
     // 設置當前聊天室
     currentChatRoom = 'private';
-    currentChat = `private_${roomId}`; // 設置正確的頻道識別碼
     currentPrivateRoomId = roomId;
-    
-    console.log('🔧 聊天室狀態設置:', {
-        currentChatRoom,
-        currentChat,
-        currentPrivateRoomId
-    });
     
     // 更新聊天區域標題
     const chatTitleEl = document.getElementById('chat-title');
@@ -575,52 +547,12 @@ window.enterRoom = function(roomId, title) {
         chatTitleEl.textContent = title;
     }
     
-    // 🔧 手機版特殊處理：確保界面切換正確
-    const isMobile = window.innerWidth <= 600;
-    if (isMobile) {
-        // 強制重置一些可能的樣式問題
-        const chatContainer = document.getElementById('chat');
-        if (chatContainer) {
-            chatContainer.style.display = 'block';
-            chatContainer.style.visibility = 'visible';
-            chatContainer.style.opacity = '1';
-        }
-        
-        // 隱藏可能的遮罩或Loading
-        const loadingElements = document.querySelectorAll('.loading, .spinner, .overlay');
-        loadingElements.forEach(el => {
-            el.style.display = 'none';
-        });
-    }
-    
     // 載入該聊天室的訊息
-    console.log('📥 開始載入私訊訊息...');
     loadPrivateMessages(roomId);
     
     // 關閉手機版側邊欄
     if (typeof closeMobileSidebar === 'function') {
         closeMobileSidebar();
-    }
-    
-    // 🔧 手機版額外確認：延遲檢查是否成功載入
-    if (isMobile) {
-        setTimeout(() => {
-            const chatContainer = document.getElementById('chat');
-            const tipEl = document.getElementById('chat-tip');
-            
-            console.log('📱 手機版載入檢查:', {
-                chatContainer: !!chatContainer,
-                chatContent: chatContainer ? chatContainer.innerHTML.length : 0,
-                tipDisplay: tipEl ? tipEl.style.display : 'null',
-                currentChat,
-                currentPrivateRoomId
-            });
-            
-            if (chatContainer && chatContainer.innerHTML.length < 50) {
-                console.log('⚠️ 手機版內容載入可能失敗，重試...');
-                loadPrivateMessages(roomId);
-            }
-        }, 1000);
     }
 };
 
@@ -663,7 +595,7 @@ function loadSpecificPrivateChat(roomId) {
     if (tipEl) tipEl.style.display = 'none';
     
     // 設置當前聊天狀態
-    currentChat = `private_${roomId}`; // 與 sourceChannel 一致
+    currentChat = 'private';
     currentPrivateRoomId = roomId;
     
     // 從 roomId 中提取對方的 UID，設置 currentPrivateUid 保持一致性
@@ -683,8 +615,7 @@ function loadSpecificPrivateChat(roomId) {
         
         if (!renderedMessageIds.has(msgId)) {
             renderedMessageIds.add(msgId);
-            // 加入頻道標識以防止錯頻道顯示
-            appendMessage(msg, msgId, `private_${roomId}`);
+            appendMessage(msg, msgId);
         }
     });
     
@@ -768,14 +699,14 @@ function displayPrivateMessagesInChat() {
             console.log('📋 Sorted private chats by actual message time:', validChats);
             
             // 只有在真正顯示私訊列表頁面時才更新列表，避免干擾當前私訊對話
-            // 檢查是否在私訊列表模式：currentChatRoom為"private"且沒有具體的對話對象
-            const isInPrivateList = (currentChatRoom === "private" && currentChat === "private" && !currentPrivateRoomId);
+            // 檢查是否在私訊列表模式：currentChat為"private"且沒有具體的對話對象
+            const isInPrivateList = (currentChat === "private" && !currentPrivateRoomId);
             console.log('🔍 檢查是否在私訊列表:', {
                 currentChat,
-                currentChatRoom,
                 currentPrivateRoomId, 
+                currentChatRoom,
                 isInPrivateList,
-                reason: currentChatRoom === "private" ? 
+                reason: currentChat === "private" ? 
                     (!currentPrivateRoomId ? "在私訊列表中" : "在具體私訊對話中") : 
                     "不在私訊模式"
             });
@@ -790,7 +721,7 @@ function displayPrivateMessagesInChat() {
             console.error('❌ 載入私訊列表時發生錯誤:', error);
             // 顯示錯誤訊息並提供重試選項
             const chatContainer = document.getElementById('chat');
-            if (chatContainer && currentChatRoom === "private" && currentChat === "private" && !currentPrivateRoomId) {
+            if (chatContainer && currentChat === "private" && !currentPrivateRoomId) {
                 chatContainer.innerHTML = `
                     <div style="text-align: center; color: #999; padding: 40px;">
                         <p>載入私訊列表失敗</p>
@@ -805,65 +736,19 @@ function displayPrivateMessagesInChat() {
 // 顯示私訊對話列表
 function displayPrivateChats(privateChats) {
   const chatContainer = document.getElementById('chat');
-  if (!chatContainer) {
-    console.error('❌ 找不到聊天容器 #chat');
-    return;
-  }
+  if (!chatContainer) return;
     
-  if (privateChats.length === 0) {
-    chatContainer.innerHTML = `
-      <div style="text-align: center; color: #999; padding: 40px;">
-        <p>還沒有私訊對話</p>
-        <p style="font-size: 12px;">點擊其他用戶開始私人對話</p>
-      </div>
-    `;
-    console.log('📱 顯示空私訊列表');
-    return;
-  }
-  
-  console.log('📱 顯示私訊列表，數量:', privateChats.length);
-  
-  // 🔧 加強手機版樣式修復
-  const isMobile = window.innerWidth <= 600;
-  
-  // 添加手機版專用樣式
-  if (isMobile && !document.getElementById('mobile-private-chat-styles')) {
-    const mobileStyles = document.createElement('style');
-    mobileStyles.id = 'mobile-private-chat-styles';
-    mobileStyles.textContent = `
-      @media (max-width: 600px) {
-        .private-chat-item {
-          position: relative !important;
-          z-index: 10 !important;
-          pointer-events: auto !important;
-          -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1) !important;
-          touch-action: manipulation !important;
-          min-height: 70px !important;
-        }
-        
-        .private-chat-content {
-          user-select: none !important;
-          -webkit-user-select: none !important;
-        }
-        
-        .private-chat-content * {
-          pointer-events: none !important;
-        }
-        
-        #chat {
-          overflow-y: auto !important;
-          -webkit-overflow-scrolling: touch !important;
-        }
-      }
-    `;
-    document.head.appendChild(mobileStyles);
-  }
-  
-  const wrapperStyle = isMobile ? 
-    'padding: 8px; background: #fff; min-height: 200px; position: relative;' : 
-    'padding: 10px;';
+    if (privateChats.length === 0) {
+        chatContainer.innerHTML = `
+            <div style="text-align: center; color: #999; padding: 40px;">
+                <p>還沒有私訊對話</p>
+                <p style="font-size: 12px;">點擊其他用戶開始私人對話</p>
+            </div>
+        `;
+        return;
+    }
     
-  chatContainer.innerHTML = `<div class="private-chat-list-wrapper" style="${wrapperStyle}"><h4 style="margin: 0 0 15px 0; color: var(--sea-blue); font-size: ${isMobile ? '16px' : '18px'}; pointer-events: none;">私訊對話</h4><div class="private-chat-list" id="private-chat-list" style="display:flex;flex-direction:column;gap:${isMobile ? '12px' : '6px'};"></div></div>`;
+  chatContainer.innerHTML = '<div class="private-chat-list-wrapper" style="padding:10px;"><h4 style="margin: 0 0 15px 0; color: var(--sea-blue);">私訊對話</h4><div class="private-chat-list" id="private-chat-list" style="display:flex;flex-direction:column;gap:6px;"></div></div>';
     
   const listEl = chatContainer.querySelector('#private-chat-list');
   privateChats.forEach(chat => {
@@ -899,89 +784,40 @@ function addPrivateChatToList(chat, userData, containerOverride) {
         hour12: false
     }) : '';
     
-    // 檢查是否有未讀訊息
-    const hasUnread = chat.lastTime && !isMessageRead(chat.otherUserId, chat.lastTime);
-    const unreadIndicator = hasUnread ? '<div class="unread-indicator" style="width: 10px; height: 10px; background: var(--accent-coral); border-radius: 50%; margin-left: 8px;"></div>' : '';
-    
   const chatDiv = document.createElement('div');
   chatDiv.className = 'private-chat-item';
   chatDiv.setAttribute('data-room-id', chat.roomId);
   chatDiv.setAttribute('data-private-click', chat.roomId);
   chatDiv.setAttribute('data-private-title', `與${userData.nickname}的對話`);
-  
-  // 🔧 手機版優化：增強觸控目標和事件處理
-  const isMobile = window.innerWidth <= 600;
-  const mobileStyles = isMobile ? 
-    `
-    min-height: 70px; 
-    -webkit-tap-highlight-color: rgba(0,0,0,0.1); 
-    user-select: none; 
-    -webkit-user-select: none;
-    touch-action: manipulation;
-    ` : '';
-  
-  chatDiv.style.cssText = `
-    cursor: pointer; 
-    position: relative; 
-    z-index: 10;
-    pointer-events: auto;
-    ${mobileStyles}
-  `;
-  
+  chatDiv.style.pointerEvents = 'auto';
   chatDiv.innerHTML = `
-    <div class="private-chat-content" style="display: flex; align-items: center; padding: ${isMobile ? '16px 12px' : '12px'}; background: ${hasUnread ? '#fff5f5' : '#f8f9fa'}; border-radius: 8px; margin-bottom: 8px; cursor: pointer; transition: background 0.2s ease; border-left: ${hasUnread ? '4px solid var(--accent-coral)' : 'none'};">
+    <div class="private-chat-content" style="display: flex; align-items: center; padding: 12px; background: #f8f9fa; border-radius: 8px; margin-bottom: 8px; cursor: pointer; transition: background 0.2s ease;" data-private-click="${chat.roomId}" data-private-title="與${userData.nickname}的對話">
             <img src="${userData.avatar || 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'40\' height=\'40\' viewBox=\'0 0 40 40\'%3E%3Ccircle cx=\'20\' cy=\'20\' r=\'20\' fill=\'%23ddd\'/%3E%3Ctext x=\'20\' y=\'26\' text-anchor=\'middle\' fill=\'white\' font-size=\'16\'%3E👤%3C/text%3E%3C/svg%3E'}" 
-                 class="private-chat-avatar" style="width: ${isMobile ? '56px' : '50px'}; height: ${isMobile ? '56px' : '50px'}; border-radius: 50%; margin-right: 12px; object-fit: cover; border: 2px solid ${hasUnread ? 'var(--accent-coral)' : 'var(--accent-green)'}; pointer-events: none;">
-            <div style="flex: 1; pointer-events: none;">
-                <div style="font-weight: ${hasUnread ? '700' : '600'}; color: var(--sea-dark); margin-bottom: 2px; font-size: ${isMobile ? '16px' : '14px'};">${userData.nickname || '匿名用戶'}</div>
-                <div style="font-size: ${isMobile ? '14px' : '12px'}; color: ${hasUnread ? '#333' : '#666'}; margin-bottom: 2px; font-weight: ${hasUnread ? '600' : 'normal'};">${lastMessageText}</div>
-                <div style="font-size: ${isMobile ? '12px' : '10px'}; color: #999;">${timeStr}</div>
+                 class="private-chat-avatar" style="width: 50px; height: 50px; border-radius: 50%; margin-right: 12px; object-fit: cover; border: 2px solid var(--accent-green);" data-private-click="${chat.roomId}" data-private-title="與${userData.nickname}的對話">
+            <div style="flex: 1;" data-private-click="${chat.roomId}" data-private-title="與${userData.nickname}的對話">
+                <div style="font-weight: 600; color: var(--sea-dark); margin-bottom: 2px;" data-private-click="${chat.roomId}" data-private-title="與${userData.nickname}的對話">${userData.nickname || '匿名用戶'}</div>
+                <div style="font-size: 12px; color: #666; margin-bottom: 2px;" data-private-click="${chat.roomId}" data-private-title="與${userData.nickname}的對話">${lastMessageText}</div>
+                <div style="font-size: 10px; color: #999;" data-private-click="${chat.roomId}" data-private-title="與${userData.nickname}的對話">${timeStr}</div>
             </div>
-            ${unreadIndicator}
         </div>
     `;
     
-  // 🔧 加強手機版事件處理 - 移除所有 preventDefault 避免阻止點擊
-  if (isMobile) {
-    // 手機版使用 touchstart + touchend 組合
-    let touchStartTime = 0;
-    let touchMoved = false;
-    
-    chatDiv.addEventListener('touchstart', (e) => {
-      console.log('� Private chat touchstart:', chat.roomId);
-      touchStartTime = Date.now();
-      touchMoved = false;
-    }, { passive: true });
-    
-    chatDiv.addEventListener('touchmove', (e) => {
-      touchMoved = true;
-    }, { passive: true });
-    
-    chatDiv.addEventListener('touchend', (e) => {
-      console.log('📱 Private chat touchend:', chat.roomId, 'moved:', touchMoved, 'duration:', Date.now() - touchStartTime);
-      if (!touchMoved && (Date.now() - touchStartTime) < 500) {
-        e.stopPropagation();
-        console.log('📱 ✅ 觸發私訊點擊:', chat.roomId);
-        enterRoom(chat.roomId, `與${userData.nickname}的對話`);
-      }
-    }, { passive: false });
-  } else {
-    // 電腦版使用標準 click
+    // 使用更強大的事件處理 - 移除 preventDefault 以避免與全域事件衝突
     chatDiv.addEventListener('click', (e) => {
-      console.log('� Private chat clicked:', chat.roomId);
-      e.preventDefault();
-      e.stopPropagation();
-      enterRoom(chat.roomId, `與${userData.nickname}的對話`);
+        console.log('💬 Private chat clicked (direct):', chat.roomId);
+        // 讓全域事件處理器來處理，不要在這裡阻止事件
+        // e.preventDefault();
+        // e.stopPropagation();
+        // enterRoom(chat.roomId, `與${userData.nickname}的對話`);
     });
-  }
     
-    // 調試資訊
-    console.log(`📱 私訊項目已添加 (${isMobile ? '手機版' : '電腦版'}):`, {
-        roomId: chat.roomId,
-        nickname: userData.nickname,
-        isMobile,
-        containerExists: !!container
-    });
+    // 移除直接的觸摸事件，讓全域處理器統一處理
+    // chatDiv.addEventListener('touchend', (e) => {
+    //     console.log('📱 Private chat touched (direct):', chat.roomId);
+    //     e.preventDefault();
+    //     e.stopPropagation();
+    //     enterRoom(chat.roomId, `與${userData.nickname}的對話`);
+    // });
     
     container.appendChild(chatDiv);
 }
@@ -994,24 +830,7 @@ function escapeHTML(str) {
   }[m]));
 }
 
-function appendMessage(msg, msgId, sourceChannel = null) {
-  // 驗證訊息是否屬於當前頻道，防止錯頻道顯示
-  if (sourceChannel) {
-    console.log('🔍 頻道驗證:', { sourceChannel, currentChat, msgId });
-    
-    // 精確匹配：sourceChannel 必須與 currentChat 完全一致
-    if (sourceChannel !== currentChat) {
-      console.log('⚠️ 跳過不匹配的訊息:', { 
-        sourceChannel, 
-        currentChat, 
-        msgId,
-        reason: `${sourceChannel} !== ${currentChat}` 
-      });
-      return;
-    }
-  }
-
-  console.log('✅ 渲染訊息:', { msgId, sourceChannel, currentChat });
+function appendMessage(msg, msgId) {
   if (msgId) messageMap[msgId] = msg;
 
   const chatDiv = document.getElementById('chat');
@@ -1148,10 +967,7 @@ function listenToVoteUpdates(room = 'chat') {
     const msgId = snap.key;
 
     // 只有在當前聊天室才更新投票
-    if (currentChat !== `group_${room}`) {
-      console.log('⚠️ 跳過投票更新：不在對應群組聊天室中', { currentChat, targetRoom: `group_${room}` });
-      return;
-    }
+    if (currentChat !== `group_${room}`) return;
 
     const msgDiv = document.querySelector(`[data-msgid="${msgId}"]`);
     if (!msgDiv) return;
@@ -1162,7 +978,7 @@ function listenToVoteUpdates(room = 'chat') {
     renderedMessageIds.delete(msgId);
 
     // 重新渲染訊息（會自動顯示投票結果）
-    appendMessage(msg, msgId, `group_${room}`);
+    appendMessage(msg, msgId);
   });
 }
 
@@ -1714,15 +1530,12 @@ onAuthStateChanged(auth, async (user) => {
 
     // 啟動私訊通知監聽（只在 chat.html 頁面）
     if (document.getElementById('main') && document.getElementById('chat')) {
-      // 載入已讀狀態
-      loadReadStates();
       startGlobalPrivateMessageMonitoring();
     }
 
-    // ✅ 自動進入上次的聊天室（只在 chat.html 頁面）
+    // ✅ 自動進入聊天室（統一進入 chat 房間）
     if (document.getElementById('main') && document.getElementById('chat')) {
-      const lastRoom = localStorage.getItem('lastGroupRoom') || 'chat';
-      loadGroupChat(lastRoom);
+      loadGroupChat('chat');
     }
 
     // 關閉 loading
@@ -2062,13 +1875,13 @@ function openPrivateChat(uid) {
   stopAllListeners();  // 清除原本監聽器
   clearChat(); // 清空聊天室並重置已渲染訊息ID
 
+  currentChat = uid;
+  currentPrivateUid = uid;
+  currentChatRoom = 'private'; // 確保設置為私訊模式
+
   // 設置當前私訊房間ID
   const ids = [currentUser.uid, uid].sort();
   currentPrivateRoomId = `${ids[0]}_${ids[1]}`;
-  
-  currentChat = `private_${currentPrivateRoomId}`; // 與 sourceChannel 一致
-  currentPrivateUid = uid;
-  currentChatRoom = 'private'; // 確保設置為私訊模式
 
   // 確保私訊標籤是活躍的
   document.querySelectorAll('.chat-tab').forEach(tab => {
@@ -2099,8 +1912,7 @@ function openPrivateChat(uid) {
     const msgId = snap.key;
     if (!renderedMessageIds.has(msgId)) {
       renderedMessageIds.add(msgId);
-      // 加入頻道標識以防止錯頻道顯示
-      appendMessage?.(snap.val(), msgId, `private_${currentPrivateRoomId}`);
+      appendMessage?.(snap.val(), msgId);
     }
   });
 
@@ -2111,69 +1923,9 @@ function openPrivateChat(uid) {
     if(dot) dot.style.display = 'none';
   }
   privateChatNotificationStates[uid] = false;
-  
-  // 記錄已讀狀態
-  markMessagesAsRead(uid);
 }
 
 // ========= 私訊通知功能 =========
-// 記錄已讀狀態
-function markMessagesAsRead(fromUid) {
-  if (!currentUser?.uid || !fromUid) return;
-  
-  const now = Date.now();
-  lastReadMessages[fromUid] = now;
-  
-  // 儲存到 localStorage 以持久化
-  const readStateKey = `lastRead_${currentUser.uid}_${fromUid}`;
-  localStorage.setItem(readStateKey, now.toString());
-  
-  console.log('📖 標記已讀:', { fromUid, timestamp: now });
-}
-
-// 檢查訊息是否已讀
-function isMessageRead(fromUid, messageTime) {
-  if (!currentUser?.uid || !fromUid || !messageTime) return false;
-  
-  // 先檢查記憶體中的狀態
-  if (lastReadMessages[fromUid] && messageTime <= lastReadMessages[fromUid]) {
-    return true;
-  }
-  
-  // 檢查 localStorage
-  const readStateKey = `lastRead_${currentUser.uid}_${fromUid}`;
-  const lastReadTime = localStorage.getItem(readStateKey);
-  
-  if (lastReadTime) {
-    const lastRead = parseInt(lastReadTime, 10);
-    lastReadMessages[fromUid] = lastRead; // 同步到記憶體
-    return messageTime <= lastRead;
-  }
-  
-  return false;
-}
-
-// 載入已讀狀態
-function loadReadStates() {
-  if (!currentUser?.uid) return;
-  
-  lastReadMessages = {};
-  
-  // 從 localStorage 載入所有已讀狀態
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i);
-    if (key && key.startsWith(`lastRead_${currentUser.uid}_`)) {
-      const fromUid = key.replace(`lastRead_${currentUser.uid}_`, '');
-      const timestamp = localStorage.getItem(key);
-      if (timestamp) {
-        lastReadMessages[fromUid] = parseInt(timestamp, 10);
-      }
-    }
-  }
-  
-  console.log('📚 載入已讀狀態:', lastReadMessages);
-}
-
 function showPrivateMessageNotification(fromUid, message, nickname) {
   console.log('🔔 嘗試顯示私訊通知:', { fromUid, message, nickname, currentPrivateRoomId });
   
@@ -2196,10 +1948,10 @@ function startGlobalPrivateMessageMonitoring() {
     return;
   }
   
-  console.log('📢 啟動全域私訊監聽，用戶 UID:', currentUser.uid);
-  
-  // 先停止現有的監聽器，避免重複
+  // 先停止現有的監聽器避免重複
   stopGlobalPrivateMessageMonitoring();
+  
+  console.log('📢 啟動全域私訊監聽，用戶 UID:', currentUser.uid);
   
   // 監聽所有與當前用戶相關的私訊路徑
   const privateChatsRef = ref(db, 'privateChats');
@@ -2245,13 +1997,21 @@ function setupPrivateChatListener(chatId) {
     const messageData = messageSnapshot.val();
     const messageId = messageSnapshot.key;
     
+    // 防止重複處理同一條訊息的通知
+    const notificationKey = `${chatId}_${messageId}`;
+    if (processedNotificationIds.has(notificationKey)) {
+      console.log('⏭️ 跳過重複通知:', notificationKey);
+      return;
+    }
+    
     console.log('💬 收到私訊:', {
       chatId,
       messageId,
       from: messageData.from,
       to: messageData.to,
       currentUser: currentUser.uid,
-      currentPrivateUid
+      currentPrivateUid,
+      timestamp: messageData.time
     });
     
     // 只處理別人發送給我的訊息，且不是當前正在查看的私訊
@@ -2270,10 +2030,27 @@ function setupPrivateChatListener(chatId) {
     
     if (messageData.from !== currentUser.uid && 
         messageData.to === currentUser.uid && 
-        !isInCurrentPrivateChat &&
-        !isMessageRead(messageData.from, messageData.time)) { // 加入已讀檢查
+        !isInCurrentPrivateChat) {
+      
+      // 檢查訊息是否是最近的（避免顯示舊訊息通知）
+      const messageTime = messageData.time || 0;
+      const currentTime = Date.now();
+      const maxAge = 5 * 60 * 1000; // 5分鐘
+      
+      if (currentTime - messageTime > maxAge) {
+        console.log('⏭️ 跳過舊訊息通知:', {
+          messageTime: new Date(messageTime),
+          currentTime: new Date(currentTime),
+          ageMinutes: (currentTime - messageTime) / (60 * 1000)
+        });
+        processedNotificationIds.add(notificationKey);
+        return;
+      }
       
       console.log('🔔 顯示私訊通知:', messageData.from);
+      
+      // 標記此訊息已處理
+      processedNotificationIds.add(notificationKey);
       
       // 獲取發送者昵稱
       get(ref(db, `users/${messageData.from}/nickname`)).then((snapshot) => {
@@ -2284,6 +2061,9 @@ function setupPrivateChatListener(chatId) {
         console.error('獲取發送者昵稱失敗:', error);
         showPrivateMessageNotification(messageData.from, messageData.msg, '匿名用戶');
       });
+    } else {
+      // 對於不需要通知的訊息也要標記為已處理
+      processedNotificationIds.add(notificationKey);
     }
   });
   
@@ -2300,6 +2080,8 @@ function stopGlobalPrivateMessageMonitoring() {
   });
   
   globalPrivateMessageListeners.clear();
+  // 清理已處理的通知ID
+  processedNotificationIds.clear();
   hidePrivateMessageNotification();
 }
 
@@ -2677,10 +2459,31 @@ function initNotificationSystem() {
     });
 }
 
-// 手機版通知系統 - 使用頁面內通知
+// 手機版通知系統 - 使用頁面內通知和系統通知
 function initMobileNotifications() {
-    console.log("📱 手機版通知系統：使用頁面內通知");
-    checkForNewPrivateMessages();
+    console.log("📱 手機版通知系統：使用頁面內通知和系統通知");
+    
+    // 檢查瀏覽器是否支援通知
+    if ("Notification" in window) {
+        // 請求通知權限
+        if (Notification.permission === "default") {
+            console.log("📱 請求手機系統通知權限");
+            Notification.requestPermission().then(permission => {
+                if (permission === "granted") {
+                    console.log("✅ 手機系統通知權限已授予");
+                } else {
+                    console.log("❌ 手機系統通知權限被拒絕，僅使用頁面內通知");
+                }
+                checkForNewPrivateMessages();
+            });
+        } else {
+            console.log(`📱 通知權限狀態: ${Notification.permission}`);
+            checkForNewPrivateMessages();
+        }
+    } else {
+        console.log("📱 此瀏覽器不支援系統通知，僅使用頁面內通知");
+        checkForNewPrivateMessages();
+    }
 }
 
 // 電腦版通知系統 - 使用桌面通知
@@ -2716,15 +2519,16 @@ function initDesktopNotifications() {
 function showNotification(title, body, fromUid, icon = null) {
     const isMobile = window.innerWidth <= 600;
     
-    if (isMobile || Notification.permission !== "granted") {
-        // 手機版或無桌面通知權限時使用頁面內通知
-        showMobileNotification(fromUid, body, title);
-    } else {
-        // 電腦版使用桌面通知
+    // 檢查是否有系統通知權限
+    const hasSystemNotification = "Notification" in window && Notification.permission === "granted";
+    
+    if (hasSystemNotification) {
+        // 有系統通知權限時，使用系統通知
         showDesktopNotification(title, body, fromUid, icon);
-        // 同時顯示頁面內通知作為備用
-        showMobileNotification(fromUid, body, title);
     }
+    
+    // 同時顯示頁面內通知作為備用（手機版主要依賴這個，電腦版作為補充）
+    showMobileNotification(fromUid, body, title);
 }
 
 // 手機版頁面內通知
@@ -2732,10 +2536,9 @@ function showMobileNotification(fromUid, message, nickname) {
     console.log('📱 顯示手機版通知:', { fromUid, message, nickname });
     console.log('🔍 當前狀態檢查:', { 
         currentChat, 
-        currentChatRoom,
         currentPrivateRoomId, 
         currentPrivateUid,
-        isInPrivateMode: currentChatRoom === 'private',
+        isInPrivateMode: currentChat === 'private',
         hasPrivateRoom: !!currentPrivateRoomId
     });
     
@@ -2744,7 +2547,7 @@ function showMobileNotification(fromUid, message, nickname) {
     const messageRoomId = `${[fromUid, currentUser.uid].sort().join('_')}`;
     
     // 檢查是否在私訊模式且正在與此用戶對話
-    const isInPrivateChat = currentChatRoom === 'private' && currentPrivateRoomId;
+    const isInPrivateChat = currentChat === 'private' && currentPrivateRoomId;
     const isSameRoom = currentRoomId === messageRoomId;
     const isSameUser = currentPrivateUid === fromUid;
     const shouldSkipNotification = isInPrivateChat && (isSameRoom || isSameUser);
@@ -2861,8 +2664,42 @@ function checkForNewPrivateMessages() {
     const user = auth.currentUser;
     if (!user) return;
     
-    console.log('🔍 檢查新私訊 - 跳過，使用統一的全域監聽器');
-    // 移除重複的監聽邏輯，只使用 startGlobalPrivateMessageMonitoring 的統一監聽器
+    // 監聽所有私人聊天室的新訊息
+    const privateChatsRef = ref(db, 'privateChats');
+    onValue(privateChatsRef, (snapshot) => {
+        const privateChats = snapshot.val() || {};
+        
+        Object.keys(privateChats).forEach(roomId => {
+            if (roomId.includes(user.uid)) {
+                const messagesRef = ref(db, `privateChats/${roomId}/messages`);
+                
+                // 監聽新訊息
+                onChildAdded(messagesRef, (messageSnapshot) => {
+                    const message = messageSnapshot.val();
+                    
+                    // 如果不是自己發送的訊息且在最近5秒內發送
+                    if (message && message.from !== user.uid && 
+                        message.time && 
+                        (Date.now() - message.time) < 5000) {
+                        
+                        // 標記私訊標籤有未讀
+                        const privateTab = document.querySelector('.chat-tab[data-room="private"]');
+                        if (privateTab) {
+                            privateTab.classList.add('has-unread');
+                        }
+                        
+                        // 使用統一的通知系統
+                        showNotification(
+                            '新私訊',
+                            `${message.user || '匿名'}: ${message.message || '傳送了一則訊息'}`,
+                            message.from,
+                            message.avatar
+                        );
+                    }
+                });
+            }
+        });
+    });
 }
 
 // 更新用戶個人資料顯示
@@ -2902,9 +2739,6 @@ function updateUserProfileDisplay() {
 // 全域聊天室切換函數 - 移到全域範圍確保HTML onclick可以調用
 window.switchChatRoom = function(room) {
   console.log('🔄 切換聊天室:', room);
-  
-  // 先停止所有監聽器，確保乾淨切換
-  stopAllListeners();
   
   // 退出手機版好友模式，顯示聊天相關元素
   document.body.classList.remove('mobile-friends-mode');
@@ -3069,9 +2903,16 @@ function initUserDropdownMenu() {
       document.getElementById('edit-nickname').value = currentUser.nickname || '';
     });
     
-    document.getElementById('toggle-notification-btn')?.addEventListener('click', () => {
+    // 通知設定按鈕事件（桌面版）
+    document.getElementById('notification-settings-btn')?.addEventListener('click', () => {
       document.querySelector('.user-dropdown-menu').classList.remove('show');
-      console.log('通知設定功能待開發');
+      showNotificationSettings();
+    });
+    
+    // 通知設定按鈕事件（手機版）
+    document.getElementById('notification-settings-btn-mobile')?.addEventListener('click', () => {
+      closeMobileSidebar();
+      showNotificationSettings();
     });
     
     document.getElementById('logout-btn')?.addEventListener('click', () => {
@@ -3265,4 +3106,106 @@ window.addEventListener('DOMContentLoaded', () => {
       }
     }, 1000);
   }
+});
+
+// ====== 通知設定功能 ======
+
+// 顯示通知設定彈窗
+function showNotificationSettings() {
+  const modal = document.getElementById('notification-settings-modal');
+  const statusEl = document.getElementById('notification-status');
+  const requestBtn = document.getElementById('request-notification-btn');
+  
+  // 更新通知狀態顯示
+  updateNotificationStatus();
+  
+  modal.style.display = 'block';
+}
+
+// 更新通知權限狀態顯示
+function updateNotificationStatus() {
+  const statusEl = document.getElementById('notification-status');
+  const requestBtn = document.getElementById('request-notification-btn');
+  
+  if (!("Notification" in window)) {
+    statusEl.innerHTML = '❌ 您的瀏覽器不支援系統通知';
+    statusEl.style.backgroundColor = '#ffe6e6';
+    statusEl.style.color = '#d63384';
+    requestBtn.style.display = 'none';
+    return;
+  }
+  
+  switch (Notification.permission) {
+    case 'granted':
+      statusEl.innerHTML = '✅ 系統通知已啟用';
+      statusEl.style.backgroundColor = '#e6ffe6';
+      statusEl.style.color = '#198754';
+      requestBtn.textContent = '重新請求權限';
+      requestBtn.style.display = 'block';
+      break;
+    case 'denied':
+      statusEl.innerHTML = '❌ 系統通知已被拒絕<br><small>請在瀏覽器設定中手動啟用</small>';
+      statusEl.style.backgroundColor = '#ffe6e6';
+      statusEl.style.color = '#d63384';
+      requestBtn.textContent = '重新請求權限';
+      requestBtn.style.display = 'block';
+      break;
+    case 'default':
+      statusEl.innerHTML = '⚠️ 尚未設定系統通知權限';
+      statusEl.style.backgroundColor = '#fff3cd';
+      statusEl.style.color = '#664d03';
+      requestBtn.textContent = '啟用系統通知';
+      requestBtn.style.display = 'block';
+      break;
+  }
+}
+
+// 請求通知權限
+function requestNotificationPermission() {
+  if (!("Notification" in window)) {
+    alert('您的瀏覽器不支援系統通知');
+    return;
+  }
+  
+  Notification.requestPermission().then(permission => {
+    console.log('通知權限請求結果:', permission);
+    updateNotificationStatus();
+    
+    if (permission === 'granted') {
+      alert('✅ 系統通知已啟用！');
+    } else {
+      alert('❌ 系統通知權限被拒絕。您仍可以收到頁面內通知。');
+    }
+  });
+}
+
+// 發送測試通知
+function sendTestNotification() {
+  if (Notification.permission === 'granted') {
+    showDesktopNotification('LalaLand 測試通知', '如果您看到這個通知，表示系統通知正常運作！');
+    alert('✅ 測試通知已發送！');
+  } else {
+    alert('⚠️ 請先啟用系統通知權限');
+  }
+}
+
+// 初始化通知設定事件
+document.addEventListener('DOMContentLoaded', function() {
+  // 通知設定彈窗關閉按鈕
+  document.getElementById('close-notification-modal')?.addEventListener('click', () => {
+    document.getElementById('notification-settings-modal').style.display = 'none';
+  });
+  
+  // 點擊彈窗外部關閉
+  document.getElementById('notification-settings-modal')?.addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) {
+      e.target.style.display = 'none';
+    }
+  });
+  
+  // 請求通知權限按鈕
+  document.getElementById('request-notification-btn')?.addEventListener('click', requestNotificationPermission);
+  
+  // 測試通知按鈕
+  document.getElementById('test-notification-btn')?.addEventListener('click', sendTestNotification);
 });
