@@ -438,8 +438,13 @@ function addFriendToList(friendId, friendData) {
   friendDiv.style.position = 'relative';
   friendDiv.style.pointerEvents = 'auto';
     
-    // 檢查是否為手機版
-    const isMobile = window.innerWidth <= 600;
+    // 使用統一的手機檢測邏輯
+    const userAgent = navigator.userAgent.toLowerCase();
+    const isIOS = /ipad|iphone|ipod/.test(userAgent);
+    const isAndroid = /android/.test(userAgent);
+    const isMobileUserAgent = /android|iphone|ipad|ipod|blackberry|iemobile|opera mini|mobile|phone/i.test(navigator.userAgent);
+    const isMobileWidth = window.innerWidth <= 768;
+    const isMobile = isIOS || isAndroid || isMobileUserAgent || isMobileWidth;
     console.log('📱 Mobile check for friend', friendId, '- isMobile:', isMobile, 'width:', window.innerWidth);
     const chatButtonHtml = isMobile ? '' : `<button onclick="event.stopPropagation(); window.startPrivateChat('${friendId}')" class="desktop-only" style="background: linear-gradient(135deg, var(--sea-blue), var(--accent-green)); color: white; border: none; padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.2); transition: transform 0.2s ease;">💬 聊天</button>`;
     
@@ -2512,10 +2517,19 @@ function initDesktopNotifications() {
 
 // 顯示通知 - 根據平台選擇通知方式
 function showNotification(title, body, fromUid, icon = null) {
-    const isMobile = window.innerWidth <= 600;
+    // 使用統一的手機檢測邏輯
+    const userAgent = navigator.userAgent.toLowerCase();
+    const isIOS = /ipad|iphone|ipod/.test(userAgent);
+    const isAndroid = /android/.test(userAgent);
+    const isMobileUserAgent = /android|iphone|ipad|ipod|blackberry|iemobile|opera mini|mobile|phone/i.test(navigator.userAgent);
+    const isMobileWidth = window.innerWidth <= 768;
+    const isMobile = isIOS || isAndroid || isMobileUserAgent || isMobileWidth;
+    
+    console.log('📱 showNotification 設備檢測:', { isMobile, isIOS, isAndroid, width: window.innerWidth });
     
     // 檢查是否有系統通知權限
     const hasSystemNotification = "Notification" in window && Notification.permission === "granted";
+    console.log('🔔 系統通知狀態:', hasSystemNotification, 'Permission:', Notification.permission);
     
     if (hasSystemNotification) {
         // 有系統通知權限時，使用系統通知
@@ -3263,39 +3277,61 @@ function requestMobileNotificationPermission() {
   console.log('📱 User Agent:', navigator.userAgent);
   console.log('📱 螢幕寬度:', window.innerWidth);
   
-  // 手機版可能需要用戶互動才能請求權限
-  const requestPermission = async () => {
-    try {
-      // 確保在用戶互動事件中請求權限
-      if ('requestPermission' in Notification) {
-        // iOS Safari 特殊處理
-        return await Notification.requestPermission();
-      } else if (Notification.requestPermission) {
-        return await Notification.requestPermission();
-      } else {
-        // 對於舊版手機瀏覽器的回退方案
-        return new Promise((resolve) => {
-          Notification.requestPermission((permission) => {
-            resolve(permission);
-          });
-        });
-      }
-    } catch (error) {
-      console.error('❌ 權限請求過程中發生錯誤:', error);
-      throw error;
-    }
-  };
-  
-  // 添加額外的手機版檢查
+  // 添加設備檢測
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
   const isAndroid = /Android/.test(navigator.userAgent);
+  const isSafari = /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
+  const isChrome = /Chrome/.test(navigator.userAgent);
   
-  console.log('📱 設備檢測:', { isIOS, isAndroid });
+  console.log('📱 設備檢測:', { isIOS, isAndroid, isSafari, isChrome });
   
-  if (isIOS && !('requestPermission' in Notification)) {
-    alert('⚠️ 您的 iOS 設備可能不支援 Web 推播通知\n請使用 Safari 瀏覽器並確保版本為 16.4 或更新');
+  // 如果已經有權限，直接返回
+  if (Notification.permission === 'granted') {
+    alert('✅ 您已經啟用了系統通知權限！');
+    updateNotificationStatus();
     return;
   }
+  
+  // iOS Safari 特殊檢查
+  if (isIOS && !isSafari) {
+    alert('⚠️ iOS 設備需要使用 Safari 瀏覽器才能啟用推播通知\n請使用 Safari 打開本網站');
+    return;
+  }
+  
+  if (isIOS && parseFloat(navigator.userAgent.match(/OS (\d+)/)?.[1] || '0') < 16) {
+    alert('⚠️ 您的 iOS 版本可能不支援 Web 推播通知\n請確保 iOS 版本為 16.4 或更新');
+    return;
+  }
+  
+  // 手機版需要在用戶互動事件中請求權限
+  const requestPermission = () => {
+    console.log('📱 開始權限請求流程...');
+    
+    try {
+      // 確保使用正確的 API
+      let permissionPromise;
+      
+      if (typeof Notification.requestPermission === 'function') {
+        // 現代瀏覽器
+        permissionPromise = Notification.requestPermission();
+      } else {
+        // 舊版瀏覽器回退
+        permissionPromise = new Promise((resolve) => {
+          Notification.requestPermission(resolve);
+        });
+      }
+      
+      // 如果返回的不是 Promise，包裝成 Promise
+      if (!permissionPromise || typeof permissionPromise.then !== 'function') {
+        permissionPromise = Promise.resolve(Notification.permission);
+      }
+      
+      return permissionPromise;
+    } catch (error) {
+      console.error('❌ 權限請求過程中發生錯誤:', error);
+      return Promise.reject(error);
+    }
+  };
   
   requestPermission().then(permission => {
     console.log('✅ 手機版通知權限請求結果:', permission);
@@ -3306,11 +3342,29 @@ function requestMobileNotificationPermission() {
     if (permission === 'granted') {
       alert('✅ 手機版系統通知已啟用！\n現在您可以收到私訊的推播通知了。');
       
-      // 立即檢查權限是否真的生效
+      // 立即測試通知是否正常工作
       setTimeout(() => {
         console.log('🔍 驗證權限狀態:', Notification.permission);
         if (Notification.permission === 'granted') {
-          console.log('✅ 權限驗證成功');
+          console.log('✅ 權限驗證成功，發送測試通知');
+          try {
+            const testNotification = new Notification('🎉 通知設定成功！', {
+              body: '您現在可以收到私訊推播通知了',
+              icon: '/icon-512.png',
+              badge: '/icon-512.png',
+              tag: 'test-notification',
+              requireInteraction: false,
+              silent: false
+            });
+            
+            // 3秒後自動關閉測試通知
+            setTimeout(() => {
+              testNotification.close();
+            }, 3000);
+            
+          } catch (testError) {
+            console.error('❌ 測試通知失敗:', testError);
+          }
         } else {
           console.warn('⚠️ 權限可能未正確設定');
         }
@@ -3318,14 +3372,19 @@ function requestMobileNotificationPermission() {
       
     } else if (permission === 'denied') {
       if (isIOS) {
-        alert('❌ iOS 系統通知權限被拒絕。\n\n請手動啟用：\n1. 開啟 Safari 設定\n2. 找到本網站\n3. 啟用通知權限\n4. 重新整理頁面');
+        alert('❌ iOS 系統通知權限被拒絕。\n\n請手動啟用：\n1. 開啟 iPhone 設定\n2. Safari → 網站設定\n3. 找到本網站\n4. 啟用通知權限\n5. 重新整理頁面');
       } else if (isAndroid) {
-        alert('❌ Android 系統通知權限被拒絕。\n\n請手動啟用：\n1. 開啟手機設定\n2. 應用程式 → 瀏覽器\n3. 權限 → 通知\n4. 允許通知權限');
+        if (isChrome) {
+          alert('❌ Android Chrome 通知權限被拒絕。\n\n請手動啟用：\n1. Chrome 右上角選單\n2. 設定 → 網站設定\n3. 通知權限\n4. 找到本網站並允許');
+        } else {
+          alert('❌ Android 系統通知權限被拒絕。\n\n請手動啟用：\n1. 開啟手機設定\n2. 應用程式 → 瀏覽器\n3. 權限 → 通知\n4. 允許通知權限');
+        }
       } else {
         alert('❌ 手機系統通知權限被拒絕。\n\n請手動啟用：\n1. 開啟手機設定\n2. 找到瀏覽器應用程式\n3. 啟用通知權限\n4. 重新整理頁面');
       }
     } else {
-      alert('⚠️ 手機通知權限未設定。您仍可以收到頁面內通知。');
+      // permission === 'default' 或其他狀態
+      alert('⚠️ 手機通知權限未設定。\n\n您可以稍後在瀏覽器設定中手動啟用，\n或者重新點擊權限請求按鈕。');
     }
   }).catch(error => {
     console.error('❌ 請求手機版通知權限時發生錯誤:', error);
