@@ -3165,8 +3165,15 @@ function updateNotificationStatus() {
     return;
   }
   
-  const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 600;
-  console.log('📱 是否為手機:', isMobile);
+  // 使用與 requestNotificationPermission 相同的手機檢測邏輯
+  const userAgent = navigator.userAgent.toLowerCase();
+  const isIOS = /ipad|iphone|ipod/.test(userAgent);
+  const isAndroid = /android/.test(userAgent);
+  const isMobileUserAgent = /android|iphone|ipad|ipod|blackberry|iemobile|opera mini|mobile|phone/i.test(navigator.userAgent);
+  const isMobileWidth = window.innerWidth <= 768;
+  const isMobile = isIOS || isAndroid || isMobileUserAgent || isMobileWidth;
+  
+  console.log('📱 是否為手機:', isMobile, { isIOS, isAndroid, isMobileUserAgent, isMobileWidth });
   
   switch (Notification.permission) {
     case 'granted':
@@ -3253,20 +3260,42 @@ function requestMobileNotificationPermission() {
   
   console.log('📱 開始請求手機版通知權限...');
   console.log('📱 當前權限狀態:', Notification.permission);
+  console.log('📱 User Agent:', navigator.userAgent);
+  console.log('📱 螢幕寬度:', window.innerWidth);
   
-  // 手機版特殊處理
-  const requestPermission = () => {
-    if (Notification.requestPermission) {
-      return Notification.requestPermission();
-    } else {
-      // 對於舊版手機瀏覽器的回退方案
-      return new Promise((resolve) => {
-        Notification.requestPermission((permission) => {
-          resolve(permission);
+  // 手機版可能需要用戶互動才能請求權限
+  const requestPermission = async () => {
+    try {
+      // 確保在用戶互動事件中請求權限
+      if ('requestPermission' in Notification) {
+        // iOS Safari 特殊處理
+        return await Notification.requestPermission();
+      } else if (Notification.requestPermission) {
+        return await Notification.requestPermission();
+      } else {
+        // 對於舊版手機瀏覽器的回退方案
+        return new Promise((resolve) => {
+          Notification.requestPermission((permission) => {
+            resolve(permission);
+          });
         });
-      });
+      }
+    } catch (error) {
+      console.error('❌ 權限請求過程中發生錯誤:', error);
+      throw error;
     }
   };
+  
+  // 添加額外的手機版檢查
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  const isAndroid = /Android/.test(navigator.userAgent);
+  
+  console.log('📱 設備檢測:', { isIOS, isAndroid });
+  
+  if (isIOS && !('requestPermission' in Notification)) {
+    alert('⚠️ 您的 iOS 設備可能不支援 Web 推播通知\n請使用 Safari 瀏覽器並確保版本為 16.4 或更新');
+    return;
+  }
   
   requestPermission().then(permission => {
     console.log('✅ 手機版通知權限請求結果:', permission);
@@ -3277,21 +3306,53 @@ function requestMobileNotificationPermission() {
     if (permission === 'granted') {
       alert('✅ 手機版系統通知已啟用！\n現在您可以收到私訊的推播通知了。');
       
+      // 立即檢查權限是否真的生效
+      setTimeout(() => {
+        console.log('🔍 驗證權限狀態:', Notification.permission);
+        if (Notification.permission === 'granted') {
+          console.log('✅ 權限驗證成功');
+        } else {
+          console.warn('⚠️ 權限可能未正確設定');
+        }
+      }, 1000);
+      
     } else if (permission === 'denied') {
-      alert('❌ 手機系統通知權限被拒絕。\n\n請手動啟用：\n1. 開啟手機設定\n2. 找到瀏覽器應用程式\n3. 啟用通知權限\n4. 重新整理頁面');
+      if (isIOS) {
+        alert('❌ iOS 系統通知權限被拒絕。\n\n請手動啟用：\n1. 開啟 Safari 設定\n2. 找到本網站\n3. 啟用通知權限\n4. 重新整理頁面');
+      } else if (isAndroid) {
+        alert('❌ Android 系統通知權限被拒絕。\n\n請手動啟用：\n1. 開啟手機設定\n2. 應用程式 → 瀏覽器\n3. 權限 → 通知\n4. 允許通知權限');
+      } else {
+        alert('❌ 手機系統通知權限被拒絕。\n\n請手動啟用：\n1. 開啟手機設定\n2. 找到瀏覽器應用程式\n3. 啟用通知權限\n4. 重新整理頁面');
+      }
     } else {
       alert('⚠️ 手機通知權限未設定。您仍可以收到頁面內通知。');
     }
   }).catch(error => {
     console.error('❌ 請求手機版通知權限時發生錯誤:', error);
-    alert('❌ 請求手機通知權限失敗，請檢查手機設定。');
+    alert('❌ 請求手機通知權限失敗：' + error.message + '\n請檢查手機設定或嘗試重新整理頁面。');
     updateNotificationStatus();
   });
 }
 
 // 通用權限請求 - 根據設備類型選擇對應的請求方式
 function requestNotificationPermission() {
-  const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 600;
+  // 改進的手機檢測邏輯
+  const userAgent = navigator.userAgent.toLowerCase();
+  const isIOS = /ipad|iphone|ipod/.test(userAgent);
+  const isAndroid = /android/.test(userAgent);
+  const isMobileUserAgent = /android|iphone|ipad|ipod|blackberry|iemobile|opera mini|mobile|phone/i.test(navigator.userAgent);
+  const isMobileWidth = window.innerWidth <= 768; // 增加閾值到 768px
+  const isMobile = isIOS || isAndroid || isMobileUserAgent || isMobileWidth;
+  
+  console.log('🔍 設備檢測詳細資訊:', {
+    userAgent: navigator.userAgent,
+    isIOS,
+    isAndroid,
+    isMobileUserAgent,
+    isMobileWidth,
+    windowWidth: window.innerWidth,
+    finalIsMobile: isMobile
+  });
   
   if (isMobile) {
     console.log('📱 檢測到手機設備，使用手機版權限請求');
