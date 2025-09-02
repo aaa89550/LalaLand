@@ -2465,21 +2465,16 @@ function initMobileNotifications() {
     
     // 檢查瀏覽器是否支援通知
     if ("Notification" in window) {
-        // 請求通知權限
-        if (Notification.permission === "default") {
-            console.log("📱 請求手機系統通知權限");
-            Notification.requestPermission().then(permission => {
-                if (permission === "granted") {
-                    console.log("✅ 手機系統通知權限已授予");
-                } else {
-                    console.log("❌ 手機系統通知權限被拒絕，僅使用頁面內通知");
-                }
-                checkForNewPrivateMessages();
-            });
+        // 不再自動請求權限，讓用戶通過設定彈窗來控制
+        console.log(`📱 通知權限狀態: ${Notification.permission}`);
+        if (Notification.permission === "granted") {
+            console.log("✅ 手機系統通知權限已存在");
+        } else if (Notification.permission === "denied") {
+            console.log("❌ 手機系統通知權限被拒絕，僅使用頁面內通知");
         } else {
-            console.log(`📱 通知權限狀態: ${Notification.permission}`);
-            checkForNewPrivateMessages();
+            console.log("⚠️ 手機系統通知權限未設定，用戶可透過設定啟用");
         }
+        checkForNewPrivateMessages();
     } else {
         console.log("📱 此瀏覽器不支援系統通知，僅使用頁面內通知");
         checkForNewPrivateMessages();
@@ -3116,8 +3111,41 @@ function showNotificationSettings() {
   const statusEl = document.getElementById('notification-status');
   const requestBtn = document.getElementById('request-notification-btn');
   
+  console.log('🔔 顯示通知設定彈窗');
+  
   // 更新通知狀態顯示
   updateNotificationStatus();
+  
+  // 為手機版添加權限變化監聽
+  const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 600;
+  
+  if (isMobile && "Notification" in window) {
+    // 添加定期檢查權限狀態的機制（某些手機瀏覽器權限變化不會立即反映）
+    const checkPermission = () => {
+      console.log('📱 檢查權限狀態:', Notification.permission);
+      updateNotificationStatus();
+    };
+    
+    // 設定定期檢查
+    const permissionChecker = setInterval(checkPermission, 1000);
+    
+    // 當彈窗關閉時停止檢查
+    const stopChecker = () => {
+      clearInterval(permissionChecker);
+      console.log('🔔 停止權限狀態檢查');
+    };
+    
+    // 監聽彈窗關閉事件
+    const closeHandler = () => {
+      stopChecker();
+      document.getElementById('close-notification-modal')?.removeEventListener('click', closeHandler);
+    };
+    
+    document.getElementById('close-notification-modal')?.addEventListener('click', closeHandler);
+    
+    // 10秒後自動停止檢查
+    setTimeout(stopChecker, 10000);
+  }
   
   modal.style.display = 'block';
 }
@@ -3127,6 +3155,8 @@ function updateNotificationStatus() {
   const statusEl = document.getElementById('notification-status');
   const requestBtn = document.getElementById('request-notification-btn');
   
+  console.log('🔄 更新通知狀態顯示，當前權限:', Notification.permission);
+  
   if (!("Notification" in window)) {
     statusEl.innerHTML = '❌ 您的瀏覽器不支援系統通知';
     statusEl.style.backgroundColor = '#ffe6e6';
@@ -3135,7 +3165,8 @@ function updateNotificationStatus() {
     return;
   }
   
-  const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 600;
+  console.log('📱 是否為手機:', isMobile);
   
   switch (Notification.permission) {
     case 'granted':
@@ -3179,7 +3210,7 @@ function requestNotificationPermission() {
   console.log('📱 當前權限狀態:', Notification.permission);
   
   // 對於手機版，使用更兼容的方式
-  const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 600;
   
   if (isMobile) {
     console.log('📱 檢測到手機設備，使用手機優化版本');
@@ -3201,7 +3232,15 @@ function requestNotificationPermission() {
   
   requestPermission().then(permission => {
     console.log('✅ 通知權限請求結果:', permission);
+    
+    // 更新通知設定界面狀態
     updateNotificationStatus();
+    
+    // 如果是手機版，也要重新初始化通知系統
+    if (isMobile) {
+      console.log('📱 重新初始化手機通知系統');
+      // 不需要再次請求權限，因為已經處理過了
+    }
     
     if (permission === 'granted') {
       alert('✅ 系統通知已啟用！\n現在您可以收到私訊的系統通知了。');
@@ -3215,6 +3254,14 @@ function requestNotificationPermission() {
             badge: '/icon-512.png',
             tag: 'lalaland-test'
           });
+          
+          testNotification.onshow = () => {
+            console.log('✅ 自動測試通知已顯示');
+          };
+          
+          testNotification.onerror = (error) => {
+            console.error('❌ 自動測試通知失敗:', error);
+          };
           
           setTimeout(() => {
             testNotification.close();
