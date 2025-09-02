@@ -2540,17 +2540,25 @@ function showNotification(title, body, fromUid, icon = null) {
         // 有系統通知權限時，使用系統通知
         try {
             showDesktopNotification(title, body, fromUid, icon);
-            console.log('✅ 系統通知已觸發');
+            console.log('✅ 系統通知調用完成');
+            
+            // 手機版也顯示頁面內通知作為額外提醒
+            if (isMobile) {
+                console.log('📱 手機版額外顯示頁面內通知');
+                showMobileNotification(fromUid, body, title);
+            }
         } catch (error) {
             console.error('❌ 系統通知失敗:', error);
+            // 如果系統通知失敗，顯示頁面內通知作為備用
+            console.log('📱 系統通知失敗，顯示頁面內通知作為備用');
+            showMobileNotification(fromUid, body, title);
         }
     } else {
         console.log('⚠️ 無系統通知權限:', Notification.permission);
+        // 沒有系統通知權限時，顯示頁面內通知
+        console.log('📱 顯示頁面內通知作為主要通知方式');
+        showMobileNotification(fromUid, body, title);
     }
-    
-    // 同時顯示頁面內通知作為備用（手機版主要依賴這個，電腦版作為補充）
-    console.log('📱 顯示頁面內通知作為備用');
-    showMobileNotification(fromUid, body, title);
 }
 
 // 手機版頁面內通知
@@ -2646,60 +2654,125 @@ function showMobileNotification(fromUid, message, nickname) {
     }, hideDelay);
 }
 
-// 顯示桌面通知
+// 顯示系統通知（適用於桌面和手機）
 function showDesktopNotification(title, body, fromUid = null, icon = null) {
-    console.log('🖥️ showDesktopNotification 被調用:', { title, body, fromUid, permission: Notification.permission });
+    console.log('� showDesktopNotification 被調用:', { title, body, fromUid, permission: Notification.permission });
     
     if (Notification.permission !== "granted") {
-        console.log("❌ 無桌面通知權限:", Notification.permission);
+        console.log("❌ 無系統通知權限:", Notification.permission);
         return;
     }
     
     try {
+        // 檢測設備類型以調整通知配置
+        const userAgent = navigator.userAgent.toLowerCase();
+        const isIOS = /ipad|iphone|ipod/.test(userAgent);
+        const isAndroid = /android/.test(userAgent);
+        const isMobileUserAgent = /android|iphone|ipad|ipod|blackberry|iemobile|opera mini|mobile|phone/i.test(navigator.userAgent);
+        const isMobileWidth = window.innerWidth <= 768;
+        const isMobile = isIOS || isAndroid || isMobileUserAgent || isMobileWidth;
+        
+        console.log('📱 系統通知設備檢測:', { isMobile, isIOS, isAndroid });
+        
+        // 根據設備類型調整通知選項
         const options = {
             body: body,
             icon: icon || '/icon-512.png',
             badge: '/icon-512.png',
-            tag: 'lalaland-chat',
-            requireInteraction: false,
-            silent: false
+            tag: fromUid ? `private-chat-${fromUid}` : 'lalaland-chat', // 使用唯一 tag
+            requireInteraction: isMobile, // 手機版要求用戶互動
+            silent: false,
+            // 手機版特殊設定
+            ...(isMobile && {
+                vibrate: [200, 100, 200], // 震動模式
+                renotify: true, // 重複通知
+                timestamp: Date.now()
+            }),
+            // iOS 特殊設定
+            ...(isIOS && {
+                requireInteraction: true,
+                persistent: true
+            }),
+            // Android 特殊設定
+            ...(isAndroid && {
+                requireInteraction: true,
+                actions: [
+                    {
+                        action: 'reply',
+                        title: '回覆',
+                        icon: '/icon-512.png'
+                    }
+                ]
+            })
         };
         
-        console.log('🔔 創建系統通知，選項:', options);
+        console.log('🔔 創建系統通知，設備:', isMobile ? '手機' : '電腦', '選項:', options);
         const notification = new Notification(title, options);
         
         console.log('✅ 系統通知已創建:', notification);
+        console.log('🔍 通知物件屬性:', {
+            title: notification.title,
+            body: notification.body,
+            icon: notification.icon,
+            tag: notification.tag
+        });
         
         // 點擊通知時聚焦到視窗並導航到私訊
-        notification.onclick = function() {
-            console.log('👆 通知被點擊');
-            window.focus();
-            notification.close();
-            
-            // 如果有fromUid，導航到該私訊
-            if (fromUid) {
-                openPrivateChat(fromUid);
+        notification.onclick = function(event) {
+            console.log('👆 通知被點擊:', event);
+            try {
+                window.focus();
+                notification.close();
+                
+                // 如果有fromUid，導航到該私訊
+                if (fromUid) {
+                    console.log('🚀 導航到私訊:', fromUid);
+                    openPrivateChat(fromUid);
+                }
+            } catch (error) {
+                console.error('❌ 處理通知點擊時出錯:', error);
             }
         };
         
-        // 監聽通知事件
+        // 監聽通知事件 - 增加更詳細的日誌
         notification.onshow = function() {
-            console.log('✅ 通知已顯示');
+            console.log('✅ 系統通知已顯示在設備上');
         };
         
         notification.onerror = function(error) {
-            console.error('❌ 通知顯示錯誤:', error);
+            console.error('❌ 系統通知顯示錯誤:', error);
+            console.error('❌ 錯誤詳情:', error.message || error);
         };
         
         notification.onclose = function() {
-            console.log('🔕 通知已關閉');
+            console.log('🔕 系統通知已關閉');
         };
         
-        // 自動關閉通知
-        setTimeout(() => {
-            notification.close();
-            console.log('⏰ 通知自動關閉（5秒後）');
-        }, 5000);
+        // 手機版通知處理
+        if (isMobile) {
+            // 手機版不自動關閉，讓用戶手動處理
+            console.log('📱 手機版通知 - 不設定自動關閉');
+            
+            // 添加 action 事件處理（Android）
+            if (isAndroid && 'addEventListener' in notification) {
+                notification.addEventListener('notificationclick', function(event) {
+                    console.log('📱 Android 通知動作被點擊:', event.action);
+                    if (event.action === 'reply') {
+                        // 處理回覆動作
+                        window.focus();
+                        if (fromUid) {
+                            openPrivateChat(fromUid);
+                        }
+                    }
+                });
+            }
+        } else {
+            // 桌面版自動關閉通知
+            setTimeout(() => {
+                notification.close();
+                console.log('⏰ 桌面版通知自動關閉（5秒後）');
+            }, 5000);
+        }
         
     } catch (error) {
         console.error('❌ 創建桌面通知時發生錯誤:', error);
