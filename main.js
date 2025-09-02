@@ -3135,23 +3135,31 @@ function updateNotificationStatus() {
     return;
   }
   
+  const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  
   switch (Notification.permission) {
     case 'granted':
-      statusEl.innerHTML = '✅ 系統通知已啟用';
+      statusEl.innerHTML = '✅ 系統通知已啟用' + (isMobile ? '<br><small>📱 已支援手機系統通知</small>' : '');
       statusEl.style.backgroundColor = '#e6ffe6';
       statusEl.style.color = '#198754';
       requestBtn.textContent = '重新請求權限';
       requestBtn.style.display = 'block';
       break;
     case 'denied':
-      statusEl.innerHTML = '❌ 系統通知已被拒絕<br><small>請在瀏覽器設定中手動啟用</small>';
+      const deniedText = isMobile 
+        ? '❌ 系統通知已被拒絕<br><small>📱 手機用戶：請到瀏覽器設定→網站設定→通知權限啟用</small>'
+        : '❌ 系統通知已被拒絕<br><small>請在瀏覽器設定中手動啟用</small>';
+      statusEl.innerHTML = deniedText;
       statusEl.style.backgroundColor = '#ffe6e6';
       statusEl.style.color = '#d63384';
       requestBtn.textContent = '重新請求權限';
       requestBtn.style.display = 'block';
       break;
     case 'default':
-      statusEl.innerHTML = '⚠️ 尚未設定系統通知權限';
+      const defaultText = isMobile 
+        ? '⚠️ 尚未設定系統通知權限<br><small>📱 手機用戶：點擊下方按鈕會彈出權限請求</small>'
+        : '⚠️ 尚未設定系統通知權限';
+      statusEl.innerHTML = defaultText;
       statusEl.style.backgroundColor = '#fff3cd';
       statusEl.style.color = '#664d03';
       requestBtn.textContent = '啟用系統通知';
@@ -3167,25 +3175,126 @@ function requestNotificationPermission() {
     return;
   }
   
-  Notification.requestPermission().then(permission => {
-    console.log('通知權限請求結果:', permission);
+  console.log('🔔 開始請求通知權限...');
+  console.log('📱 當前權限狀態:', Notification.permission);
+  
+  // 對於手機版，使用更兼容的方式
+  const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  
+  if (isMobile) {
+    console.log('📱 檢測到手機設備，使用手機優化版本');
+  }
+  
+  // 使用 Promise 方式請求權限
+  const requestPermission = () => {
+    if (Notification.requestPermission) {
+      return Notification.requestPermission();
+    } else {
+      // 對於舊版瀏覽器的回退方案
+      return new Promise((resolve) => {
+        Notification.requestPermission((permission) => {
+          resolve(permission);
+        });
+      });
+    }
+  };
+  
+  requestPermission().then(permission => {
+    console.log('✅ 通知權限請求結果:', permission);
     updateNotificationStatus();
     
     if (permission === 'granted') {
-      alert('✅ 系統通知已啟用！');
+      alert('✅ 系統通知已啟用！\n現在您可以收到私訊的系統通知了。');
+      
+      // 立即發送一個測試通知來確認功能正常
+      setTimeout(() => {
+        try {
+          const testNotification = new Notification('LalaLand 通知測試', {
+            body: '系統通知已成功啟用！',
+            icon: '/icon-512.png',
+            badge: '/icon-512.png',
+            tag: 'lalaland-test'
+          });
+          
+          setTimeout(() => {
+            testNotification.close();
+          }, 3000);
+          
+          console.log('✅ 自動測試通知已發送');
+        } catch (error) {
+          console.error('❌ 自動測試通知失敗:', error);
+        }
+      }, 500);
+      
+    } else if (permission === 'denied') {
+      alert('❌ 系統通知權限被拒絕。\n\n請在瀏覽器設定中手動啟用通知權限：\n1. 點擊網址欄左側的🔒圖示\n2. 允許「通知」權限\n3. 重新整理頁面');
     } else {
-      alert('❌ 系統通知權限被拒絕。您仍可以收到頁面內通知。');
+      alert('⚠️ 通知權限未設定。您仍可以收到頁面內通知。');
     }
+  }).catch(error => {
+    console.error('❌ 請求通知權限時發生錯誤:', error);
+    alert('❌ 請求通知權限失敗，請檢查瀏覽器設定。');
+    updateNotificationStatus();
   });
 }
 
 // 發送測試通知
 function sendTestNotification() {
+  console.log('🧪 開始測試通知...');
+  console.log('📱 當前權限狀態:', Notification.permission);
+  console.log('📱 通知API支援:', "Notification" in window);
+  
+  if (!("Notification" in window)) {
+    alert('❌ 您的瀏覽器不支援系統通知');
+    return;
+  }
+  
   if (Notification.permission === 'granted') {
-    showDesktopNotification('LalaLand 測試通知', '如果您看到這個通知，表示系統通知正常運作！');
-    alert('✅ 測試通知已發送！');
+    try {
+      console.log('✅ 權限已授予，正在創建測試通知...');
+      
+      const notification = new Notification('LalaLand 測試通知', {
+        body: '如果您看到這個通知，表示系統通知正常運作！',
+        icon: '/icon-512.png',
+        badge: '/icon-512.png',
+        tag: 'lalaland-test',
+        requireInteraction: false,
+        silent: false
+      });
+      
+      console.log('✅ 測試通知已創建:', notification);
+      
+      notification.onshow = () => {
+        console.log('✅ 通知已顯示');
+      };
+      
+      notification.onerror = (error) => {
+        console.error('❌ 通知顯示錯誤:', error);
+        alert('❌ 通知顯示失敗，請檢查瀏覽器設定');
+      };
+      
+      notification.onclick = () => {
+        console.log('👆 用戶點擊了測試通知');
+        window.focus();
+        notification.close();
+      };
+      
+      // 自動關閉通知
+      setTimeout(() => {
+        notification.close();
+        console.log('⏰ 測試通知已自動關閉');
+      }, 5000);
+      
+      alert('✅ 測試通知已發送！\n如果沒有看到通知，請檢查：\n1. 瀏覽器通知權限是否正確啟用\n2. 設備的勿擾模式是否關閉\n3. 通知中心是否被關閉');
+      
+    } catch (error) {
+      console.error('❌ 創建測試通知時發生錯誤:', error);
+      alert('❌ 測試通知失敗：' + error.message + '\n\n請嘗試：\n1. 重新整理頁面\n2. 重新授予通知權限\n3. 檢查瀏覽器設定');
+    }
+  } else if (Notification.permission === 'denied') {
+    alert('❌ 系統通知權限被拒絕\n\n請手動啟用：\n1. 點擊網址欄左側的🔒或⚙️圖示\n2. 允許「通知」權限\n3. 重新整理頁面後再試');
   } else {
-    alert('⚠️ 請先啟用系統通知權限');
+    alert('⚠️ 請先點擊「啟用系統通知」按鈕授予權限');
   }
 }
 
