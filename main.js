@@ -3597,79 +3597,152 @@ window.startRandomMatch = function() {
         return;
     }
     
+    // 檢查網路連線狀態
+    if (!navigator.onLine) {
+        alert('網路連線異常，請檢查網路後重試');
+        return;
+    }
+    
     // 顯示載入狀態
     const btn = document.getElementById('random-match-btn');
+    if (!btn) {
+        console.error('❌ 找不到隨機配對按鈕');
+        return;
+    }
+    
     const originalText = btn.innerHTML;
     btn.disabled = true;
     btn.innerHTML = '🔄 配對中...';
     btn.style.opacity = '0.7';
     
-    // 獲取所有註冊用戶
+    console.log('📡 開始獲取用戶列表...');
+    
+    // 使用 onValue 替代 get 來避免權限問題
     const usersRef = ref(db, 'users');
-    get(usersRef).then((snapshot) => {
-        const allUsers = snapshot.val() || {};
-        const currentUserId = auth.currentUser.uid;
+    
+    // 設定超時處理
+    const timeout = setTimeout(() => {
+        console.error('⏰ 獲取用戶列表超時');
+        alert('獲取用戶列表超時，請稍後再試');
+        resetButton();
+    }, 10000); // 10秒超時
+    
+    const unsubscribe = onValue(usersRef, (snapshot) => {
+        clearTimeout(timeout);
         
-        // 過濾掉自己，獲取其他有效用戶
-        const otherUsers = Object.keys(allUsers).filter(uid => {
-            const user = allUsers[uid];
-            return uid !== currentUserId && 
-                   user && 
-                   user.nickname && 
-                   user.nickname.trim() !== '';
-        });
-        
-        console.log('👥 找到可配對用戶數量:', otherUsers.length);
-        
-        if (otherUsers.length === 0) {
-            alert('目前沒有其他用戶可以配對，請稍後再試！');
+        try {
+            console.log('📊 成功獲取用戶數據');
+            const allUsers = snapshot.val() || {};
+            const currentUserId = auth.currentUser.uid;
+            
+            console.log('👥 所有用戶數據:', Object.keys(allUsers).length, '個用戶');
+            
+            // 過濾掉自己，獲取其他有效用戶
+            const otherUsers = Object.keys(allUsers).filter(uid => {
+                const user = allUsers[uid];
+                const isValid = uid !== currentUserId && 
+                               user && 
+                               user.nickname && 
+                               user.nickname.trim() !== '';
+                
+                if (uid !== currentUserId && user) {
+                    console.log(`👤 檢查用戶 ${uid}:`, {
+                        nickname: user.nickname,
+                        hasNickname: !!user.nickname,
+                        isNotEmpty: user.nickname ? user.nickname.trim() !== '' : false,
+                        isValid
+                    });
+                }
+                
+                return isValid;
+            });
+            
+            console.log('✅ 找到可配對用戶數量:', otherUsers.length);
+            
+            if (otherUsers.length === 0) {
+                alert('目前沒有其他用戶可以配對，請稍後再試！\n\n提示：可能需要等待其他用戶上線，或者邀請朋友一起使用。');
+                resetButton();
+                unsubscribe();
+                return;
+            }
+            
+            // 隨機選擇一個用戶
+            const randomIndex = Math.floor(Math.random() * otherUsers.length);
+            const selectedUserId = otherUsers[randomIndex];
+            const selectedUser = allUsers[selectedUserId];
+            
+            console.log('🎯 隨機選中用戶:', {
+                uid: selectedUserId,
+                nickname: selectedUser.nickname,
+                totalUsers: otherUsers.length,
+                selectedIndex: randomIndex
+            });
+            
+            // 創建私訊聊天室
+            const roomId = createPrivateRoomId(currentUserId, selectedUserId);
+            console.log('🏠 創建聊天室 ID:', roomId);
+            
+            // 發送配對成功訊息
+            const congratsMessage = {
+                text: `🎉 恭喜你們配對成功！開始愉快的聊天吧～`,
+                time: Date.now(),
+                uid: 'system',
+                nickname: '系統',
+                avatar: '🤖',
+                type: 'system'
+            };
+            
+            console.log('💌 準備發送配對訊息...');
+            
+            // 儲存配對訊息到資料庫
+            const messagesRef = ref(db, `privateChats/${roomId}/messages`);
+            push(messagesRef, congratsMessage).then(() => {
+                console.log('✅ 配對訊息已發送');
+                
+                // 顯示配對成功訊息
+                alert(`🎉 配對成功！\n與 ${selectedUser.nickname} 開始聊天吧！`);
+                
+                // 直接進入該私訊聊天室
+                setTimeout(() => {
+                    console.log('🚀 即將進入私訊聊天室:', roomId);
+                    loadSpecificPrivateChat(roomId);
+                    resetButton();
+                    unsubscribe();
+                }, 1000);
+                
+            }).catch(error => {
+                console.error('❌ 發送配對訊息失敗:', error);
+                alert('配對過程中發生錯誤，請重試\n\n錯誤詳情：' + error.message);
+                resetButton();
+                unsubscribe();
+            });
+            
+        } catch (processingError) {
+            console.error('❌ 處理用戶數據時發生錯誤:', processingError);
+            alert('處理用戶數據時發生錯誤，請重試');
             resetButton();
-            return;
+            unsubscribe();
         }
         
-        // 隨機選擇一個用戶
-        const randomIndex = Math.floor(Math.random() * otherUsers.length);
-        const selectedUserId = otherUsers[randomIndex];
-        const selectedUser = allUsers[selectedUserId];
-        
-        console.log('🎯 隨機選中用戶:', selectedUser.nickname);
-        
-        // 創建私訊聊天室
-        const roomId = createPrivateRoomId(currentUserId, selectedUserId);
-        
-        // 發送配對成功訊息
-        const congratsMessage = {
-            text: `🎉 恭喜你們配對成功！開始愉快的聊天吧～`,
-            time: Date.now(),
-            uid: 'system',
-            nickname: '系統',
-            avatar: '🤖',
-            type: 'system'
-        };
-        
-        // 儲存配對訊息到資料庫
-        const messagesRef = ref(db, `privateChats/${roomId}/messages`);
-        push(messagesRef, congratsMessage).then(() => {
-            console.log('✅ 配對訊息已發送');
-            
-            // 顯示配對成功訊息
-            alert(`🎉 配對成功！\n與 ${selectedUser.nickname} 開始聊天吧！`);
-            
-            // 直接進入該私訊聊天室
-            setTimeout(() => {
-                loadSpecificPrivateChat(roomId);
-                resetButton();
-            }, 1000);
-            
-        }).catch(error => {
-            console.error('❌ 發送配對訊息失敗:', error);
-            alert('配對過程中發生錯誤，請重試');
-            resetButton();
-        });
-        
-    }).catch(error => {
+    }, (error) => {
+        clearTimeout(timeout);
         console.error('❌ 獲取用戶列表失敗:', error);
-        alert('無法獲取用戶列表，請檢查網路連線');
+        console.error('❌ 錯誤代碼:', error.code);
+        console.error('❌ 錯誤訊息:', error.message);
+        
+        let errorMessage = '無法獲取用戶列表';
+        
+        if (error.code === 'permission-denied') {
+            errorMessage = '沒有權限訪問用戶列表，請檢查登入狀態';
+        } else if (error.code === 'unavailable') {
+            errorMessage = 'Firebase 服務暫時無法使用，請稍後再試';
+        } else if (error.message.includes('network')) {
+            errorMessage = '網路連線有問題，請檢查網路後重試';
+        } else {
+            errorMessage = `獲取用戶列表失敗：${error.message}`;
+        }
+        
+        alert(errorMessage);
         resetButton();
     });
     
