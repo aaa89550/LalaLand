@@ -748,12 +748,49 @@ function displayPrivateChats(privateChats) {
             <div style="text-align: center; color: #999; padding: 40px;">
                 <p>還沒有私訊對話</p>
                 <p style="font-size: 12px;">點擊其他用戶開始私人對話</p>
+                <div style="margin-top: 20px;">
+                    <button id="random-match-btn" onclick="startRandomMatch()" style="
+                        background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+                        color: white;
+                        border: none;
+                        padding: 12px 24px;
+                        border-radius: 25px;
+                        font-size: 14px;
+                        font-weight: 600;
+                        cursor: pointer;
+                        transition: all 0.3s ease;
+                        box-shadow: 0 4px 15px rgba(255, 107, 107, 0.3);
+                    " onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
+                        🎲 隨機配對聊天
+                    </button>
+                </div>
             </div>
         `;
         return;
     }
     
-  chatContainer.innerHTML = '<div class="private-chat-list-wrapper" style="padding:10px;"><h4 style="margin: 0 0 15px 0; color: var(--sea-blue);">私訊對話</h4><div class="private-chat-list" id="private-chat-list" style="display:flex;flex-direction:column;gap:6px;"></div></div>';
+    chatContainer.innerHTML = `
+        <div class="private-chat-list-wrapper" style="padding:10px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <h4 style="margin: 0; color: var(--sea-blue);">私訊對話</h4>
+                <button id="random-match-btn" onclick="startRandomMatch()" style="
+                    background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+                    color: white;
+                    border: none;
+                    padding: 8px 16px;
+                    border-radius: 20px;
+                    font-size: 12px;
+                    font-weight: 600;
+                    cursor: pointer;
+                    transition: all 0.3s ease;
+                    box-shadow: 0 2px 8px rgba(255, 107, 107, 0.3);
+                " onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform='translateY(0)'">
+                    🎲 隨機配對
+                </button>
+            </div>
+            <div class="private-chat-list" id="private-chat-list" style="display:flex;flex-direction:column;gap:6px;"></div>
+        </div>
+    `;
     
   const listEl = chatContainer.querySelector('#private-chat-list');
   privateChats.forEach(chat => {
@@ -3550,3 +3587,103 @@ document.addEventListener('DOMContentLoaded', function() {
   // 請求通知權限按鈕
   document.getElementById('request-notification-btn')?.addEventListener('click', requestNotificationPermission);
 });
+
+// 隨機配對聊天功能
+window.startRandomMatch = function() {
+    console.log('🎲 開始隨機配對...');
+    
+    if (!auth.currentUser) {
+        alert('請先登入才能使用隨機配對功能');
+        return;
+    }
+    
+    // 顯示載入狀態
+    const btn = document.getElementById('random-match-btn');
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '🔄 配對中...';
+    btn.style.opacity = '0.7';
+    
+    // 獲取所有註冊用戶
+    const usersRef = ref(db, 'users');
+    get(usersRef).then((snapshot) => {
+        const allUsers = snapshot.val() || {};
+        const currentUserId = auth.currentUser.uid;
+        
+        // 過濾掉自己，獲取其他有效用戶
+        const otherUsers = Object.keys(allUsers).filter(uid => {
+            const user = allUsers[uid];
+            return uid !== currentUserId && 
+                   user && 
+                   user.nickname && 
+                   user.nickname.trim() !== '';
+        });
+        
+        console.log('👥 找到可配對用戶數量:', otherUsers.length);
+        
+        if (otherUsers.length === 0) {
+            alert('目前沒有其他用戶可以配對，請稍後再試！');
+            resetButton();
+            return;
+        }
+        
+        // 隨機選擇一個用戶
+        const randomIndex = Math.floor(Math.random() * otherUsers.length);
+        const selectedUserId = otherUsers[randomIndex];
+        const selectedUser = allUsers[selectedUserId];
+        
+        console.log('🎯 隨機選中用戶:', selectedUser.nickname);
+        
+        // 創建私訊聊天室
+        const roomId = createPrivateRoomId(currentUserId, selectedUserId);
+        
+        // 發送配對成功訊息
+        const congratsMessage = {
+            text: `🎉 恭喜你們配對成功！開始愉快的聊天吧～`,
+            time: Date.now(),
+            uid: 'system',
+            nickname: '系統',
+            avatar: '🤖',
+            type: 'system'
+        };
+        
+        // 儲存配對訊息到資料庫
+        const messagesRef = ref(db, `privateChats/${roomId}/messages`);
+        push(messagesRef, congratsMessage).then(() => {
+            console.log('✅ 配對訊息已發送');
+            
+            // 顯示配對成功訊息
+            alert(`🎉 配對成功！\n與 ${selectedUser.nickname} 開始聊天吧！`);
+            
+            // 直接進入該私訊聊天室
+            setTimeout(() => {
+                loadSpecificPrivateChat(roomId);
+                resetButton();
+            }, 1000);
+            
+        }).catch(error => {
+            console.error('❌ 發送配對訊息失敗:', error);
+            alert('配對過程中發生錯誤，請重試');
+            resetButton();
+        });
+        
+    }).catch(error => {
+        console.error('❌ 獲取用戶列表失敗:', error);
+        alert('無法獲取用戶列表，請檢查網路連線');
+        resetButton();
+    });
+    
+    function resetButton() {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+            btn.style.opacity = '1';
+        }
+    }
+};
+
+// 創建私訊聊天室ID的輔助函數
+function createPrivateRoomId(uid1, uid2) {
+    // 確保 room ID 是確定的 (較小的 UID 在前)
+    return uid1 < uid2 ? `${uid1}_${uid2}` : `${uid2}_${uid1}`;
+}
