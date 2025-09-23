@@ -2,7 +2,7 @@
 
 // ✅ 附加功能初始化（需從 main.js 呼叫一次）
 export function initExtras() {
-  // 電腦版元素
+  // 通用元素（手機版和電腦版共用）
   const emojiBtn = document.getElementById('emoji-btn');
   const plusBtn = document.getElementById('plus-btn');
   const plusMenu = document.getElementById('plus-menu');
@@ -10,14 +10,7 @@ export function initExtras() {
   const uploadBtn = document.getElementById('upload-btn');
   const uploadInput = document.getElementById('upload-input');
   
-  // 手機版元素
-  const emojiBtnMobile = document.getElementById('emoji-btn-mobile');
-  const plusBtnMobile = document.getElementById('plus-btn-mobile');
-  const plusMenuMobile = document.getElementById('plus-menu-mobile');
-  const uploadBtnMobile = document.getElementById('upload-btn-mobile');
-  const uploadInputMobile = document.getElementById('upload-input-mobile');
-  
-  // 電腦版事件
+  // Emoji 按鈕事件
   if (emojiBtn && emojiPicker && plusMenu) {
     emojiBtn.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -25,17 +18,8 @@ export function initExtras() {
       plusMenu.style.display = 'none';
     });
   }
-  
-  // 手機版 emoji 事件
-  if (emojiBtnMobile && emojiPicker && plusMenuMobile) {
-    emojiBtnMobile.addEventListener('click', (e) => {
-      e.stopPropagation();
-      emojiPicker.style.display = emojiPicker.style.display === 'block' ? 'none' : 'block';
-      plusMenuMobile.style.display = 'none';
-    });
-  }
 
-  // 電腦版上傳
+  // 上傳按鈕事件
   if (uploadBtn && uploadInput) {
     uploadBtn.addEventListener('click', () => {
       uploadInput.value = '';
@@ -43,40 +27,19 @@ export function initExtras() {
     });
   }
   
-  // 手機版上傳
-  if (uploadBtnMobile && uploadInputMobile) {
-    uploadBtnMobile.addEventListener('click', () => {
-      uploadInputMobile.value = '';
-      uploadInputMobile.click();
-    });
-  }
-  
   setupEmojiInsertion('#msg');
 
-  // 電腦版 + 按鈕
+  // + 按鈕事件（通用）
   if (plusBtn && plusMenu) {
     plusBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       plusMenu.style.display = plusMenu.style.display === 'block' ? 'none' : 'block';
       if (emojiPicker) emojiPicker.style.display = 'none';
-      if (plusMenuMobile) plusMenuMobile.style.display = 'none';
     });
   }
-  
-  // 手機版 + 按鈕
-  if (plusBtnMobile && plusMenuMobile) {
-    plusBtnMobile.addEventListener('click', (e) => {
-      e.stopPropagation();
-      plusMenuMobile.style.display = plusMenuMobile.style.display === 'block' ? 'none' : 'block';
-      if (emojiPicker) emojiPicker.style.display = 'none';
-      if (plusMenu) plusMenu.style.display = 'none';
-    });
-  }
-
   // 點頁面其他地方時收起選單
   document.addEventListener('click', () => {
     if (plusMenu) plusMenu.style.display = 'none';
-    if (plusMenuMobile) plusMenuMobile.style.display = 'none';
     if (emojiPicker) emojiPicker.style.display = 'none';
   });
 }

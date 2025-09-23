@@ -276,8 +276,8 @@ button:hover {
   box-shadow: 0 2px 8px #2877b91a;
 }
 
-/* 電腦版 + 按鈕在輸入框內的樣式 */
-#input-area .plus-btn.desktop-only {
+/* + 按鈕在輸入框內的樣式（通用） */
+#input-area .plus-btn {
   margin: 0;
   padding: 8px 12px;
   flex-shrink: 0;
@@ -1445,27 +1445,42 @@ button:hover {
 
 /* RWD 手機版 */
 @media (max-width: 600px) {
-  .plus-btn  {
-  background: var(--sea-blue);
-  color: var(--accent-green);
-  border: none;
-  border-radius: 8px;
-  padding: 10px 0;
-  font-weight: bold;
-  cursor: pointer;
-  transition: background 0.2s, color 0.2s;
-  margin-top: 0;
-  margin-bottom: 8px;
-  letter-spacing: 1px;
-  box-shadow: 0 2px 8px #2877b91a;
-  font-size: 16px;
-  display: block;
-  width: 100%;
-}
-.plus-btn:hover {
-  background: var(--sea-dark);
-  color: var(--white);
-}
+  /* 手機版輸入區域內的 + 按鈕樣式 */
+  #input-area .plus-btn {
+    background: transparent;
+    color: var(--sea-blue);
+    margin: 0;
+    padding: 8px 12px;
+    flex-shrink: 0;
+    align-self: center;
+    font-size: 16px;
+    width: auto;
+    display: block !important;
+  }
+  
+  /* 手機版菜單內的 + 按鈕樣式 */
+  #plus-menu .plus-btn {
+    background: var(--sea-blue);
+    color: var(--accent-green);
+    border: none;
+    border-radius: 8px;
+    padding: 10px 0;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+    margin-top: 0;
+    margin-bottom: 8px;
+    letter-spacing: 1px;
+    box-shadow: 0 2px 8px #2877b91a;
+    font-size: 16px;
+    display: block;
+    width: 100%;
+  }
+  
+  #plus-menu .plus-btn:hover {
+    background: var(--sea-dark);
+    color: var(--white);
+  }
   body {
     padding: 0 !important;
     margin: 0 !important;
