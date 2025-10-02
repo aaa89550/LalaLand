@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { 
   ref, 
   onValue, 
@@ -13,10 +13,25 @@ import {
 import { database } from '../config/firebase'
 import { useAuthStore } from '../store/authStore'
 import { useChatStore } from '../store/chatStore'
+import { notificationManager } from '../utils/notificationManager'
+
+// 房間名稱映射
+const getRoomDisplayName = (roomId) => {
+  const roomNames = {
+    'casual': '日常閒聊',
+    'dating': '約會交友', 
+    'hookup': '約砲專區',
+    'confession': '匿名告白',
+    'general': '一般討論',
+    'random': '隨機聊天'
+  }
+  return roomNames[roomId] || `聊天室 ${roomId}`
+}
 
 export const useFirebaseChat = (roomId) => {
   const { user } = useAuthStore()
   const { setMessages, addMessage, clearMessages } = useChatStore()
+  const lastMessageCountRef = useRef(0)
 
   useEffect(() => {
     if (!user || !roomId) {
@@ -61,10 +76,53 @@ export const useFirebaseChat = (roomId) => {
             const timeB = b.timestamp || b.time || 0
             return timeA - timeB
           })
+          
+          // 檢查是否有新訊息 (用於通知)
+          const currentMessageCount = messages.length
+          const previousMessageCount = lastMessageCountRef.current
+          
+          // 如果有新訊息且不是首次載入
+          if (currentMessageCount > previousMessageCount && previousMessageCount > 0) {
+            const newMessages = messages.slice(previousMessageCount)
+            
+            // 檢查新訊息是否來自其他用戶
+            newMessages.forEach(message => {
+              const messageFrom = message.from || message.userId || message.uid
+              if (messageFrom !== user.uid) {
+                // 顯示通知
+                const senderName = message.user || message.nickname || '匿名用戶'
+                const roomName = getRoomDisplayName(roomId)
+                
+                console.log(`🔔 收到來自 ${senderName} 的新群組訊息 (${roomName}):`, message.text)
+                
+                // 顯示桌面通知
+                notificationManager.showGroupMessageNotification(
+                  senderName,
+                  roomName,
+                  message.text,
+                  () => {
+                    // 點擊通知時聚焦到窗口
+                    window.focus()
+                  }
+                )
+                
+                // 手機震動 (較短的震動，避免群組訊息太吵)
+                notificationManager.vibrate([100])
+                
+                // 播放通知音效 (群組訊息音效較輕)
+                if (Math.random() < 0.3) { // 只有 30% 機率播放音效，避免太頻繁
+                  notificationManager.playNotificationSound()
+                }
+              }
+            })
+          }
+          
+          lastMessageCountRef.current = currentMessageCount
           console.log(`✅ 房間 ${roomId} 載入了 ${messages.length} 條訊息`)
           setMessages(messages)
         } else {
           console.log(`📭 房間 ${roomId} 沒有訊息`)
+          lastMessageCountRef.current = 0
           setMessages([])
         }
       } catch (error) {

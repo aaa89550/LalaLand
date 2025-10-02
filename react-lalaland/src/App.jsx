@@ -5,6 +5,7 @@ import { useAuthStore } from './store/authStore'
 import { auth, database } from './config/firebase'
 import { onAuthStateChanged } from 'firebase/auth'
 import { ref, get } from 'firebase/database'
+import { initNotifications } from './utils/notificationManager'
 import { debugDatabase } from './utils/debugFirebase'
 
 // 頁面組件
@@ -19,6 +20,9 @@ function App() {
   const { user, setUser, loading, setLoading } = useAuthStore()
 
   useEffect(() => {
+    // 初始化通知系統
+    initNotifications()
+    
     // 監聽 Firebase 認證狀態
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {

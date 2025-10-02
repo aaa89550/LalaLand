@@ -1,13 +1,21 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { X, Bell, BellOff, User, Camera } from 'lucide-react'
 import { useAuthStore } from '../../store/authStore'
+import { notificationManager, requestNotificationPermission } from '../../utils/notificationManager'
+import toast from 'react-hot-toast'
 
 const SettingsModal = ({ isOpen, onClose }) => {
   const { user, setUser } = useAuthStore()
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true)
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false)
   const [nickname, setNickname] = useState(user?.nickname || '')
   const [avatar, setAvatar] = useState(user?.avatar || '')
   const [tempNickname, setTempNickname] = useState(nickname)
+
+  useEffect(() => {
+    // 檢查通知權限狀態
+    const { enabled } = notificationManager.getPermissionStatus()
+    setNotificationsEnabled(enabled)
+  }, [isOpen])
 
   if (!isOpen) return null
 
@@ -35,18 +43,22 @@ const SettingsModal = ({ isOpen, onClose }) => {
     }
   }
 
-  const toggleNotifications = () => {
-    setNotificationsEnabled(!notificationsEnabled)
-    // TODO: 實際的通知權限請求邏輯
+  const toggleNotifications = async () => {
     if (!notificationsEnabled) {
       // 請求通知權限
-      if ('Notification' in window) {
-        Notification.requestPermission().then(permission => {
-          if (permission === 'granted') {
-            console.log('✅ 通知權限已授予')
-          }
-        })
+      const granted = await requestNotificationPermission()
+      if (granted) {
+        setNotificationsEnabled(true)
+        toast.success('🔔 通知已啟用！')
+      } else {
+        toast.error('❌ 通知權限被拒絕')
       }
+    } else {
+      // 無法程式化禁用通知，提示用戶手動設定
+      toast('🔕 請在瀏覽器設定中禁用通知', {
+        duration: 4000,
+        icon: '⚠️'
+      })
     }
   }
 

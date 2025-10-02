@@ -1,12 +1,14 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { ref, onValue, push } from 'firebase/database'
 import { database } from '../config/firebase'
 import { useAuthStore } from '../store/authStore'
 import { useChatStore } from '../store/chatStore'
+import { notificationManager } from '../utils/notificationManager'
 
 export const usePrivateChat = (recipientId) => {
   const { user } = useAuthStore()
   const { setMessages, clearMessages } = useChatStore()
+  const lastMessageCountRef = useRef(0)
 
   useEffect(() => {
     console.log('🔍 usePrivateChat 參數檢查:')
@@ -58,12 +60,50 @@ export const usePrivateChat = (recipientId) => {
             time: message.time,
             timestamp: message.time || message.timestamp || Date.now()
           }))
+          
           // 按時間排序
           messages.sort((a, b) => (a.time || a.timestamp || 0) - (b.time || b.timestamp || 0))
+          
+          // 檢查是否有新訊息 (用於通知)
+          const currentMessageCount = messages.length
+          const previousMessageCount = lastMessageCountRef.current
+          
+          // 如果有新訊息且不是首次載入
+          if (currentMessageCount > previousMessageCount && previousMessageCount > 0) {
+            const newMessages = messages.slice(previousMessageCount)
+            
+            // 檢查新訊息是否來自其他用戶
+            newMessages.forEach(message => {
+              if (message.from !== user.uid) {
+                // 顯示通知
+                const senderName = message.user || '匿名用戶'
+                console.log(`🔔 收到來自 ${senderName} 的新私訊:`, message.text)
+                
+                // 顯示桌面通知
+                notificationManager.showPrivateMessageNotification(
+                  senderName,
+                  message.text,
+                  () => {
+                    // 點擊通知時聚焦到窗口
+                    window.focus()
+                  }
+                )
+                
+                // 手機震動
+                notificationManager.vibrate([200, 100, 200])
+                
+                // 播放通知音效
+                notificationManager.playNotificationSound()
+              }
+            })
+          }
+          
+          lastMessageCountRef.current = currentMessageCount
           console.log(`✅ 私聊 ${chatId} 載入了 ${messages.length} 條訊息`)
           setMessages(messages)
         } else {
           console.log(`📭 私聊 ${chatId} 沒有訊息`)
+          lastMessageCountRef.current = 0
           setMessages([])
         }
       } catch (error) {
