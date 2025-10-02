@@ -87,26 +87,19 @@ export const useFirebaseChat = (roomId) => {
             
             // 檢查新訊息是否來自其他用戶
             newMessages.forEach(message => {
-              // 防護：確保訊息物件存在且有必要屬性
-              if (!message || typeof message !== 'object') {
-                console.warn('🚨 收到無效的訊息物件:', message)
-                return
-              }
-
               const messageFrom = message.from || message.userId || message.uid
-              if (messageFrom && messageFrom !== user.uid) {
+              if (messageFrom !== user.uid) {
                 // 顯示通知
-                const senderName = message.user || message.nickname || message.senderName || '匿名用戶'
-                const roomName = getRoomDisplayName(roomId) || '聊天室'
-                const messageText = message.text || message.content || '[圖片或其他內容]'
+                const senderName = message.user || message.nickname || '匿名用戶'
+                const roomName = getRoomDisplayName(roomId)
                 
-                console.log(`🔔 收到來自 ${senderName} 的新群組訊息 (${roomName}):`, messageText)
+                console.log(`🔔 收到來自 ${senderName} 的新群組訊息 (${roomName}):`, message.text)
                 
                 // 顯示桌面通知
                 notificationManager.showGroupMessageNotification(
                   senderName,
                   roomName,
-                  messageText,
+                  message.text,
                   () => {
                     // 點擊通知時聚焦到窗口
                     window.focus()

@@ -3,17 +3,16 @@ import { useNavigate } from 'react-router-dom'
 import { 
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword,
-  signInAnonymously,
   updateProfile
 } from 'firebase/auth'
-import { ref, set } from 'firebase/database'
-import { auth, database } from '../config/firebase'
+
+import { auth } from '../config/firebase'
 import { Eye, EyeOff, Mail, Lock, User, ArrowLeft } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 const Login = () => {
   const navigate = useNavigate()
-  const [mode, setMode] = useState('login') // 'login', 'register', 'anonymous'
+  const [mode, setMode] = useState('login') // 'login', 'register'
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   
@@ -92,37 +91,7 @@ const Login = () => {
     }
   }
 
-  const handleAnonymousLogin = async () => {
-    setLoading(true)
 
-    try {
-      const userCredential = await signInAnonymously(auth)
-      
-      const anonymousNickname = formData.nickname || `訪客_${Math.floor(Math.random() * 1000)}`
-      
-      // 更新匿名用戶資料
-      await updateProfile(userCredential.user, {
-        displayName: anonymousNickname
-      })
-
-      // 儲存到 Firebase Realtime Database
-      await set(ref(database, `users/${userCredential.user.uid}`), {
-        nickname: anonymousNickname,
-        email: null,
-        avatar: null,
-        joinedAt: Date.now(),
-        isOnline: true,
-        isAnonymous: true
-      })
-
-      toast.success('匿名登入成功！')
-      navigate('/chat')
-    } catch (error) {
-      toast.error('匿名登入失敗：' + (error.message || '請稍後再試'))
-    } finally {
-      setLoading(false)
-    }
-  }
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 py-8">
@@ -144,10 +113,9 @@ const Login = () => {
               alt="LalaLand" 
               className="w-16 h-16 mx-auto mb-4"
             />
-            <h2 className="text-2xl font-bold text-gray-800">
-              {mode === 'login' && '登入 LalaLand'}
-              {mode === 'register' && '註冊 LalaLand'}
-              {mode === 'anonymous' && '匿名體驗'}
+                        <h2 className="text-2xl font-bold text-gray-900 mb-2 text-center">
+              {mode === 'login' && '歡迎回來'}
+              {mode === 'register' && '建立帳號'}
             </h2>
           </div>
 
@@ -173,21 +141,10 @@ const Login = () => {
             >
               註冊
             </button>
-            <button
-              className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
-                mode === 'anonymous' 
-                  ? 'bg-white text-sea-blue shadow-sm' 
-                  : 'text-gray-600 hover:text-gray-800'
-              }`}
-              onClick={() => setMode('anonymous')}
-            >
-              匿名
-            </button>
           </div>
 
           {/* 表單 */}
-          {mode !== 'anonymous' ? (
-            <form onSubmit={mode === 'login' ? handleLogin : handleRegister}>
+          <form onSubmit={mode === 'login' ? handleLogin : handleRegister}>
               {mode === 'register' && (
                 <div className="mb-4">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -279,39 +236,6 @@ const Login = () => {
                 {loading ? '處理中...' : mode === 'login' ? '登入' : '註冊'}
               </button>
             </form>
-          ) : (
-            // 匿名模式
-            <div>
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  暱稱（選填）
-                </label>
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                  <input
-                    type="text"
-                    name="nickname"
-                    value={formData.nickname}
-                    onChange={handleInputChange}
-                    className="input-field pl-10"
-                    placeholder="輸入暱稱或留空使用隨機名稱"
-                  />
-                </div>
-              </div>
-
-              <button
-                onClick={handleAnonymousLogin}
-                disabled={loading}
-                className="btn-primary w-full text-center disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {loading ? '處理中...' : '匿名進入聊天室'}
-              </button>
-
-              <p className="text-xs text-gray-500 mt-4 text-center">
-                匿名模式不需要註冊，但資料不會被保存
-              </p>
-            </div>
-          )}
         </div>
       </div>
     </div>
