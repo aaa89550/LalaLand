@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
-  base: '/',
+  base: '/react-lalaland/',
   server: {
     port: 3000,
     host: true
@@ -11,5 +11,8 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap: true
+  },
+  define: {
+    'process.env.NOTIFICATION_API_URL': JSON.stringify('https://api.example.com/notifications')
   }
 })

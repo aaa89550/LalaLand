@@ -15,6 +15,7 @@ import Chat from './pages/Chat'
 import Debug from './pages/Debug'
 import SplashScreen from './components/SplashScreen'
 import ErrorBoundary from './components/ErrorBoundary'
+import NotificationSystem from './components/NotificationSystem'
 
 function App() {
   const { user, setUser, loading, setLoading } = useAuthStore()
@@ -115,6 +116,7 @@ function App() {
               }
             }}
           />
+          <NotificationSystem />
         </div>
       </BrowserRouter>
     </ErrorBoundary>
