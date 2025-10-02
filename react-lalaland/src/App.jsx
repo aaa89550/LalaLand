@@ -4,8 +4,8 @@ import { Toaster } from 'react-hot-toast'
 import { useAuthStore } from './store/authStore'
 import { auth, database } from './config/firebase'
 import { onAuthStateChanged } from 'firebase/auth'
-import { ref, get, remove } from 'firebase/database'
-import { initNotifications } from './utils/notificationManager'
+import { ref, get, remove, onValue } from 'firebase/database'
+import { initNotifications, setupNotificationsAfterLogin } from './utils/notificationManager'
 import { debugDatabase } from './utils/debugFirebase'
 
 // 頁面組件
@@ -29,18 +29,26 @@ function App() {
         let nickname = firebaseUser.displayName || '匿名用戶'
         let avatar = firebaseUser.photoURL || null
         
-        // 從 Database 讀取用戶資料（特別是匿名用戶的暱稱）
+                // 嘗試從 Database 獲取用戶資料
         try {
-          const userRef = ref(database, `users/${firebaseUser.uid}`)
-          const userSnapshot = await get(userRef)
-          
-          if (userSnapshot.exists()) {
-            const userData = userSnapshot.val()
+          const userDataRef = ref(database, `users/${firebaseUser.uid}`)
+          const userDataSnapshot = await get(userDataRef)
+          if (userDataSnapshot.exists()) {
+            const userData = userDataSnapshot.val()
             nickname = userData.nickname || nickname
             avatar = userData.avatar || avatar
+            console.log('📖 從 Database 讀取到用戶資料:', { nickname, avatar, isAnonymous: firebaseUser.isAnonymous })
+          } else if (firebaseUser.isAnonymous) {
+            // 匿名用戶但 Database 中沒有資料，使用 displayName
+            console.log('👻 匿名用戶，使用 displayName:', firebaseUser.displayName)
+            nickname = firebaseUser.displayName || nickname
           }
         } catch (error) {
           console.warn('無法讀取用戶資料:', error)
+          // 如果讀取失敗且是匿名用戶，使用 displayName
+          if (firebaseUser.isAnonymous) {
+            nickname = firebaseUser.displayName || nickname
+          }
         }
         
         setUser({
@@ -52,7 +60,43 @@ function App() {
         })
         
         console.log('✅ 用戶已登入:', firebaseUser.uid, '暱稱:', nickname)
+        
+        // 用戶登入後設定通知權限
+        setupNotificationsAfterLogin()
+        
+        // 如果是匿名用戶，監聽 Database 中的用戶資料變化
+        if (firebaseUser.isAnonymous) {
+          console.log('👻 設定匿名用戶資料監聽器...')
+          const userDataRef = ref(database, `users/${firebaseUser.uid}`)
+          const unsubscribeUserData = onValue(userDataRef, (snapshot) => {
+            if (snapshot.exists()) {
+              const userData = snapshot.val()
+              const updatedNickname = userData.nickname || firebaseUser.displayName || '匿名用戶'
+              console.log('📡 匿名用戶資料已更新:', { nickname: updatedNickname })
+              
+              // 更新用戶狀態
+              setUser(prevUser => ({
+                ...prevUser,
+                nickname: updatedNickname,
+                avatar: userData.avatar || prevUser?.avatar
+              }))
+            }
+          })
+          
+          // 儲存清理函數到 window 以便後續清理
+          if (!window.userDataUnsubscribers) window.userDataUnsubscribers = {}
+          window.userDataUnsubscribers[firebaseUser.uid] = unsubscribeUserData
+        }
       } else {
+        // 清理用戶資料監聽器
+        if (window.userDataUnsubscribers) {
+          Object.values(window.userDataUnsubscribers).forEach(unsubscribe => {
+            if (typeof unsubscribe === 'function') {
+              unsubscribe()
+            }
+          })
+          window.userDataUnsubscribers = {}
+        }
         setUser(null)
       }
       setLoading(false)

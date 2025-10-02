@@ -27,8 +27,9 @@ class NotificationManager {
       return false
     }
 
-    // 權限狀態為 'default'，需要請求權限
-    return await this.requestPermission()
+    // 權限狀態為 'default'，延遲到用戶登入後再請求
+    console.log('⏳ 通知權限狀態為 default，等待用戶交互後請求權限')
+    return false
   }
 
   // 請求通知權限
@@ -170,6 +171,44 @@ export const initNotifications = async () => {
 // 請求通知權限的輔助函數
 export const requestNotificationPermission = async () => {
   return await notificationManager.requestPermission()
+}
+
+// 在用戶登入後請求通知權限
+export const setupNotificationsAfterLogin = async () => {
+  console.log('🔔 設定登入後的通知權限...')
+  
+  if (!notificationManager.isSupported) {
+    console.warn('🔔 此瀏覽器不支援桌面通知')
+    return false
+  }
+
+  if (notificationManager.permission === 'granted') {
+    console.log('✅ 通知權限已存在')
+    return true
+  }
+
+  if (notificationManager.permission === 'denied') {
+    console.warn('❌ 通知權限已被拒絕，無法啟用桌面通知')
+    return false
+  }
+
+  // 延遲1秒後請求權限，讓用戶先完成登入流程
+  setTimeout(async () => {
+    console.log('🔔 即將請求桌面通知權限...')
+    try {
+      const granted = await notificationManager.requestPermission()
+      if (granted) {
+        console.log('🎉 桌面通知已啟用！')
+        // 顯示一個測試通知
+        notificationManager.showNotification('拉拉樂園', {
+          body: '桌面通知已成功啟用！🎉',
+          tag: 'welcome-notification'
+        })
+      }
+    } catch (error) {
+      console.error('🚨 請求通知權限失敗:', error)
+    }
+  }, 1000)
 }
 
 export default notificationManager
