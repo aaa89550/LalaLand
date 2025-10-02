@@ -1,54 +1,31 @@
 {
   "rules": {
-    "chats": {
-      "$roomId": {
-        "messages": {
-          ".read": "auth != null",
-          "$messageId": {
-            ".write": "auth != null && (!data.exists() || data.child('senderId').val() == auth.uid)"
-          }
-        }
-      }
+    "groupChats": {
+      ".read": "auth != null",
+      ".write": "auth != null"
     },
-    
-   
+    "chats": {
+      ".read": "auth != null", 
+      ".write": "auth != null"
+    },
     "users": {
       ".read": "auth != null",
-      "$userId": {
-        ".write": "auth != null && auth.uid == $userId"
-      }
+      ".write": "auth != null"
     },
-    
-    
     "privateChats": {
-      "$chatId": {
-        ".read": "auth != null && (data.child('participant1').val() == auth.uid || data.child('participant2').val() == auth.uid)",
-        ".write": "auth != null && (data.child('participant1').val() == auth.uid || data.child('participant2').val() == auth.uid)",
-        "messages": {
-          "$messageId": {
-            ".write": "auth != null && (!data.exists() || data.child('senderId').val() == auth.uid)"
-          }
-        }
-      }
+      ".read": "auth != null",
+      ".write": "auth != null"
     },
-    
-    
     "privateChatsList": {
-      "$userId": {
-        ".read": "auth != null && auth.uid == $userId",
-        ".write": "auth != null && auth.uid == $userId"
-      }
+      ".read": "auth != null",
+      ".write": "auth != null"
     },
-    
- 
     "settings": {
       ".read": "auth != null",
       ".write": false
     },
-    
-    
     "announcements": {
-      ".read": "auth != null",
+      ".read": "auth != null", 
       ".write": false
     }
   }
