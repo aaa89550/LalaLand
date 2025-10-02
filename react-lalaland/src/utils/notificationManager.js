@@ -95,9 +95,19 @@ class NotificationManager {
 
   // 顯示私訊通知
   showPrivateMessageNotification(senderName, message, onClick) {
+    // 防護：確保參數存在
+    if (!senderName) {
+      console.warn('🚨 showPrivateMessageNotification: 缺少發送者名稱', { senderName, message })
+      return null
+    }
+
+    // 安全處理訊息內容
+    const messageText = message || '[無內容]'
+    const safeMessage = typeof messageText === 'string' ? messageText : String(messageText)
+    
     const title = `💬 ${senderName} 發送了私訊`
     const options = {
-      body: message.length > 50 ? message.substring(0, 50) + '...' : message,
+      body: safeMessage.length > 50 ? safeMessage.substring(0, 50) + '...' : safeMessage,
       icon: '/icon-512.png',
       tag: 'private-message',
       onClick
@@ -108,9 +118,19 @@ class NotificationManager {
 
   // 顯示群組訊息通知  
   showGroupMessageNotification(senderName, roomName, message, onClick) {
+    // 防護：確保參數存在
+    if (!senderName || !roomName) {
+      console.warn('🚨 showGroupMessageNotification: 缺少必要參數', { senderName, roomName, message })
+      return null
+    }
+
+    // 安全處理訊息內容
+    const messageText = message || '[無內容]'
+    const safeMessage = typeof messageText === 'string' ? messageText : String(messageText)
+    
     const title = `🏠 ${roomName} - ${senderName}`
     const options = {
-      body: message.length > 50 ? message.substring(0, 50) + '...' : message,
+      body: safeMessage.length > 50 ? safeMessage.substring(0, 50) + '...' : safeMessage,
       icon: '/icon-512.png',
       tag: 'group-message',
       onClick
