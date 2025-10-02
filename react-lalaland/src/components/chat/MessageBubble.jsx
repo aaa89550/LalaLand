@@ -217,15 +217,15 @@ const MessageBubble = ({ message, isOwn, onReply }) => {
             className={`
               message-bubble relative
               ${isOwn 
-                ? 'message-self bg-sea-blue text-white' 
-                : 'message-other bg-white text-gray-700 border border-gray-200'
+                ? 'message-self bg-sea-blue dark:bg-green-600 text-white' 
+                : 'message-other bg-white dark:bg-green-700 text-gray-700 dark:text-green-100 border border-gray-200 dark:border-green-600'
               }
             `}
           >
             {renderMessageContent()}
             
             {/* 時間戳記 */}
-            <div className={`text-xs mt-1 ${isOwn ? 'text-sea-light' : 'text-gray-400'}`}>
+            <div className={`text-xs mt-1 ${isOwn ? 'text-sea-light dark:text-green-200' : 'text-gray-400 dark:text-green-300'}`}>
               {formatTime(message.timestamp || message.time)}
             </div>
           </div>
@@ -277,7 +277,7 @@ const VoteContent = ({ voteData }) => {
   }
 
   return (
-    <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 min-w-[250px]">
+    <div className="bg-gray-50 dark:bg-green-900/30 rounded-lg p-4 min-w-[250px]">
       <h4 className="font-medium mb-3 text-gray-800 dark:text-gray-200">
         📊 {question}
       </h4>
@@ -296,16 +296,16 @@ const VoteContent = ({ voteData }) => {
               className={`
                 w-full text-left p-3 rounded-lg border transition-colors relative overflow-hidden
                 ${isSelected 
-                  ? 'border-sea-blue bg-sea-light text-sea-dark' 
+                  ? 'border-sea-blue dark:border-green-400 bg-sea-light dark:bg-green-800 text-sea-dark dark:text-green-100' 
                   : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'
                 }
-                ${selectedOption !== null ? 'cursor-default' : 'cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700'}
+                ${selectedOption !== null ? 'cursor-default' : 'cursor-pointer hover:bg-gray-100 dark:hover:bg-green-800/50'}
               `}
             >
               {/* 背景進度條 */}
               {selectedOption !== null && (
                 <div 
-                  className="absolute inset-0 bg-sea-blue/10 transition-all duration-500"
+                  className="absolute inset-0 bg-sea-blue/10 dark:bg-green-500/20 transition-all duration-500"
                   style={{ width: `${percentage}%` }}
                 />
               )}
