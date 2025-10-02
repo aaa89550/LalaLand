@@ -3,7 +3,6 @@ import { MessageCircle, ArrowLeft, Send, Image, Smile } from 'lucide-react'
 import { useChatStore } from '../../store/chatStore'
 import { useAuthStore } from '../../store/authStore'
 import { usePrivateChat } from '../../hooks/usePrivateChat'
-import { useFirebaseDebug } from '../../hooks/useFirebaseDebug'
 import { usePrivateChatsList } from '../../hooks/usePrivateChatsList'
 import MessageBubble from './MessageBubble'
 import toast from 'react-hot-toast'
@@ -25,7 +24,6 @@ const PrivateChat = () => {
   
   // 使用私聊 hook 來載入歷史訊息
   const { sendPrivateMessage } = usePrivateChat(currentPrivateChat?.recipientId)
-  const { testFirebaseConnection } = useFirebaseDebug()
   
   // 調試日誌 (簡化版)
   console.log('💬 PrivateChat 狀態:', {
@@ -181,45 +179,6 @@ const PrivateChat = () => {
               在聊天室中點擊其他用戶的頭像<br />
               就可以開始私人對話
             </p>
-            <div className="flex flex-col gap-2">
-              <button 
-                onClick={() => {
-                  // 測試私聊功能 - 使用診斷中找到的實際用戶
-                  const testRecipient = {
-                    uid: 'ykw8Q4X6sMNFKNhCeXw5SwUORwd2',
-                    nickname: 'hand', 
-                    avatar: 'https://firebasestorage.googleapis.com/v0/b/lalaland-24931.firebasestorage.app/o/avatars%2F1750609471297_14FA7E2F-A644-4D66-9586-C274F37B3E56.png?alt=media&token=f1b79a53-5061-4941-9ec9-9ca132e0fbb9'
-                  }
-                  
-                  console.log('🧪 測試私聊 - 當前用戶:', user.uid)
-                  console.log('🧪 測試私聊 - 目標用戶:', testRecipient.uid)
-                  console.log('🧪 預期房間ID:', `${[user.uid, testRecipient.uid].sort().join('_')}`)
-                  
-                  const privateChatData = {
-                    roomId: `private_${testRecipient.uid}`,
-                    recipientId: testRecipient.uid,
-                    nickname: testRecipient.nickname,
-                    avatar: testRecipient.avatar,
-                    isOnline: false
-                  }
-                  
-                  console.log('🧪 設置私聊狀態:', privateChatData)
-                  setCurrentPrivateChat(privateChatData)
-                }}
-                className="px-4 py-2 bg-sea-blue text-white rounded-lg hover:bg-sea-dark transition-colors"
-              >
-                🧪 測試私聊功能
-              </button>
-              
-              <button 
-                onClick={testFirebaseConnection}
-                className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
-              >
-                🔧 診斷 Firebase 連接
-              </button>
-              
-
-            </div>
           </div>
         ) : (
           <div className="p-4 space-y-2">
