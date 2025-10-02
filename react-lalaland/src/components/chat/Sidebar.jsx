@@ -10,10 +10,12 @@ import {
   Sun
 } from 'lucide-react'
 import { signOut } from 'firebase/auth'
-import { auth } from '../../config/firebase'
+import { auth, database } from '../../config/firebase'
+import { ref, remove } from 'firebase/database'
 import { useAuthStore } from '../../store/authStore'
 import SettingsModal from './SettingsModal'
 import { useChatStore } from '../../store/chatStore'
+import { cleanupStaleUsers } from '../../utils/cleanupUsers'
 import toast from 'react-hot-toast'
 
 const Sidebar = () => {
@@ -32,10 +34,29 @@ const Sidebar = () => {
 
   const handleLogout = async () => {
     try {
+      // 如果是匿名用戶，在登出前先刪除資料
+      if (user && user.isAnonymous) {
+        console.log('🗑️ 匿名用戶登出 - 清理所有資料')
+        const userRef = ref(database, `users/${user.uid}`)
+        await remove(userRef)
+        console.log('✅ 匿名用戶資料已刪除')
+      }
+      
       await signOut(auth)
       toast.success('已登出')
     } catch (error) {
+      console.error('登出失敗:', error)
       toast.error('登出失敗')
+    }
+  }
+
+  const handleCleanupUsers = async () => {
+    try {
+      toast.loading('正在清理過期用戶...', { id: 'cleanup' })
+      const cleanedCount = await cleanupStaleUsers()
+      toast.success(`已清理 ${cleanedCount} 個過期用戶`, { id: 'cleanup' })
+    } catch (error) {
+      toast.error('清理失敗', { id: 'cleanup' })
     }
   }
 
@@ -123,7 +144,16 @@ const Sidebar = () => {
 
             {/* 在線用戶列表 */}
             <div className="p-4 border-t border-gray-200 dark:border-gray-700">
-              <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-3">在線成員</h4>
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">在線成員</h4>
+                <button
+                  onClick={handleCleanupUsers}
+                  className="text-xs px-2 py-1 rounded bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-400"
+                  title="清理過期用戶"
+                >
+                  🧹
+                </button>
+              </div>
               <div className="space-y-2">
                 {Object.entries(onlineUsers).map(([uid, userData]) => (
                   <div key={uid} className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">

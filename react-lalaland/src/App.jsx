@@ -4,7 +4,7 @@ import { Toaster } from 'react-hot-toast'
 import { useAuthStore } from './store/authStore'
 import { auth, database } from './config/firebase'
 import { onAuthStateChanged } from 'firebase/auth'
-import { ref, get } from 'firebase/database'
+import { ref, get, remove } from 'firebase/database'
 import { initNotifications } from './utils/notificationManager'
 import { debugDatabase } from './utils/debugFirebase'
 
@@ -60,6 +60,29 @@ function App() {
 
     return () => unsubscribe()
   }, [setUser, setLoading])
+
+  // 處理匿名用戶關閉頁面時的資料清理
+  useEffect(() => {
+    const handleBeforeUnload = async (event) => {
+      if (user && user.isAnonymous) {
+        console.log('🗑️ 匿名用戶關閉頁面 - 嘗試清理資料')
+        try {
+          const userRef = ref(database, `users/${user.uid}`)
+          await remove(userRef)
+          console.log('✅ 匿名用戶資料已清理')
+        } catch (error) {
+          console.error('❌ 清理匿名用戶資料失敗:', error)
+        }
+      }
+    }
+
+    // 添加頁面卸載事件監聽器
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+    }
+  }, [user])
 
   // 載入中顯示 Splash Screen
   if (loading) {
