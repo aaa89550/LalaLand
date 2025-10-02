@@ -2,8 +2,9 @@ import React, { useEffect } from 'react'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 import { useAuthStore } from './store/authStore'
-import { auth } from './config/firebase'
+import { auth, database } from './config/firebase'
 import { onAuthStateChanged } from 'firebase/auth'
+import { ref, get } from 'firebase/database'
 import { debugDatabase } from './utils/debugFirebase'
 
 // 頁面組件
@@ -21,15 +22,32 @@ function App() {
     // 監聽 Firebase 認證狀態
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
+        let nickname = firebaseUser.displayName || '匿名用戶'
+        let avatar = firebaseUser.photoURL || null
+        
+        // 從 Database 讀取用戶資料（特別是匿名用戶的暱稱）
+        try {
+          const userRef = ref(database, `users/${firebaseUser.uid}`)
+          const userSnapshot = await get(userRef)
+          
+          if (userSnapshot.exists()) {
+            const userData = userSnapshot.val()
+            nickname = userData.nickname || nickname
+            avatar = userData.avatar || avatar
+          }
+        } catch (error) {
+          console.warn('無法讀取用戶資料:', error)
+        }
+        
         setUser({
           uid: firebaseUser.uid,
           email: firebaseUser.email,
-          nickname: firebaseUser.displayName || '匿名用戶',
-          avatar: firebaseUser.photoURL || null,
+          nickname: nickname,
+          avatar: avatar,
           isAnonymous: firebaseUser.isAnonymous
         })
         
-        console.log('✅ 用戶已登入:', firebaseUser.uid)
+        console.log('✅ 用戶已登入:', firebaseUser.uid, '暱稱:', nickname)
       } else {
         setUser(null)
       }

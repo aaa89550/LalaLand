@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { debugDatabase, debugRoomMessages, debugUserFriends } from '../utils/debugFirebase'
+import { debugDatabase, debugRoomMessages } from '../utils/debugFirebase'
 import { useAuthStore } from '../store/authStore'
 
 const DebugPage = () => {
@@ -41,26 +41,7 @@ const DebugPage = () => {
     }
   }
 
-  const debugCurrentUserFriends = async () => {
-    if (!user?.uid) {
-      setResults('請先登入')
-      return
-    }
 
-    setLoading(true)
-    try {
-      const friends = await debugUserFriends(user.uid)
-      if (friends) {
-        setResults(`用戶 ${user.uid} 有 ${Object.keys(friends).length} 個好友`)
-      } else {
-        setResults(`用戶 ${user.uid} 沒有好友`)
-      }
-    } catch (error) {
-      setResults(`偵錯好友失敗: ${error.message}`)
-    } finally {
-      setLoading(false)
-    }
-  }
 
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900 p-4">
@@ -100,15 +81,7 @@ const DebugPage = () => {
             偵錯特定房間
           </button>
 
-          {user && (
-            <button
-              onClick={debugCurrentUserFriends}
-              disabled={loading}
-              className="w-full px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50"
-            >
-              偵錯我的好友
-            </button>
-          )}
+
         </div>
 
         {results && (

@@ -2,16 +2,11 @@ import React from 'react'
 import { useChatStore } from '../../store/chatStore'
 import GroupChat from './GroupChat'
 import PrivateChat from './PrivateChat'
-import FriendsList from './FriendsList'
 
 const ChatArea = () => {
   const { currentRoom, currentPrivateChat } = useChatStore()
 
   const renderChatContent = () => {
-    if (currentRoom === 'friends') {
-      return <FriendsList />
-    }
-    
     if (currentRoom === 'private') {
       if (currentPrivateChat) {
         return <PrivateChat />

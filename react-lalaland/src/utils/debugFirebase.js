@@ -102,24 +102,3 @@ export const debugRoomMessages = async (roomId) => {
   }
 }
 
-// 特定用戶的好友偵錯
-export const debugUserFriends = async (uid) => {
-  console.log(`🔍 偵錯用戶 ${uid} 的好友...`)
-  
-  try {
-    const friendsRef = ref(database, `users/${uid}/friends`)
-    const snapshot = await get(friendsRef)
-    
-    if (snapshot.exists()) {
-      const friends = snapshot.val()
-      console.log(`✅ 用戶 ${uid} 找到 ${Object.keys(friends).length} 個好友:`, friends)
-      return friends
-    } else {
-      console.log(`❌ 用戶 ${uid} 沒有好友`)
-      return null
-    }
-  } catch (error) {
-    console.error(`🚨 無法讀取用戶 ${uid} 的好友:`, error)
-    return null
-  }
-}

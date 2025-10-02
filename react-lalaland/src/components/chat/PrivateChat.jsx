@@ -6,7 +6,6 @@ import { usePrivateChat } from '../../hooks/usePrivateChat'
 import { useFirebaseDebug } from '../../hooks/useFirebaseDebug'
 import { usePrivateChatsList } from '../../hooks/usePrivateChatsList'
 import MessageBubble from './MessageBubble'
-import { sendFriendRequest } from '../../utils/friendSystem'
 import toast from 'react-hot-toast'
 
 const PrivateChat = () => {
@@ -43,23 +42,6 @@ const PrivateChat = () => {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' })
     }
   }, [messages])
-  
-  // 處理加好友
-  const handleAddFriend = async () => {
-    if (!user?.uid || !currentPrivateChat?.recipientId) return
-    
-    try {
-      await sendFriendRequest(user.uid, currentPrivateChat.recipientId)
-      toast.success(`好友請求已發送給 ${currentPrivateChat.nickname}！`)
-    } catch (error) {
-      console.error('發送好友請求失敗:', error)
-      if (error.message.includes('不能加自己')) {
-        toast.error('不能加自己為好友')
-      } else {
-        toast.error('發送好友請求失敗: ' + error.message)
-      }
-    }
-  }
 
   // 處理返回私聊列表
   const handleBackToList = () => {
@@ -108,15 +90,6 @@ const PrivateChat = () => {
                 <p className="text-sm text-gray-500">私人對話</p>
               </div>
             </div>
-            
-            {/* 加好友按鈕 */}
-            <button
-              onClick={handleAddFriend}
-              className="px-3 py-1 text-sm bg-sea-blue text-white rounded-lg hover:bg-sea-blue/90 transition-colors"
-              title="加為好友"
-            >
-              ➕ 加好友
-            </button>
           </div>
         </div>
 
@@ -245,19 +218,7 @@ const PrivateChat = () => {
                 🔧 診斷 Firebase 連接
               </button>
               
-              <button 
-                onClick={async () => {
-                  const success = await addFriendForTesting(user.uid, 'ykw8Q4X6sMNFKNhCeXw5SwUORwd2')
-                  if (success) {
-                    alert('✅ 成功添加測試好友！請重新載入頁面查看好友列表。')
-                  } else {
-                    alert('❌ 添加好友失敗，請查看控制台錯誤訊息。')
-                  }
-                }}
-                className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
-              >
-                👥 添加測試好友
-              </button>
+
             </div>
           </div>
         ) : (
@@ -293,15 +254,7 @@ const PrivateChat = () => {
         )}
       </div>
 
-      {/* 底部提示 */}
-      <div className="p-4 text-center">
-        <button
-          onClick={() => setCurrentRoom('friends')}
-          className="text-sea-blue hover:text-sea-dark text-sm font-medium transition-colors"
-        >
-          前往好友列表 →
-        </button>
-      </div>
+
     </div>
   )
 }

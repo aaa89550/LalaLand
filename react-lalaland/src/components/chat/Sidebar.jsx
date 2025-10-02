@@ -118,17 +118,6 @@ const Sidebar = () => {
                   <MessageCircle className="w-5 h-5" />
                   <span className="font-medium">私人訊息</span>
                 </button>
-
-                <button
-                  onClick={() => {
-                    setCurrentRoom('friends')
-                    setSidebarOpen(false)
-                  }}
-                  className={`sidebar-item w-full ${currentRoom === 'friends' ? 'active' : ''}`}
-                >
-                  <UserPlus className="w-5 h-5" />
-                  <span className="font-medium">我的好友</span>
-                </button>
               </div>
             </div>
 
