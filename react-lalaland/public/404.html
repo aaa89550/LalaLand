@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>拉拉樂園</title>
+    <script>
+      // GitHub Pages SPA 重定向處理
+      // 將 404 頁面重定向到 index.html 並保持路徑參數
+      (function(l) {
+        if (l.search[1] === '/' ) {
+          var decoded = sessionStorage.redirect;
+          delete sessionStorage.redirect;
+          if (decoded) {
+            l.replace(l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') +
+              decoded);
+            return;
+          }
+        }
+      }(window.location))
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script>
+      // 如果沒有重定向，直接跳轉到首頁
+      window.location.href = window.location.origin + '/LalaLand/';
+    </script>
+  </body>
+</html>
