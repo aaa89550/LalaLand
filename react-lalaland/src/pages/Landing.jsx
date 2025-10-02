@@ -65,7 +65,7 @@ const Landing = () => {
           </h2>
           
           <p className="text-xl text-gray-600 mb-8 leading-relaxed">
-            專為女同性戀者設計的安全聊天平台<br />
+            專為女同志設計的安全聊天平台<br />
             在這裡，你可以安心做自己，與志同道合的朋友建立真摯連結
           </p>
 
