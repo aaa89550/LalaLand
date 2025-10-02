@@ -1,0 +1,22 @@
+{
+  "name": "LalaLand 女同聊天室",
+  "short_name": "LalaLand",
+  "description": "專為女同性戀者與LGBTQ+社群打造的安全聊天平台",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f7f1e1",
+  "theme_color": "#2877b9",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["social", "communication", "lifestyle"],
+  "lang": "zh-TW",
+  "dir": "ltr",
+  "scope": "/"
+}

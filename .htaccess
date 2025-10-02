@@ -1,0 +1,72 @@
+# Apache .htaccess for LalaLand SEO optimization
+
+# 啟用 Gzip 壓縮
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/plain
+    AddOutputFilterByType DEFLATE text/html
+    AddOutputFilterByType DEFLATE text/xml
+    AddOutputFilterByType DEFLATE text/css
+    AddOutputFilterByType DEFLATE application/xml
+    AddOutputFilterByType DEFLATE application/xhtml+xml
+    AddOutputFilterByType DEFLATE application/rss+xml
+    AddOutputFilterByType DEFLATE application/javascript
+    AddOutputFilterByType DEFLATE application/x-javascript
+</IfModule>
+
+# 設定快取標頭
+<IfModule mod_expires.c>
+    ExpiresActive on
+    
+    # 圖片快取 1 個月
+    ExpiresByType image/png "access plus 1 month"
+    ExpiresByType image/jpg "access plus 1 month"
+    ExpiresByType image/jpeg "access plus 1 month"
+    ExpiresByType image/gif "access plus 1 month"
+    ExpiresByType image/svg+xml "access plus 1 month"
+    
+    # CSS 和 JS 快取 1 週
+    ExpiresByType text/css "access plus 1 week"
+    ExpiresByType application/javascript "access plus 1 week"
+    
+    # HTML 快取 1 天
+    ExpiresByType text/html "access plus 1 day"
+</IfModule>
+
+# 安全性標頭
+<IfModule mod_headers.c>
+    # 防止 MIME 類型混淆攻擊
+    Header set X-Content-Type-Options nosniff
+    
+    # 防止點擊劫持
+    Header set X-Frame-Options SAMEORIGIN
+    
+    # XSS 保護
+    Header set X-XSS-Protection "1; mode=block"
+    
+    # 推薦使用 HTTPS
+    Header set Strict-Transport-Security "max-age=31536000; includeSubDomains"
+</IfModule>
+
+# URL 重寫規則
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    
+    # 強制使用 HTTPS (生產環境)
+    # RewriteCond %{HTTPS} off
+    # RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+    
+    # 移除 .html 副檔名
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteRule ^([^\.]+)$ $1.html [NC,L]
+    
+    # 重導向 www 到非 www (可選)
+    # RewriteCond %{HTTP_HOST} ^www\.(.*)$ [NC]
+    # RewriteRule ^(.*)$ https://%1/$1 [R=301,L]
+</IfModule>
+
+# 自訂錯誤頁面
+ErrorDocument 404 /index.html
+
+# 字元編碼
+AddDefaultCharset UTF-8
