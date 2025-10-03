@@ -30,7 +30,7 @@ const getRoomDisplayName = (roomId) => {
 
 export const useFirebaseChat = (roomId) => {
   const { user } = useAuthStore()
-  const { setMessages, addMessage, clearMessages } = useChatStore()
+  const { setMessages, addMessage, clearMessages, currentRoom } = useChatStore()
   const lastMessageCountRef = useRef(0)
 
   useEffect(() => {
@@ -89,30 +89,45 @@ export const useFirebaseChat = (roomId) => {
             newMessages.forEach(message => {
               const messageFrom = message.from || message.userId || message.uid
               if (messageFrom !== user.uid) {
-                // 顯示通知
+                // 檢查用戶是否正在當前的群組房間
+                const isCurrentlyInThisRoom = currentRoom === roomId
+                
                 const senderName = message.user || message.nickname || '匿名用戶'
                 const roomName = getRoomDisplayName(roomId)
                 
-                console.log(`🔔 收到來自 ${senderName} 的新群組訊息 (${roomName}):`, message.text)
+                console.log(`� 檢查群組通知條件:`, {
+                  currentRoom,
+                  roomId,
+                  isCurrentlyInThisRoom,
+                  messageFrom,
+                  senderName
+                })
                 
-                // 顯示通知
-                notificationManager.showMessageNotification(
-                  `${senderName} (${roomName})`,
-                  message.text,
-                  'group'
-                )
-                
-                // 播放提示音
-                notificationManager.playNotificationSound()
-                
-                // 顯示內部通知
-                if (window.showNotification) {
-                  window.showNotification(`🏠 ${senderName} (${roomName}): ${message.text}`, 'info', 6000)
-                }
-                
-                // 播放通知音效 (群組訊息音效較輕)
-                if (Math.random() < 0.3) { // 只有 30% 機率播放音效，避免太頻繁
+                // 只有在用戶沒有正在當前房間時才顯示通知
+                if (!isCurrentlyInThisRoom) {
+                  console.log(`�🔔 收到來自 ${senderName} 的新群組訊息 (非當前房間 ${roomName}):`, message.text)
+                  
+                  // 顯示通知
+                  notificationManager.showMessageNotification(
+                    `${senderName} (${roomName})`,
+                    message.text,
+                    'group'
+                  )
+                  
+                  // 播放提示音
                   notificationManager.playNotificationSound()
+                  
+                  // 顯示內部通知
+                  if (window.showNotification) {
+                    window.showNotification(`🏠 ${senderName} (${roomName}): ${message.text}`, 'info', 6000)
+                  }
+                  
+                  // 播放通知音效 (群組訊息音效較輕)
+                  if (Math.random() < 0.3) { // 只有 30% 機率播放音效，避免太頻繁
+                    notificationManager.playNotificationSound()
+                  }
+                } else {
+                  console.log(`🔇 不顯示通知 - 用戶正在 ${roomName} 房間`)
                 }
               }
             })

@@ -8,7 +8,7 @@ import { useUnreadMessages } from './useUnreadMessages'
 
 export const usePrivateChat = (recipientId) => {
   const { user } = useAuthStore()
-  const { setMessages, clearMessages } = useChatStore()
+  const { setMessages, clearMessages, currentRoom, currentPrivateChat } = useChatStore()
   const { incrementUnread } = useUnreadMessages()
   const lastMessageCountRef = useRef(0)
 
@@ -77,30 +77,45 @@ export const usePrivateChat = (recipientId) => {
             // 檢查新訊息是否來自其他用戶
             newMessages.forEach(message => {
               if (message.from !== user.uid) {
-                // 顯示通知
+                // 檢查用戶是否正在與這個發送者進行私人聊天
+                const isCurrentlyChattingWithSender = 
+                  currentRoom === 'private' && 
+                  currentPrivateChat && 
+                  currentPrivateChat.recipientId === message.from
+                
                 const senderName = message.user || '匿名用戶'
-                console.log(`🔔 收到來自 ${senderName} 的新私訊:`, message.text)
+                console.log(`🔍 檢查通知條件:`, {
+                  currentRoom,
+                  currentPrivateChat,
+                  recipientId,
+                  messageFrom: message.from,
+                  isCurrentlyChattingWithSender
+                })
                 
-                // 顯示通知
-                notificationManager.showMessageNotification(
-                  senderName,
-                  message.text,
-                  'private'
-                )
-                
-                // 播放提示音
-                notificationManager.playNotificationSound()
-                
-                // 顯示內部通知
-                if (window.showNotification) {
-                  window.showNotification(`💬 ${senderName}: ${message.text}`, 'info', 6000)
+                // 只有在用戶沒有正在與發送者聊天時才顯示通知
+                if (!isCurrentlyChattingWithSender) {
+                  console.log(`🔔 收到來自 ${senderName} 的新私訊 (非當前聊天):`, message.text)
+                  
+                  // 顯示通知
+                  notificationManager.showMessageNotification(
+                    senderName,
+                    message.text,
+                    'private'
+                  )
+                  
+                  // 播放提示音
+                  notificationManager.playNotificationSound()
+                  
+                  // 顯示內部通知
+                  if (window.showNotification) {
+                    window.showNotification(`💬 ${senderName}: ${message.text}`, 'info', 6000)
+                  }
+                  
+                  // 只有在不是當前聊天時才增加未讀數量
+                  incrementUnread(message.from)
+                } else {
+                  console.log(`🔇 不顯示通知 - 用戶正在與 ${senderName} 聊天`)
                 }
-                
-                // 增加未讀數量
-                incrementUnread(message.from)
-                
-                // 播放通知音效
-                notificationManager.playNotificationSound()
               }
             })
           }

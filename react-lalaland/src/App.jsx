@@ -70,6 +70,17 @@ function App() {
         })
         
         console.log('✅ 用戶已登入:', firebaseUser.uid, '暱稱:', nickname)
+        
+        // 自動請求通知權限
+        setTimeout(async () => {
+          console.log('🔔 自動請求通知權限...')
+          const token = await fcmManager.requestPermissionSilently(firebaseUser.uid)
+          if (token) {
+            console.log('✅ 通知權限已獲得，FCM Token:', token.substring(0, 20) + '...')
+          } else {
+            console.log('ℹ️ 通知權限未獲得或瀏覽器不支援 FCM')
+          }
+        }, 2000) // 延遲2秒後請求，讓用戶先適應頁面
       } else {
         setUser(null)
       }

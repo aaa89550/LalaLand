@@ -16,32 +16,33 @@ export const useUnreadMessages = () => {
       return
     }
 
-    // 監聽用戶的私聊列表
-    const privateChatRef = ref(database, `privateChats/${user.uid}`)
+    // 監聽用戶的未讀訊息數據
+    const unreadRef = ref(database, `userUnreadCounts/${user.uid}`)
     
-    const unsubscribe = onValue(privateChatRef, (snapshot) => {
+    const unsubscribe = onValue(unreadRef, (snapshot) => {
       if (!snapshot.exists()) {
         setUnreadCounts({})
         setTotalUnread(0)
         return
       }
 
-      const privateChats = snapshot.val()
+      const unreadData = snapshot.val()
       const counts = {}
       let total = 0
 
-      Object.entries(privateChats).forEach(([chatPartnerId, chatData]) => {
-        const unreadCount = chatData.unreadCount || 0
-        counts[chatPartnerId] = unreadCount
-        total += unreadCount
+      Object.entries(unreadData).forEach(([chatPartnerId, unreadCount]) => {
+        const count = parseInt(unreadCount) || 0
+        counts[chatPartnerId] = count
+        total += count
       })
 
+      console.log('📊 未讀訊息更新:', { counts, total })
       setUnreadCounts(counts)
       setTotalUnread(total)
     })
 
     return () => {
-      off(privateChatRef)
+      off(unreadRef)
     }
   }, [user?.uid])
 
@@ -50,11 +51,13 @@ export const useUnreadMessages = () => {
     if (!user?.uid || !chatPartnerId) return
 
     try {
-      const chatRef = ref(database, `privateChats/${user.uid}/${chatPartnerId}`)
-      await update(chatRef, {
-        unreadCount: 0,
-        lastRead: Date.now()
-      })
+      console.log(`🔄 標記與 ${chatPartnerId} 的對話為已讀`)
+      const unreadRef = ref(database, `userUnreadCounts/${user.uid}/${chatPartnerId}`)
+      await update(unreadRef, { '.sv': 'delete' }) // 刪除未讀記錄
+      
+      // 也更新最後讀取時間
+      const lastReadRef = ref(database, `userLastRead/${user.uid}/${chatPartnerId}`)
+      await update(lastReadRef, { timestamp: Date.now() })
     } catch (error) {
       console.error('標記已讀失敗:', error)
     }
@@ -65,10 +68,13 @@ export const useUnreadMessages = () => {
     if (!user?.uid || !chatPartnerId) return
 
     try {
-      const chatRef = ref(database, `privateChats/${user.uid}/${chatPartnerId}/unreadCount`)
+      console.log(`📈 增加與 ${chatPartnerId} 的未讀數量`)
+      const unreadRef = ref(database, `userUnreadCounts/${user.uid}/${chatPartnerId}`)
       
-      await runTransaction(chatRef, (currentCount) => {
-        return (currentCount || 0) + 1
+      await runTransaction(unreadRef, (currentCount) => {
+        const newCount = (currentCount || 0) + 1
+        console.log(`  舊數量: ${currentCount}, 新數量: ${newCount}`)
+        return newCount
       })
     } catch (error) {
       console.error('增加未讀數量失敗:', error)

@@ -46,6 +46,14 @@ const PrivateChat = () => {
     }
   }, [messages])
 
+  // 當進入特定私聊時，自動標記為已讀
+  useEffect(() => {
+    if (currentPrivateChat?.recipientId) {
+      console.log(`📖 進入與 ${currentPrivateChat.nickname} 的聊天，標記為已讀`)
+      markAsRead(currentPrivateChat.recipientId)
+    }
+  }, [currentPrivateChat?.recipientId, markAsRead])
+
   // 處理返回私聊列表
   const handleBackToList = () => {
     setCurrentPrivateChat(null)
@@ -192,8 +200,8 @@ const PrivateChat = () => {
                 key={chat.id}
                 onClick={() => {
                   setCurrentPrivateChat(chat)
-                  // 標記為已讀
-                  markAsRead(chat.id)
+                  // 標記為已讀 - 使用 recipientId 而非 chat.id
+                  markAsRead(chat.recipientId)
                 }}
                 className="flex items-center gap-3 p-4 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer transition-colors relative"
               >
@@ -203,7 +211,7 @@ const PrivateChat = () => {
                     alt={chat.nickname}
                     className="w-12 h-12 rounded-full"
                   />
-                  <UnreadBadge count={getUnreadCount(chat.id)} className="absolute -top-1 -right-1" />
+                  <UnreadBadge count={getUnreadCount(chat.recipientId)} className="absolute -top-1 -right-1" />
                 </div>
                 <div className="flex-1">
                   <h3 className="font-medium text-gray-800 dark:text-gray-200">

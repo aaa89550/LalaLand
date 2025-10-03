@@ -5,7 +5,7 @@ import { ref, set, push } from 'firebase/database'
 import { database } from '../config/firebase'
 
 // VAPID 金鑰
-const VAPID_KEY = '6VcIS3LHfhdZSsTZc_dy9gJVdNOZaUnRMFOv7Ys0G0I'
+const VAPID_KEY = 'BPkxFDyty7orkmlIPl7B8xl1A8rY1rQuqDWM03HdXOj1fvVWrXHc3mJX99iQl7GGHIk1Nj7rZK3bhCu0os7h8Mw'
 
 class FCMManager {
   constructor() {
@@ -71,7 +71,32 @@ class FCMManager {
       messaging: !!messaging,
       permission: Notification.permission,
       userAgent: navigator.userAgent,
-      url: window.location.href
+      url: window.location.href,
+      vapidKey: VAPID_KEY ? `${VAPID_KEY.substring(0, 10)}...` : 'Not set',
+      platform: navigator.platform,
+      language: navigator.language,
+      cookieEnabled: navigator.cookieEnabled,
+      onLine: navigator.onLine
+    }
+
+    // 檢查 Service Worker 狀態
+    if ('serviceWorker' in navigator) {
+      try {
+        const registration = await navigator.serviceWorker.getRegistration()
+        diagnosis.swRegistered = !!registration
+        diagnosis.swActive = !!(registration && registration.active)
+      } catch (error) {
+        diagnosis.swError = error.message
+      }
+    }
+
+    // 詳細的權限檢查
+    if (Notification.permission === 'denied') {
+      diagnosis.permissionAdvice = '通知權限被永久拒絕，需要手動在瀏覽器設定中重新啟用'
+    } else if (Notification.permission === 'default') {
+      diagnosis.permissionAdvice = '尚未請求通知權限'
+    } else if (Notification.permission === 'granted') {
+      diagnosis.permissionAdvice = '通知權限已獲得'
     }
 
     console.log('🔍 FCM 環境診斷:', diagnosis)
@@ -131,26 +156,51 @@ class FCMManager {
 
       // 取得 FCM Token
       console.log('🎫 取得 FCM Token...')
-      const token = await getToken(messaging, {
-        vapidKey: VAPID_KEY
-      })
+      try {
+        const token = await getToken(messaging, {
+          vapidKey: VAPID_KEY
+        })
 
-      if (token) {
-        console.log('✅ FCM Token 取得成功:', token)
-        this.fcmToken = token
-        
-        // 如果有用戶 ID，將 token 存到資料庫
-        if (userId) {
-          await this.saveFCMToken(userId, token)
+        if (token) {
+          console.log('✅ FCM Token 取得成功:', token.substring(0, 30) + '...')
+          this.fcmToken = token
+          
+          // 如果有用戶 ID，將 token 存到資料庫
+          if (userId) {
+            await this.saveFCMToken(userId, token)
+          }
+          
+          return token
+        } else {
+          console.warn('⚠️ 無法取得 FCM Token - 可能是瀏覽器不支援或配置問題')
+          return null
         }
-        
-        return token
-      } else {
-        console.warn('❌ 無法取得 FCM Token')
-        return null
+      } catch (tokenError) {
+        console.warn('⚠️ FCM Token 取得失敗:', tokenError.message)
+        // 嘗試診斷具體問題
+        if (tokenError.code === 'messaging/token-subscribe-failed') {
+          throw new Error('FCM 服務訂閱失敗，請檢查網路連線和 VAPID 金鑰設定')
+        } else if (tokenError.code === 'messaging/invalid-vapid-key') {
+          throw new Error('VAPID 金鑰無效，請檢查 Firebase 專案設定')
+        } else if (tokenError.code === 'messaging/registration-token-not-registered') {
+          throw new Error('註冊 Token 無效，請清除瀏覽器資料後重試')
+        } else {
+          throw new Error(`FCM Token 取得失敗: ${tokenError.message}`)
+        }
       }
     } catch (error) {
-      console.error('❌ FCM 權限請求失敗:', error)
+      console.error('❌ FCM 權限請求流程失敗:', error.message)
+      throw error // 重新拋出錯誤，讓調用者處理
+    }
+  }
+
+  // 靜默請求權限（適用於自動初始化，不會拋出錯誤）
+  async requestPermissionSilently(userId = null) {
+    try {
+      return await this.requestPermission(userId)
+    } catch (error) {
+      // 靜默處理錯誤，只記錄日誌
+      console.log('ℹ️ 靜默權限請求結果:', error.message)
       return null
     }
   }
@@ -254,6 +304,53 @@ class FCMManager {
   // 檢查是否已啟用
   isEnabled() {
     return !!(this.fcmToken && Notification.permission === 'granted')
+  }
+
+  // 驗證 VAPID 金鑰設定
+  async validateVAPIDKey() {
+    console.log('🔍 驗證 VAPID 金鑰設定...')
+    
+    const expectedSettings = {
+      vapidKey: VAPID_KEY,
+      projectId: 'lalaland-24931',
+      messagingSenderId: '45134876312',
+      publicKey: 'BPkxFDyty7orkmlIPl7B8xl1A8rY1rQuqDWM03HdXOj1fvVWrXHc3mJX99iQl7GGHIk1Nj7rZK3bhCu0os7h8Mw'
+    }
+    
+    console.log('📋 預期的 VAPID 設定:', expectedSettings)
+    
+    // 檢查 Firebase 設定
+    if (messaging && messaging.app) {
+      const firebaseConfig = messaging.app.options
+      console.log('🔧 Firebase 專案設定:', {
+        projectId: firebaseConfig.projectId,
+        messagingSenderId: firebaseConfig.messagingSenderId,
+        authDomain: firebaseConfig.authDomain
+      })
+      
+      if (firebaseConfig.projectId !== expectedSettings.projectId) {
+        console.error('❌ Firebase Project ID 不匹配!')
+        console.log('   預期:', expectedSettings.projectId)
+        console.log('   實際:', firebaseConfig.projectId)
+        return false
+      }
+      
+      if (firebaseConfig.messagingSenderId !== expectedSettings.messagingSenderId) {
+        console.error('❌ Messaging Sender ID 不匹配!')
+        console.log('   預期:', expectedSettings.messagingSenderId)
+        console.log('   實際:', firebaseConfig.messagingSenderId)
+        return false
+      }
+    }
+    
+    // 檢查 VAPID 金鑰格式
+    if (!VAPID_KEY || VAPID_KEY.length < 40) {
+      console.error('❌ VAPID 金鑰格式無效')
+      return false
+    }
+    
+    console.log('✅ VAPID 金鑰設定驗證通過')
+    return true
   }
 
   // 停用 FCM
