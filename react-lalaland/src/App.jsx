@@ -152,7 +152,7 @@ function App() {
             }}
           />
           <NotificationSystem />
-          <PWAInstallPrompt />
+          <PWAInstallPrompt user={user} />
         </div>
       </BrowserRouter>
     </ErrorBoundary>

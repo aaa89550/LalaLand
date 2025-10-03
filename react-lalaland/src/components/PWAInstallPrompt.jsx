@@ -1,7 +1,7 @@
 // PWAInstallPrompt.jsx - PWA 安裝提示組件
 import React, { useState, useEffect } from 'react';
 
-const PWAInstallPrompt = () => {
+const PWAInstallPrompt = ({ user = null }) => {
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [showInstallPrompt, setShowInstallPrompt] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
@@ -38,12 +38,13 @@ const PWAInstallPrompt = () => {
 
     detectDevice();
 
-    // 延遲顯示安裝提示（避免干擾用戶體驗）
+    // 立即顯示安裝提示（登入後推薦安裝）
     const showPromptTimer = setTimeout(() => {
       if (!isInstalled && !isStandalone) {
-        console.log('💡 顯示 PWA 安裝提示');
+        console.log('💡 顯示 PWA 安裝提示（登入後推薦）');
+        setShowInstallPrompt(true);
       }
-    }, 10000); // 10秒後顯示
+    }, 2000); // 2秒後顯示，讓用戶有時間適應
 
     // 添加事件監聽器
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
@@ -55,6 +56,32 @@ const PWAInstallPrompt = () => {
       window.removeEventListener('appinstalled', handleAppInstalled);
     };
   }, [isInstalled, isStandalone]);
+
+  // 監聽用戶登入狀態變化
+  useEffect(() => {
+    if (user && !isInstalled && !isStandalone) {
+      console.log('👤 用戶登入，觸發 PWA 安裝提示');
+      
+      // 用戶登入後立即檢查是否可以顯示安裝提示
+      const loginPromptTimer = setTimeout(() => {
+        // 檢查是否已經顯示過或安裝過
+        const dismissed = localStorage.getItem('pwa-install-dismissed');
+        if (dismissed) {
+          const dismissedTime = parseInt(dismissed);
+          const hoursSinceLastDismiss = (Date.now() - dismissedTime) / (1000 * 60 * 60);
+          if (hoursSinceLastDismiss < 6) { // 6小時內不重複顯示
+            console.log('⏰ 最近已顯示過安裝提示，暫不重複顯示');
+            return;
+          }
+        }
+        
+        setShowInstallPrompt(true);
+        console.log('💡 登入後顯示 PWA 安裝提示');
+      }, 3000); // 登入後 3 秒顯示
+
+      return () => clearTimeout(loginPromptTimer);
+    }
+  }, [user, isInstalled, isStandalone]);
 
   // 處理安裝點擊
   const handleInstallClick = async () => {
@@ -81,8 +108,9 @@ const PWAInstallPrompt = () => {
   // 關閉提示
   const handleDismiss = () => {
     setShowInstallPrompt(false);
-    // 24小時後重新顯示
+    // 6小時後重新顯示（縮短間隔，讓用戶有更多安裝機會）
     localStorage.setItem('pwa-install-dismissed', Date.now().toString());
+    console.log('📱 PWA 安裝提示已關閉，6小時後可重新顯示');
   };
 
   // 檢查是否應該顯示提示
@@ -93,7 +121,7 @@ const PWAInstallPrompt = () => {
     if (dismissed) {
       const dismissedTime = parseInt(dismissed);
       const hoursSinceLastDismiss = (Date.now() - dismissedTime) / (1000 * 60 * 60);
-      if (hoursSinceLastDismiss < 24) return false;
+      if (hoursSinceLastDismiss < 6) return false; // 改為 6 小時
     }
     
     return showInstallPrompt || isIOS;
@@ -117,10 +145,17 @@ const PWAInstallPrompt = () => {
           {/* 內容 */}
           <div className="flex-1 min-w-0">
             <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-1">
-              安裝 LalaLand 應用程式
+              {user ? `歡迎 ${user.displayName || '朋友'}！` : '安裝 LalaLand 應用程式'}
             </h3>
             
-            {isIOS ? (
+            {user ? (
+              <p className="text-xs text-gray-600 dark:text-gray-300 mb-3">
+                {isIOS ? 
+                  '安裝到主畫面以獲得更好的聊天體驗和通知功能' : 
+                  '將 LalaLand 安裝為應用程式，享受更流暢的聊天體驗'
+                }
+              </p>
+            ) : isIOS ? (
               <p className="text-xs text-gray-600 dark:text-gray-300 mb-3">
                 在 Safari 中點選 <span className="font-semibold">分享按鈕</span>，然後選擇 
                 <span className="font-semibold">「加入主畫面」</span> 以獲得更好的通知體驗
