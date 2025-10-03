@@ -131,18 +131,18 @@ export const usePrivateChatNotifications = () => {
             isActive
           })
 
-          // 顯示通知（桌面 + 內部）
+          // 增加未讀計數（所有平台都要）
+          incrementUnread(lastMsg.from)
+
+          // 顯示通知（僅桌面）
           if (isDesktop()) {
             notificationManager.showMessageNotification(senderName, preview, 'private')
             if (window.showNotification) {
               window.showNotification(`💬 ${senderName}: ${preview}`, 'info', 6000)
             }
           } else {
-            console.log('📱 手機板不顯示通知')
+            console.log('📱 手機板：僅更新未讀計數，不顯示內部通知')
           }
-
-          // 增加未讀
-          incrementUnread(lastMsg.from)
         })
 
         listenersRef.current[chatId] = unsubscribe

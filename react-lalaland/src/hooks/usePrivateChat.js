@@ -13,6 +13,13 @@ export const usePrivateChat = (recipientId) => {
   const lastMessageCountRef = useRef(0)
   const hasLoadedOnceRef = useRef(false)
 
+  // 判斷是否為桌面裝置
+  const isDesktop = () => {
+    if (typeof window === 'undefined') return true
+    const ua = window.navigator.userAgent
+    return !(/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua))
+  }
+
   useEffect(() => {
     console.log('🔍 usePrivateChat 參數檢查:')
     console.log('  - hasUser:', !!user)
@@ -127,28 +134,32 @@ export const usePrivateChat = (recipientId) => {
                     notificationType: 'private'
                   })
                   
-                  // 顯示通知
-                  notificationManager.showMessageNotification(
-                    senderName,
-                    message.text,
-                    'private'
-                  )
-                  
-                  // 播放提示音
-                  notificationManager.playNotificationSound()
-                  
-                  // 顯示內部通知
-                  if (window.showNotification) {
-                    window.showNotification(`💬 ${senderName}: ${message.text}`, 'info', 6000)
-                  }
-                  
-                  // 只有在不是當前聊天時才增加未讀數量
+                  // 增加未讀數量（所有平台都要）
                   console.log(`📈 準備調用 incrementUnread(${message.from})`)
                   try {
                     incrementUnread(message.from)
                     console.log(`✅ incrementUnread 調用成功`)
                   } catch (error) {
                     console.error(`❌ incrementUnread 調用失敗:`, error)
+                  }
+                  
+                  // 顯示通知（僅桌面）
+                  if (isDesktop()) {
+                    notificationManager.showMessageNotification(
+                      senderName,
+                      message.text,
+                      'private'
+                    )
+                    
+                    // 播放提示音
+                    notificationManager.playNotificationSound()
+                    
+                    // 顯示內部通知
+                    if (window.showNotification) {
+                      window.showNotification(`💬 ${senderName}: ${message.text}`, 'info', 6000)
+                    }
+                  } else {
+                    console.log('📱 手機板：僅更新未讀計數，不顯示內部通知')
                   }
                 } else {
                   console.log(`🔇 ❌ 不顯示通知 - 用戶正在與 ${senderName} 聊天`, {
