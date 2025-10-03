@@ -152,6 +152,7 @@ const PrivateChat = () => {
       const callData = {
         type: 'incoming_call',
         from: user.uid,
+        to: currentPrivateChat.recipientId,
         fromName: user.nickname || user.displayName || '匿名用戶',
         fromAvatar: user.avatar || null,
         timestamp: Date.now(),
@@ -192,11 +193,16 @@ const PrivateChat = () => {
       const callRef = ref(database, `voiceCalls/${callId}`)
       
       const callData = {
-        ...notificationData,
-        id: callId,
+        from: notificationData.from,
         to: recipientId,
+        type: notificationData.type || 'incoming_call',
         status: 'calling',
-        createdAt: Date.now()
+        createdAt: Date.now(),
+        // 額外的資料
+        id: callId,
+        fromName: notificationData.fromName,
+        fromAvatar: notificationData.fromAvatar,
+        timestamp: notificationData.timestamp
       }
 
       console.log('📤 發送通話邀請:', callData)

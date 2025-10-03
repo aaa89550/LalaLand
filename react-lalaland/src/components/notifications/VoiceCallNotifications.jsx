@@ -25,9 +25,11 @@ const VoiceCallNotifications = () => {
 
     console.log('🔔 開始監聽語音通話通知:', user.uid)
     console.log('🌿 當前狀態 - showIncomingCall:', showIncomingCall, 'incomingCall:', !!incomingCall)
+    console.log('🔗 Firebase 數據庫實例:', !!database)
 
     // 監聽語音通話邀請
     const voiceCallsRef = ref(database, `voiceCalls`)
+    console.log('📡 創建 Firebase 監聽器，路徑: voiceCalls')
     
     const unsubscribe = onValue(voiceCallsRef, (snapshot) => {
       console.log('📡 Firebase 監聽回調觸發 - 用戶:', user.uid)
@@ -197,6 +199,22 @@ const VoiceCallNotifications = () => {
       callId: incomingCall.callId
     } : null
   })
+
+  // 開發環境添加測試函數
+  if (import.meta.env.DEV && typeof window !== 'undefined') {
+    window.testIncomingCall = () => {
+      console.log('🧪 測試來電界面')
+      const testCall = {
+        from: 'test-user',
+        fromName: '測試用戶',
+        fromAvatar: null,
+        callId: 'test-call-' + Date.now(),
+        notificationId: 'test-notification'
+      }
+      setIncomingCall(testCall)
+      setShowIncomingCall(true)
+    }
+  }
 
   return (
     <>
