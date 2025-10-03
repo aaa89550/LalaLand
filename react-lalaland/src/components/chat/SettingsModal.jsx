@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { X, Bell, BellOff, User, Camera, Volume2, VolumeX, Smartphone } from 'lucide-react'
 import { useAuthStore } from '../../store/authStore'
 import { fcmManager } from '../../utils/fcmManager'
+import AvatarUpload from '../common/AvatarUpload'
 import toast from 'react-hot-toast'
 
 const SettingsModal = ({ isOpen, onClose }) => {
@@ -204,22 +205,43 @@ const SettingsModal = ({ isOpen, onClose }) => {
           <div>
             <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">個人資料</h3>
             
-            {/* 頭像 */}
+            {/* 頭像上傳 */}
             <div className="flex items-center gap-4 mb-4">
-              <img
-                src={avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(tempNickname || '匿名')}&background=56c596&color=fff&size=64`}
-                alt="頭像"
-                className="w-16 h-16 rounded-full"
+              <AvatarUpload
+                currentAvatar={avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(tempNickname || '匿名')}&background=56c596&color=fff&size=96`}
+                onAvatarChange={(newAvatar, stats) => {
+                  console.log('🖼️ 頭像已更新:', { stats });
+                  setAvatar(newAvatar);
+                  
+                  if (window.showNotification && stats) {
+                    window.showNotification(
+                      `頭像已更新！壓縮率 ${stats.reduction}%`, 
+                      'success', 
+                      3000
+                    );
+                  }
+                }}
+                size="large"
               />
-              <div>
-                <button
-                  onClick={generateRandomAvatar}
-                  className="flex items-center gap-2 px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-                >
-                  <Camera className="w-4 h-4" />
-                  更換頭像
-                </button>
-                <p className="text-xs text-gray-500 mt-1">點擊生成新的頭像</p>
+              <div className="flex-1">
+                <h4 className="font-medium text-gray-900 dark:text-white mb-1">
+                  個人頭像
+                </h4>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">
+                  點擊頭像上傳新圖片，支援拖拽上傳
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={generateRandomAvatar}
+                    className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors text-sm"
+                  >
+                    <Camera className="w-3 h-3" />
+                    生成隨機頭像
+                  </button>
+                </div>
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                  支援 JPG、PNG、GIF、WebP，最大 5MB
+                </p>
               </div>
             </div>
 
