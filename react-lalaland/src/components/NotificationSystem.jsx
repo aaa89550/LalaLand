@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { notificationManager } from '../utils/notificationManager';
-import { Bell, BellOff, TestTube } from 'lucide-react';
+import { Bell, BellOff } from 'lucide-react';
 
 const NotificationSystem = () => {
   const [notificationStatus, setNotificationStatus] = useState({
@@ -34,34 +34,7 @@ const NotificationSystem = () => {
     }
   };
 
-  const handleTestNotification = () => {
-    console.log('🧪 測試通知按鈕被點擊');
-    console.log('🔔 通知狀態:', notificationStatus);
-    
-    if (notificationStatus.canNotify) {
-      console.log('✅ 嘗試顯示測試通知');
-      const result = notificationManager.showNotification(
-        '🧪 測試通知', 
-        {
-          body: '這是一個測試通知，如果您看到這則訊息，表示通知功能正常運作！',
-          icon: '/icon-512.png'
-        }
-      );
-      console.log('📬 通知結果:', result);
-      
-      if (!result) {
-        alert('通知顯示失敗，請檢查瀏覽器控制台查看錯誤訊息。');
-      }
-    } else {
-      console.log('❌ 無法顯示通知，狀態:', {
-        supported: notificationStatus.supported,
-        permission: notificationStatus.permission,
-        enabled: notificationStatus.enabled,
-        canNotify: notificationStatus.canNotify
-      });
-      alert('請先開啟通知權限才能測試通知功能。');
-    }
-  };
+
 
   if (!notificationStatus.supported) {
     return (
@@ -132,20 +105,7 @@ const NotificationSystem = () => {
         </div>
       )}
 
-      <button
-        onClick={handleTestNotification}
-        disabled={!notificationStatus.canNotify}
-        className={`
-          flex items-center space-x-2 px-4 py-2 rounded-md text-sm font-medium transition-colors
-          ${notificationStatus.canNotify
-            ? 'bg-blue-100 text-blue-700 hover:bg-blue-200'
-            : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-          }
-        `}
-      >
-        <TestTube className="h-4 w-4" />
-        <span>測試通知</span>
-      </button>
+
     </div>
   );
 };
