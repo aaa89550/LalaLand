@@ -5,10 +5,14 @@ import { createSampleData } from '../utils/sampleData'
 import Sidebar from '../components/chat/Sidebar'
 import ChatArea from '../components/chat/ChatArea'
 import MobileHeader from '../components/chat/MobileHeader'
+import { usePrivateChatNotifications } from '../hooks/usePrivateChatNotifications'
 
 const Chat = () => {
   const { darkMode } = useChatStore()
   const { user } = useAuthStore()
+
+  // 啟用全域私訊通知監聽
+  usePrivateChatNotifications()
 
   useEffect(() => {
     // 初始化夜間模式

@@ -32,6 +32,12 @@
         ".write": "auth != null && auth.uid === $uid"
       }
     },
+    "fcmTokens": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid"
+      }
+    },
     "settings": {
       ".read": "auth != null",
       ".write": false

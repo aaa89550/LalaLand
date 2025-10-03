@@ -28,7 +28,17 @@ const PrivateChat = () => {
   const { sendPrivateMessage } = usePrivateChat(currentPrivateChat?.recipientId)
   
   // 使用未讀訊息 hook
-  const { getUnreadCount, markAsRead } = useUnreadMessages()
+  const { getUnreadCount, markAsRead, recalculateTotal } = useUnreadMessages()
+  
+  // 確保進入私訊頁面時設定正確的房間狀態
+  useEffect(() => {
+    console.log('🏠 設定私訊房間狀態')
+    setCurrentRoom('private')
+    // 如果沒有選中具體的私聊，清空當前私聊狀態
+    if (!currentPrivateChat) {
+      console.log('📝 清空當前私聊狀態')
+    }
+  }, [setCurrentRoom]) // 只在組件載入時執行一次
   
   // 調試日誌 (簡化版)
   console.log('💬 PrivateChat 狀態:', {
@@ -56,7 +66,9 @@ const PrivateChat = () => {
 
   // 處理返回私聊列表
   const handleBackToList = () => {
+    console.log('🔙 返回私聊列表')
     setCurrentPrivateChat(null)
+    setCurrentRoom('private') // 保持在私聊模式，但不在具體對話中
   }
 
   // 處理發送私訊
@@ -165,15 +177,17 @@ const PrivateChat = () => {
               點選對話開始私訊
             </p>
           </div>
-          <button 
-            onClick={() => {
-              console.log('🔄 重新載入私聊列表...')
-              refreshList()
-            }}
-            className="px-3 py-1 text-xs bg-sea-blue text-white rounded-lg hover:bg-sea-dark transition-colors"
-          >
-            🔄 重新載入
-          </button>
+          <div className="flex gap-2">
+            <button 
+              onClick={() => {
+                console.log('🔄 重新載入私聊列表...')
+                refreshList()
+              }}
+              className="px-3 py-1 text-xs bg-sea-blue text-white rounded-lg hover:bg-sea-dark transition-colors"
+            >
+              🔄 重新載入
+            </button>
+          </div>
         </div>
       </div>
 
@@ -199,7 +213,9 @@ const PrivateChat = () => {
               <div
                 key={chat.id}
                 onClick={() => {
+                  console.log(`🔄 切換到私聊: ${chat.nickname} (ID: ${chat.recipientId})`)
                   setCurrentPrivateChat(chat)
+                  setCurrentRoom('private') // 重要：設定當前房間為私聊
                   // 標記為已讀 - 使用 recipientId 而非 chat.id
                   markAsRead(chat.recipientId)
                 }}

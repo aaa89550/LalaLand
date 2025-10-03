@@ -18,6 +18,11 @@ import SplashScreen from './components/SplashScreen'
 import ErrorBoundary from './components/ErrorBoundary'
 import NotificationSystem from './components/NotificationSystem'
 
+// 開發環境下載入除錯工具
+if (import.meta.env.DEV) {
+  import('./debug-notifications.js')
+}
+
 function App() {
   const { user, setUser, loading, setLoading } = useAuthStore()
 

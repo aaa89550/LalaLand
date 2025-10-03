@@ -11,6 +11,7 @@ export const usePrivateChat = (recipientId) => {
   const { setMessages, clearMessages, currentRoom, currentPrivateChat } = useChatStore()
   const { incrementUnread } = useUnreadMessages()
   const lastMessageCountRef = useRef(0)
+  const hasLoadedOnceRef = useRef(false)
 
   useEffect(() => {
     console.log('🔍 usePrivateChat 參數檢查:')
@@ -43,6 +44,10 @@ export const usePrivateChat = (recipientId) => {
     // 清空現有訊息
     clearMessages()
     console.log('🧹 已清空現有訊息，準備載入私聊訊息')
+    
+    // 重置狀態
+    lastMessageCountRef.current = 0
+    hasLoadedOnceRef.current = false
 
     // 設定私人訊息監聽器
     const messagesRef = ref(database, `privateChats/${chatId}/messages`)
@@ -69,13 +74,31 @@ export const usePrivateChat = (recipientId) => {
           // 檢查是否有新訊息 (用於通知)
           const currentMessageCount = messages.length
           const previousMessageCount = lastMessageCountRef.current
+          const isFirstLoad = !hasLoadedOnceRef.current
           
-          // 如果有新訊息且不是首次載入
-          if (currentMessageCount > previousMessageCount && previousMessageCount > 0) {
+          console.log(`📊 訊息計數檢查:`, {
+            currentMessageCount,
+            previousMessageCount,
+            isFirstLoad,
+            hasLoadedOnce: hasLoadedOnceRef.current,
+            shouldCheckForNewMessages: currentMessageCount > previousMessageCount && hasLoadedOnceRef.current
+          })
+          
+          // 只有在不是首次載入且有新訊息時才觸發通知
+          if (currentMessageCount > previousMessageCount && hasLoadedOnceRef.current) {
             const newMessages = messages.slice(previousMessageCount)
             
             // 檢查新訊息是否來自其他用戶
-            newMessages.forEach(message => {
+            console.log(`🆕 檢查 ${newMessages.length} 條新訊息:`)
+            newMessages.forEach((message, index) => {
+              console.log(`  訊息 ${index + 1}:`, {
+                from: message.from,
+                user: message.user,
+                text: message.text?.substring(0, 50) + '...',
+                currentUserUid: user.uid,
+                isFromOtherUser: message.from !== user.uid
+              })
+              
               if (message.from !== user.uid) {
                 // 檢查用戶是否正在與這個發送者進行私人聊天
                 const isCurrentlyChattingWithSender = 
@@ -87,14 +110,22 @@ export const usePrivateChat = (recipientId) => {
                 console.log(`🔍 檢查通知條件:`, {
                   currentRoom,
                   currentPrivateChat,
+                  currentPrivateChatRecipientId: currentPrivateChat?.recipientId,
                   recipientId,
                   messageFrom: message.from,
-                  isCurrentlyChattingWithSender
+                  isCurrentlyChattingWithSender,
+                  shouldShowNotification: !isCurrentlyChattingWithSender
                 })
                 
                 // 只有在用戶沒有正在與發送者聊天時才顯示通知
                 if (!isCurrentlyChattingWithSender) {
-                  console.log(`🔔 收到來自 ${senderName} 的新私訊 (非當前聊天):`, message.text)
+                  console.log(`🔔 ✅ 觸發通知 - 收到來自 ${senderName} 的新私訊:`, message.text)
+                  console.log(`📧 通知詳細資訊:`, {
+                    senderName,
+                    messageText: message.text,
+                    messageFrom: message.from,
+                    notificationType: 'private'
+                  })
                   
                   // 顯示通知
                   notificationManager.showMessageNotification(
@@ -112,20 +143,36 @@ export const usePrivateChat = (recipientId) => {
                   }
                   
                   // 只有在不是當前聊天時才增加未讀數量
-                  incrementUnread(message.from)
+                  console.log(`📈 準備調用 incrementUnread(${message.from})`)
+                  try {
+                    incrementUnread(message.from)
+                    console.log(`✅ incrementUnread 調用成功`)
+                  } catch (error) {
+                    console.error(`❌ incrementUnread 調用失敗:`, error)
+                  }
                 } else {
-                  console.log(`🔇 不顯示通知 - 用戶正在與 ${senderName} 聊天`)
+                  console.log(`🔇 ❌ 不顯示通知 - 用戶正在與 ${senderName} 聊天`, {
+                    reason: 'isCurrentlyChattingWithSender = true',
+                    currentRoom,
+                    currentPrivateChat: currentPrivateChat?.nickname,
+                    messageFromUser: senderName
+                  })
                 }
+              } else {
+                console.log(`⏭️ 跳過自己的訊息: ${message.text?.substring(0, 30)}...`)
               }
             })
           }
           
+          // 更新計數和標記
           lastMessageCountRef.current = currentMessageCount
+          hasLoadedOnceRef.current = true
           console.log(`✅ 私聊 ${chatId} 載入了 ${messages.length} 條訊息`)
           setMessages(messages)
         } else {
           console.log(`📭 私聊 ${chatId} 沒有訊息`)
           lastMessageCountRef.current = 0
+          hasLoadedOnceRef.current = true
           setMessages([])
         }
       } catch (error) {
