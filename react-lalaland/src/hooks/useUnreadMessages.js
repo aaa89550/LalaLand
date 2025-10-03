@@ -1,6 +1,6 @@
 // useUnreadMessages.js - 追蹤未讀訊息的 Hook
 import { useState, useEffect } from 'react'
-import { ref, onValue, off } from 'firebase/database'
+import { ref, onValue, off, update, runTransaction } from 'firebase/database'
 import { database } from '../config/firebase'
 import { useAuthStore } from '../store/authStore'
 
@@ -50,7 +50,6 @@ export const useUnreadMessages = () => {
     if (!user?.uid || !chatPartnerId) return
 
     try {
-      const { update, ref } = await import('firebase/database')
       const chatRef = ref(database, `privateChats/${user.uid}/${chatPartnerId}`)
       await update(chatRef, {
         unreadCount: 0,
@@ -66,7 +65,6 @@ export const useUnreadMessages = () => {
     if (!user?.uid || !chatPartnerId) return
 
     try {
-      const { ref, runTransaction } = await import('firebase/database')
       const chatRef = ref(database, `privateChats/${user.uid}/${chatPartnerId}/unreadCount`)
       
       await runTransaction(chatRef, (currentCount) => {

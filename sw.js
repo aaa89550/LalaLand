@@ -1,10 +1,10 @@
 // 簡化的 Service Worker - 僅用於 PWA 基本功能
-const CACHE_NAME = 'lalaland-v3-simple'
+const CACHE_NAME = 'lalaland-v4-simple'
 const urlsToCache = [
   '/',
   '/index.html',
   '/assets/index-e59QtEet.css',
-  '/assets/index-BquLmgjb.js',
+  '/assets/index-_M3ajTH0.js',
   '/icon-512.png',
   '/manifest.json'
 ]

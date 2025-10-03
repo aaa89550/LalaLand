@@ -4,10 +4,12 @@ import { database } from '../config/firebase'
 import { useAuthStore } from '../store/authStore'
 import { useChatStore } from '../store/chatStore'
 import { notificationManager } from '../utils/notificationManager'
+import { useUnreadMessages } from './useUnreadMessages'
 
 export const usePrivateChat = (recipientId) => {
   const { user } = useAuthStore()
   const { setMessages, clearMessages } = useChatStore()
+  const { incrementUnread } = useUnreadMessages()
   const lastMessageCountRef = useRef(0)
 
   useEffect(() => {
@@ -94,8 +96,8 @@ export const usePrivateChat = (recipientId) => {
                   window.showNotification(`💬 ${senderName}: ${message.text}`, 'info', 6000)
                 }
                 
-                // 手機震動
-                notificationManager.vibrate([200, 100, 200])
+                // 增加未讀數量
+                incrementUnread(message.from)
                 
                 // 播放通知音效
                 notificationManager.playNotificationSound()
