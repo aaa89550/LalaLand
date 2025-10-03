@@ -69,19 +69,6 @@ class NotificationManager {
     }
   }
 
-  // 顯示訊息通知的簡化方法
-  showMessageNotification(senderName, message, type = 'private') {
-    const title = type === 'private' ? 
-      `💬 ${senderName} 發送了私訊` : 
-      `🏠 ${senderName} 發送了訊息`
-    
-    const body = message.length > 50 ? message.substring(0, 50) + '...' : message
-    
-    return this.showNotification(title, body, () => {
-      // 點擊通知時聚焦到聊天
-      window.focus()
-    })
-  }
 
   // 播放通知音效（簡化版）
   playNotificationSound() {
