@@ -134,14 +134,15 @@ export const usePrivateChatNotifications = () => {
           // 增加未讀計數（所有平台都要）
           incrementUnread(lastMsg.from)
 
-          // 顯示通知（僅桌面）
+          // 顯示通知（所有平台都要，統一由此處理）
+          notificationManager.showMessageNotification(senderName, preview, 'private')
+          if (window.showNotification) {
+            window.showNotification(`💬 ${senderName}: ${preview}`, 'info', 6000)
+          }
+          
+          // 桌面額外播放提示音
           if (isDesktop()) {
-            notificationManager.showMessageNotification(senderName, preview, 'private')
-            if (window.showNotification) {
-              window.showNotification(`💬 ${senderName}: ${preview}`, 'info', 6000)
-            }
-          } else {
-            console.log('📱 手機板：僅更新未讀計數，不顯示內部通知')
+            notificationManager.playNotificationSound()
           }
         })
 

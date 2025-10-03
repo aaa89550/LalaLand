@@ -124,17 +124,12 @@ export const usePrivateChat = (recipientId) => {
                   shouldShowNotification: !isCurrentlyChattingWithSender
                 })
                 
-                // 只有在用戶沒有正在與發送者聊天時才顯示通知
+                // 只有在用戶沒有正在與發送者聊天時才增加未讀數量
+                // 通知由 usePrivateChatNotifications 統一處理，避免重複
                 if (!isCurrentlyChattingWithSender) {
-                  console.log(`🔔 ✅ 觸發通知 - 收到來自 ${senderName} 的新私訊:`, message.text)
-                  console.log(`📧 通知詳細資訊:`, {
-                    senderName,
-                    messageText: message.text,
-                    messageFrom: message.from,
-                    notificationType: 'private'
-                  })
+                  console.log(`� usePrivateChat: 增加未讀數量 - 收到來自 ${senderName} 的新私訊`)
                   
-                  // 增加未讀數量（所有平台都要）
+                  // 增加未讀數量（通知由全域 hook 處理）
                   console.log(`📈 準備調用 incrementUnread(${message.from})`)
                   try {
                     incrementUnread(message.from)
@@ -143,24 +138,7 @@ export const usePrivateChat = (recipientId) => {
                     console.error(`❌ incrementUnread 調用失敗:`, error)
                   }
                   
-                  // 顯示通知（僅桌面）
-                  if (isDesktop()) {
-                    notificationManager.showMessageNotification(
-                      senderName,
-                      message.text,
-                      'private'
-                    )
-                    
-                    // 播放提示音
-                    notificationManager.playNotificationSound()
-                    
-                    // 顯示內部通知
-                    if (window.showNotification) {
-                      window.showNotification(`💬 ${senderName}: ${message.text}`, 'info', 6000)
-                    }
-                  } else {
-                    console.log('📱 手機板：僅更新未讀計數，不顯示內部通知')
-                  }
+                  console.log(`📢 通知將由 usePrivateChatNotifications 統一處理`)
                 } else {
                   console.log(`🔇 ❌ 不顯示通知 - 用戶正在與 ${senderName} 聊天`, {
                     reason: 'isCurrentlyChattingWithSender = true',
