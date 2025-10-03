@@ -126,3 +126,38 @@
 .dark .sidebar-item.active {
   @apply bg-gray-800 text-dark-accent;
 }
+
+/* PWA 安裝提示動畫 */
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-up {
+  animation: slideUp 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* PWA 支援樣式 */
+@media (display-mode: standalone) {
+  .pwa-only {
+    display: block;
+  }
+  .browser-only {
+    display: none;
+  }
+}
+
+@media not (display-mode: standalone) {
+  .pwa-only {
+    display: none;
+  }
+  .browser-only {
+    display: block;
+  }
+}

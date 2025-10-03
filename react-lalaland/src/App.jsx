@@ -17,6 +17,8 @@ import Debug from './pages/Debug'
 import SplashScreen from './components/SplashScreen'
 import ErrorBoundary from './components/ErrorBoundary'
 import NotificationSystem from './components/NotificationSystem'
+import PWAInstallPrompt from './components/PWAInstallPrompt'
+import { pwaManager } from './utils/pwaManager'
 
 // 開發環境下載入除錯工具
 if (import.meta.env.DEV) {
@@ -150,6 +152,7 @@ function App() {
             }}
           />
           <NotificationSystem />
+          <PWAInstallPrompt />
         </div>
       </BrowserRouter>
     </ErrorBoundary>
