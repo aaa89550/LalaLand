@@ -198,7 +198,14 @@ export const usePrivateChat = (recipientId) => {
       user: user.nickname || user.displayName || '匿名用戶',
       from: user.uid,
       avatar: user.avatar || null,
-      time: Date.now()
+      time: Date.now(),
+      type: messageData.type || 'text'
+    }
+
+    // 如果有圖片，添加圖片 URL
+    if (messageData.image) {
+      message.image = messageData.image
+      console.log(`📷 私訊包含圖片: ${messageData.image}`)
     }
 
     try {

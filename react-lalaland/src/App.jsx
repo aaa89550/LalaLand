@@ -23,6 +23,14 @@ import { pwaManager } from './utils/pwaManager'
 // 開發環境下載入除錯工具
 if (import.meta.env.DEV) {
   import('./debug-notifications.js')
+  
+  // 圖片壓縮測試工具
+  import('./utils/testImageCompression.js').then(module => {
+    console.log('🧪 圖片壓縮測試工具已載入')
+    console.log('🔧 測試指令: window.testImageCompression() 或 window.testMultipleImageFormats()')
+  }).catch(error => {
+    console.warn('測試工具載入失敗:', error)
+  })
 }
 
 function App() {

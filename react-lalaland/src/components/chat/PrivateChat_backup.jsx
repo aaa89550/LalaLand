@@ -1,74 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { MessageCircle, ArrowLeft, Send, Image, Smile, Phone, X } from 'lucide-react'
-import { useChatStore } from '../../store/chatStore'
-import { useAuthStore } from '../../store/authStore'
-import { usePrivateChat } from '../../hooks/usePrivateChat'
-import { usePrivateChatsList } from '../../hooks/usePrivateChatsList'
-import { useUnreadMessages } from '../../hooks/useUnreadMessages'
-import { uploadImage, createImagePreview } from '../../utils/imageUtils'
-import MessageBubble from './MessageBubble'
-import UnreadBadge from '../UnreadBadge'
-import VoiceCall from './VoiceCall'
-import toast from 'react-hot-toast'
-
-const PrivateChat = () => {
-  const { user } = useAuthStore()
-  const { 
-    currentPrivateChat, 
-    setCurrentPrivateChat, 
-    setCurrentRoom,
-    messages
-  } = useChatStore()
-  
-  // 使用新的私聊列表hook
-  const { privateChatsList, loading: chatsLoading, refreshList } = usePrivateChatsList()
-  
-  const [inputMessage, setInputMessage] = useState('')
-  const [imagePreview, setImagePreview] = useState(null)
-  const [uploadingImage, setUploadingImage] = useState(false)
-  const [showVoiceCall, setShowVoiceCall] = useState(false)
-  const messagesEndRef = useRef(null)
-  const fileInputRef = useRef(null)
-  
-  // 使用私聊 hook 來載入歷史訊息
-  const { sendPrivateMessage } = usePrivateChat(currentPrivateChat?.recipientId)
-  
-  // 使用未讀訊息 hook
-  const { getUnreadCount, markAsRead, recalculateTotal } = useUnreadMessages()
-  
-  // 確保進入私訊頁面時設定正確的房間狀態
-  useEffect(() => {
-    console.log('🏠 設定私訊房間狀態')
-    setCurrentRoom('private')
-    // 如果沒有選中具體的私聊，清空當前私聊狀態
-    if (!currentPrivateChat) {
-      console.log('📝 清空當前私聊狀態')
-    }
-  }, [setCurrentRoom]) // 只在組件載入時執行一次
-  
-  // 調試日誌 (簡化版)
-  console.log('💬 PrivateChat 狀態:', {
-    currentPrivateChat: !!currentPrivateChat,
-    nickname: currentPrivateChat?.nickname,
-    messagesCount: messages.length,
-    privateChatsListCount: privateChatsList.length,
-    chatsLoading
-  })
-
-  // 自動滾動到底部
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
-
-  // 返回私聊列表
-  const handleBackToList = () => {
-    console.log('⬅️  返回私聊列表')
-    setCurrentPrivateChat(null)
-    // 重新計算總未讀數
-    recalculateTotal()
-  }
-
-  const handleSendMessage = async () => {
+import { MessageCirc  const handleSendMessage = async () => {
     if (!inputMessage.trim() && !imagePreview) return
     
     try {
@@ -121,11 +52,97 @@ const PrivateChat = () => {
 
   const handleVoiceCall = () => {
     setShowVoiceCall(true)
-    toast.success(`正在呼叫 ${currentPrivateChat.nickname}...`)
+    toast.success('語音通話功能開發中...')
+  }, Send, Image, Smile, Phone, X } from 'lucide-react'
+import { useChatStore } from '../../store/chatStore'
+import { useAuthStore } from '../../store/authStore'
+import { usePrivateChat } from '../../hooks/usePrivateChat'
+import { usePrivateChatsList } from '../../hooks/usePrivateChatsList'
+import { useUnreadMessages } from '../../hooks/useUnreadMessages'
+import { uploadImage, createImagePreview } from '../../utils/imageUtils'
+import MessageBubble from './MessageBubble'
+import UnreadBadge from '../UnreadBadge'
+import toast from 'react-hot-toast'
+
+const PrivateChat = () => {
+  const { user } = useAuthStore()
+  const { 
+    currentPrivateChat, 
+    setCurrentPrivateChat, 
+    setCurrentRoom,
+    messages
+  } = useChatStore()
+  
+  // 使用新的私聊列表hook
+  const { privateChatsList, loading: chatsLoading, refreshList } = usePrivateChatsList()
+  
+  const [inputMessage, setInputMessage] = useState('')
+  const [imagePreview, setImagePreview] = useState(null)
+  const [uploadingImage, setUploadingImage] = useState(false)
+  const [showVoiceCall, setShowVoiceCall] = useState(false)
+  const messagesEndRef = useRef(null)
+  const fileInputRef = useRef(null)
+  
+  // 使用私聊 hook 來載入歷史訊息
+  const { sendPrivateMessage } = usePrivateChat(currentPrivateChat?.recipientId)
+  
+  // 使用未讀訊息 hook
+  const { getUnreadCount, markAsRead, recalculateTotal } = useUnreadMessages()
+  
+  // 確保進入私訊頁面時設定正確的房間狀態
+  useEffect(() => {
+    console.log('🏠 設定私訊房間狀態')
+    setCurrentRoom('private')
+    // 如果沒有選中具體的私聊，清空當前私聊狀態
+    if (!currentPrivateChat) {
+      console.log('📝 清空當前私聊狀態')
+    }
+  }, [setCurrentRoom]) // 只在組件載入時執行一次
+  
+  // 調試日誌 (簡化版)
+  console.log('💬 PrivateChat 狀態:', {
+    currentPrivateChat: !!currentPrivateChat,
+    nickname: currentPrivateChat?.nickname,
+    messagesCount: messages.length,
+    privateChatsListCount: privateChatsList.length,
+    chatsLoading
+  })
+  
+  // 自動滾動到底部
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' })
+    }
+  }, [messages])
+
+  // 當進入特定私聊時，自動標記為已讀
+  useEffect(() => {
+    if (currentPrivateChat?.recipientId) {
+      console.log(`📖 進入與 ${currentPrivateChat.nickname} 的聊天，標記為已讀`)
+      markAsRead(currentPrivateChat.recipientId)
+    }
+  }, [currentPrivateChat?.recipientId, markAsRead])
+
+  // 處理返回私聊列表
+  const handleBackToList = () => {
+    console.log('🔙 返回私聊列表')
+    setCurrentPrivateChat(null)
+    setCurrentRoom('private') // 保持在私聊模式，但不在具體對話中
   }
 
-  const handleCloseVoiceCall = () => {
-    setShowVoiceCall(false)
+  // 處理發送私訊
+  const handleSendMessage = async () => {
+    if (!inputMessage.trim() || !currentPrivateChat) return
+    
+    try {
+      await sendPrivateMessage({
+        text: inputMessage.trim(),
+        type: 'text'
+      })
+      setInputMessage('')
+    } catch (error) {
+      console.error('發送私訊失敗:', error)
+    }
   }
 
   // 如果有選擇特定私聊，顯示聊天界面
@@ -155,15 +172,6 @@ const PrivateChat = () => {
                 <p className="text-sm text-gray-500">私人對話</p>
               </div>
             </div>
-            
-            {/* 語音通話按鈕 */}
-            <button
-              onClick={handleVoiceCall}
-              className="p-3 rounded-lg bg-green-500 hover:bg-green-600 text-white transition-colors"
-              title="語音通話"
-            >
-              <Phone className="w-5 h-5" />
-            </button>
           </div>
         </div>
 
@@ -187,53 +195,9 @@ const PrivateChat = () => {
           <div ref={messagesEndRef} />
         </div>
 
-        {/* 圖片預覽 */}
-        {imagePreview && (
-          <div className="p-4 bg-gray-50 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
-            <div className="relative inline-block">
-              <img 
-                src={imagePreview} 
-                alt="Preview" 
-                className="max-w-xs rounded-lg"
-              />
-              <button
-                onClick={() => {
-                  setImagePreview(null)
-                  if (fileInputRef.current) {
-                    fileInputRef.current.value = ''
-                  }
-                }}
-                className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-        )}
-
         {/* 輸入區域 */}
         <div className="bg-white/70 dark:bg-dark-card/70 backdrop-blur-sm border-t border-gray-200 dark:border-gray-700 p-4">
           <div className="flex gap-2">
-            {/* 圖片上傳按鈕 */}
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              disabled={uploadingImage}
-              className="p-3 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
-              title="上傳圖片"
-            >
-              <Image className="w-5 h-5" />
-            </button>
-            
-            {/* 隱藏的文件輸入 */}
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              onChange={handleImageSelect}
-              className="hidden"
-            />
-            
-            {/* 文字輸入 */}
             <input
               type="text"
               value={inputMessage}
@@ -244,27 +208,16 @@ const PrivateChat = () => {
                          focus:ring-2 focus:ring-sea-blue/20 focus:border-sea-blue 
                          bg-white dark:bg-dark-card dark:text-dark-text outline-none"
             />
-            
-            {/* 發送按鈕 */}
             <button 
               onClick={handleSendMessage}
-              disabled={(!inputMessage.trim() && !imagePreview) || uploadingImage}
+              disabled={!inputMessage.trim()}
               className="px-6 py-3 bg-sea-blue hover:bg-sea-dark disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-colors flex items-center gap-2"
             >
               <Send className="w-4 h-4" />
-              {uploadingImage ? '上傳中...' : '發送'}
+              發送
             </button>
           </div>
         </div>
-
-        {/* 語音通話組件 */}
-        <VoiceCall
-          isVisible={showVoiceCall}
-          onClose={handleCloseVoiceCall}
-          recipientName={currentPrivateChat.nickname}
-          recipientId={currentPrivateChat.recipientId}
-          isIncoming={false}
-        />
       </div>
     )
   }
@@ -354,6 +307,8 @@ const PrivateChat = () => {
           </div>
         )}
       </div>
+
+
     </div>
   )
 }
