@@ -59,29 +59,42 @@ const PWAInstallPrompt = ({ user = null }) => {
 
   // 監聽用戶登入狀態變化
   useEffect(() => {
+    console.log('🔍 PWA 安裝提示狀態檢查:', {
+      user: !!user,
+      userName: user?.displayName || user?.email || '未知',
+      isInstalled,
+      isStandalone,
+      showInstallPrompt,
+      deferredPrompt: !!deferredPrompt
+    });
+
     if (user && !isInstalled && !isStandalone) {
-      console.log('👤 用戶登入，觸發 PWA 安裝提示');
+      console.log('👤 用戶登入，準備觸發 PWA 安裝提示');
       
       // 用戶登入後立即檢查是否可以顯示安裝提示
       const loginPromptTimer = setTimeout(() => {
         // 檢查是否已經顯示過或安裝過
         const dismissed = localStorage.getItem('pwa-install-dismissed');
+        console.log('💾 檢查本地存儲:', { dismissed, timestamp: dismissed ? new Date(parseInt(dismissed)).toLocaleString() : '無' });
+        
         if (dismissed) {
           const dismissedTime = parseInt(dismissed);
           const hoursSinceLastDismiss = (Date.now() - dismissedTime) / (1000 * 60 * 60);
-          if (hoursSinceLastDismiss < 6) { // 6小時內不重複顯示
+          console.log('⏰ 距離上次關閉:', hoursSinceLastDismiss.toFixed(1), '小時');
+          
+          if (hoursSinceLastDismiss < 0.5) { // 改為 30 分鐘，方便測試
             console.log('⏰ 最近已顯示過安裝提示，暫不重複顯示');
             return;
           }
         }
         
+        console.log('💡 強制顯示 PWA 安裝提示');
         setShowInstallPrompt(true);
-        console.log('💡 登入後顯示 PWA 安裝提示');
-      }, 3000); // 登入後 3 秒顯示
+      }, 2000); // 改為 2 秒，更快顯示
 
       return () => clearTimeout(loginPromptTimer);
     }
-  }, [user, isInstalled, isStandalone]);
+  }, [user, isInstalled, isStandalone, deferredPrompt]);
 
   // 處理安裝點擊
   const handleInstallClick = async () => {
@@ -108,26 +121,68 @@ const PWAInstallPrompt = ({ user = null }) => {
   // 關閉提示
   const handleDismiss = () => {
     setShowInstallPrompt(false);
-    // 6小時後重新顯示（縮短間隔，讓用戶有更多安裝機會）
+    // 30分鐘後重新顯示（方便測試）
     localStorage.setItem('pwa-install-dismissed', Date.now().toString());
-    console.log('📱 PWA 安裝提示已關閉，6小時後可重新顯示');
+    console.log('📱 PWA 安裝提示已關閉，30分鐘後可重新顯示');
   };
+
+  // 測試功能：強制顯示提示
+  const forceShowPrompt = () => {
+    console.log('🧪 強制顯示 PWA 安裝提示');
+    localStorage.removeItem('pwa-install-dismissed');
+    setShowInstallPrompt(true);
+  };
+
+  // 暴露到全域供測試使用
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      window.forcePWAPrompt = forceShowPrompt;
+      window.pwaPromptStatus = {
+        user: !!user,
+        isInstalled,
+        isStandalone,
+        showInstallPrompt,
+        deferredPrompt: !!deferredPrompt,
+        isIOS
+      };
+    }
+  }, [user, isInstalled, isStandalone, showInstallPrompt, deferredPrompt, isIOS]);
 
   // 檢查是否應該顯示提示
   const shouldShowPrompt = () => {
-    if (isInstalled || isStandalone) return false;
+    console.log('🔍 shouldShowPrompt 檢查:', {
+      isInstalled,
+      isStandalone,
+      showInstallPrompt,
+      isIOS,
+      user: !!user
+    });
+
+    if (isInstalled || isStandalone) {
+      console.log('❌ 已安裝或已在獨立模式');
+      return false;
+    }
     
     const dismissed = localStorage.getItem('pwa-install-dismissed');
     if (dismissed) {
       const dismissedTime = parseInt(dismissed);
       const hoursSinceLastDismiss = (Date.now() - dismissedTime) / (1000 * 60 * 60);
-      if (hoursSinceLastDismiss < 6) return false; // 改為 6 小時
+      console.log('⏰ 距離上次關閉:', hoursSinceLastDismiss.toFixed(1), '小時');
+      if (hoursSinceLastDismiss < 0.5) { // 改為 30 分鐘，方便測試
+        console.log('❌ 太早重複顯示');
+        return false;
+      }
     }
     
-    return showInstallPrompt || isIOS;
+    const result = showInstallPrompt || (isIOS && user);
+    console.log('✅ shouldShowPrompt 結果:', result);
+    return result;
   };
 
-  if (!shouldShowPrompt()) return null;
+  const shouldShow = shouldShowPrompt();
+  console.log('🎯 最終顯示決定:', shouldShow);
+
+  if (!shouldShow) return null;
 
   return (
     <div className="fixed bottom-4 left-4 right-4 z-50 mx-auto max-w-sm">
