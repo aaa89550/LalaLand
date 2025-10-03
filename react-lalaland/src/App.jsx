@@ -6,6 +6,7 @@ import { auth, database } from './config/firebase'
 import { onAuthStateChanged } from 'firebase/auth'
 import { ref, get, remove } from 'firebase/database'
 import { notificationManager } from './utils/notificationManager'
+import { fcmManager } from './utils/fcmManager'
 import { debugDatabase } from './utils/debugFirebase'
 
 // 頁面組件
@@ -21,6 +22,18 @@ function App() {
   const { user, setUser, loading, setLoading } = useAuthStore()
 
   useEffect(() => {
+    // 初始化 FCM
+    const initializeFCM = async () => {
+      try {
+        await fcmManager.initialize()
+        console.log('✅ FCM 系統已初始化')
+      } catch (error) {
+        console.error('❌ FCM 初始化失敗:', error)
+      }
+    }
+
+    initializeFCM()
+
     // Service Worker 註冊（簡化版）
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js')

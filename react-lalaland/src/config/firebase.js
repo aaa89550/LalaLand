@@ -2,6 +2,7 @@ import { initializeApp } from 'firebase/app'
 import { getAuth } from 'firebase/auth'
 import { getDatabase } from 'firebase/database'
 import { getStorage } from 'firebase/storage'
+import { getMessaging } from 'firebase/messaging'
 
 const firebaseConfig = {
   apiKey: "AIzaSyD9-_GYLQabcC3SPMTOG9zj2CcaPqzfOrI",
@@ -21,5 +22,15 @@ const app = initializeApp(firebaseConfig)
 export const auth = getAuth(app)
 export const database = getDatabase(app)
 export const storage = getStorage(app)
+
+// FCM Messaging (只在支援的環境中初始化)
+export let messaging = null
+try {
+  if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+    messaging = getMessaging(app)
+  }
+} catch (error) {
+  console.log('FCM 不支援或初始化失敗:', error)
+}
 
 export default app

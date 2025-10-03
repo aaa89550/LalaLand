@@ -1,12 +1,13 @@
 // 簡化的 Service Worker - 僅用於 PWA 基本功能
-const CACHE_NAME = 'lalaland-v4-simple'
+const CACHE_NAME = 'lalaland-v5-fcm'
 const urlsToCache = [
   '/',
   '/index.html',
-  '/assets/index-e59QtEet.css',
-  '/assets/index-_M3ajTH0.js',
+  '/assets/index-5cDkpPBn.css',
+  '/assets/index-DT9JiTph.js',
   '/icon-512.png',
-  '/manifest.json'
+  '/manifest.json',
+  '/firebase-messaging-sw.js'
 ]
 
 // 安裝 Service Worker
