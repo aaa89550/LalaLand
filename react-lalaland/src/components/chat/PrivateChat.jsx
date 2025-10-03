@@ -189,12 +189,12 @@ const PrivateChat = () => {
 
         {/* 圖片預覽 */}
         {imagePreview && (
-          <div className="p-4 bg-gray-50 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
+          <div className="p-3 bg-gray-50 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
             <div className="relative inline-block">
               <img 
                 src={imagePreview} 
                 alt="Preview" 
-                className="max-w-xs rounded-lg"
+                className="max-w-32 md:max-w-xs rounded-lg"
               />
               <button
                 onClick={() => {
@@ -203,27 +203,60 @@ const PrivateChat = () => {
                     fileInputRef.current.value = ''
                   }
                 }}
-                className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600"
+                className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
+            <p className="text-xs text-gray-500 mt-2">點擊 X 移除圖片</p>
           </div>
         )}
 
         {/* 輸入區域 */}
         <div className="bg-white/70 dark:bg-dark-card/70 backdrop-blur-sm border-t border-gray-200 dark:border-gray-700 p-4">
-          <div className="flex gap-2">
-            {/* 圖片上傳按鈕 */}
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              disabled={uploadingImage}
-              className="p-3 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
-              title="上傳圖片"
-            >
-              <Image className="w-5 h-5" />
-            </button>
+          <div className="flex items-end gap-2">
+            {/* 功能按鈕組 */}
+            <div className="flex gap-1">
+              {/* 圖片上傳按鈕 */}
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploadingImage}
+                className="p-2 rounded-lg text-gray-500 hover:text-sea-blue hover:bg-sea-light/50 transition-colors disabled:opacity-50"
+                title="上傳圖片"
+              >
+                <Image className="w-5 h-5" />
+              </button>
+            </div>
             
+            {/* 文字輸入 */}
+            <div className="flex-1">
+              <input
+                type="text"
+                value={inputMessage}
+                onChange={(e) => setInputMessage(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                placeholder={`傳訊息給 ${currentPrivateChat.nickname}...`}
+                className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 
+                           focus:ring-2 focus:ring-sea-blue/20 focus:border-sea-blue 
+                           bg-white dark:bg-dark-card dark:text-dark-text outline-none"
+              />
+            </div>
+            
+            {/* 發送按鈕 */}
+            <button 
+              onClick={handleSendMessage}
+              disabled={(!inputMessage.trim() && !imagePreview) || uploadingImage}
+              className="p-3 bg-sea-blue hover:bg-sea-dark text-white rounded-lg 
+                       disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              title={uploadingImage ? '上傳中...' : '發送'}
+            >
+              {uploadingImage ? (
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <Send className="w-5 h-5" />
+              )}
+            </button>
+
             {/* 隱藏的文件輸入 */}
             <input
               ref={fileInputRef}
@@ -232,28 +265,6 @@ const PrivateChat = () => {
               onChange={handleImageSelect}
               className="hidden"
             />
-            
-            {/* 文字輸入 */}
-            <input
-              type="text"
-              value={inputMessage}
-              onChange={(e) => setInputMessage(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-              placeholder={`傳訊息給 ${currentPrivateChat.nickname}...`}
-              className="flex-1 px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 
-                         focus:ring-2 focus:ring-sea-blue/20 focus:border-sea-blue 
-                         bg-white dark:bg-dark-card dark:text-dark-text outline-none"
-            />
-            
-            {/* 發送按鈕 */}
-            <button 
-              onClick={handleSendMessage}
-              disabled={(!inputMessage.trim() && !imagePreview) || uploadingImage}
-              className="px-6 py-3 bg-sea-blue hover:bg-sea-dark disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-colors flex items-center gap-2"
-            >
-              <Send className="w-4 h-4" />
-              {uploadingImage ? '上傳中...' : '發送'}
-            </button>
           </div>
         </div>
 
