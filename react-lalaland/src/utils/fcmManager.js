@@ -61,22 +61,76 @@ class FCMManager {
     }
   }
 
+  // 檢查和診斷 FCM 環境
+  async diagnoseEnvironment() {
+    const diagnosis = {
+      https: location.protocol === 'https:' || location.hostname === 'localhost',
+      serviceWorker: 'serviceWorker' in navigator,
+      pushManager: 'PushManager' in window,
+      notification: 'Notification' in window,
+      messaging: !!messaging,
+      permission: Notification.permission,
+      userAgent: navigator.userAgent,
+      url: window.location.href
+    }
+
+    console.log('🔍 FCM 環境診斷:', diagnosis)
+    return diagnosis
+  }
+
   // 請求通知權限並取得 FCM Token
   async requestPermission(userId = null) {
-    if (!this.isSupported || !this.isInitialized) {
-      console.warn('🚫 FCM 未支援或未初始化')
-      return null
+    // 先診斷環境
+    const diagnosis = await this.diagnoseEnvironment()
+    
+    if (!this.isSupported) {
+      const missingFeatures = []
+      if (!diagnosis.serviceWorker) missingFeatures.push('Service Worker')
+      if (!diagnosis.pushManager) missingFeatures.push('Push Manager')
+      if (!diagnosis.notification) missingFeatures.push('Notification API')
+      if (!diagnosis.messaging) missingFeatures.push('Firebase Messaging')
+      
+      console.error('🚫 FCM 不支援，缺少功能:', missingFeatures.join(', '))
+      throw new Error(`瀏覽器不支援推播通知，缺少: ${missingFeatures.join(', ')}`)
+    }
+
+    if (!this.isInitialized) {
+      console.warn('🚫 FCM 未初始化，嘗試重新初始化...')
+      const initSuccess = await this.initialize()
+      if (!initSuccess) {
+        throw new Error('FCM 初始化失敗')
+      }
+    }
+
+    // 檢查 HTTPS 環境
+    if (!diagnosis.https) {
+      throw new Error('推播通知需要 HTTPS 環境或 localhost')
     }
 
     try {
+      // 檢查當前權限狀態
+      console.log('📋 當前通知權限狀態:', Notification.permission)
+
+      // 如果權限已被拒絕，提供重設指引
+      if (Notification.permission === 'denied') {
+        throw new Error('通知權限已被拒絕。請在瀏覽器設定中重新允許通知權限。')
+      }
+
       // 請求通知權限
+      console.log('🔔 請求通知權限...')
       const permission = await Notification.requestPermission()
+      console.log('📋 權限請求結果:', permission)
+
       if (permission !== 'granted') {
-        console.warn('❌ 用戶拒絕通知權限')
-        return null
+        if (permission === 'denied') {
+          throw new Error('通知權限被拒絕。請檢查瀏覽器設定並重新允許通知。')
+        } else {
+          throw new Error('通知權限未獲得授予。')
+        }
       }
 
       // 取得 FCM Token
+      console.log('🎫 取得 FCM Token...')
       const token = await getToken(messaging, {
         vapidKey: VAPID_KEY
       })
