@@ -61,10 +61,6 @@ class NotificationManager {
       return notification
     } catch (error) {
       console.error('🚨 顯示通知時出錯:', error)
-      // 降級到內部通知
-      if (window.showNotification) {
-        window.showNotification(`${title}: ${body}`, 'info')
-      }
       return null
     }
   }
