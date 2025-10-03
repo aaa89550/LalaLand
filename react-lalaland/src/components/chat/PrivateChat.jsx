@@ -52,9 +52,16 @@ const PrivateChat = () => {
   console.log('💬 PrivateChat 狀態:', {
     currentPrivateChat: !!currentPrivateChat,
     nickname: currentPrivateChat?.nickname,
+    recipientId: currentPrivateChat?.recipientId,
     messagesCount: messages.length,
     privateChatsListCount: privateChatsList.length,
-    chatsLoading
+    chatsLoading,
+    hasMessages: messages.length > 0,
+    firstMessagePreview: messages[0] ? {
+      text: messages[0].text?.substring(0, 30),
+      from: messages[0].from,
+      user: messages[0].user
+    } : null
   })
 
   // 自動滾動到底部
@@ -264,6 +271,19 @@ const PrivateChat = () => {
 
         {/* 訊息區域 */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
+          {/* 開發環境調試信息 */}
+          {import.meta.env.DEV && (
+            <div className="bg-yellow-100 dark:bg-yellow-900/30 p-2 rounded text-xs">
+              <p>🔍 調試信息：</p>
+              <p>訊息數量: {messages.length}</p>
+              <p>接收者ID: {currentPrivateChat?.recipientId}</p>
+              <p>使用者ID: {user?.uid}</p>
+              {messages.length > 0 && (
+                <p>最新訊息: {messages[messages.length - 1]?.text?.substring(0, 50)}...</p>
+              )}
+            </div>
+          )}
+          
           {messages.length === 0 ? (
             <div className="text-center text-gray-500 mt-8">
               <MessageCircle className="w-16 h-16 mx-auto mb-4 text-gray-300" />

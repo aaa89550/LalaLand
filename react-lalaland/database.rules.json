@@ -1,39 +1,51 @@
 {
   "rules": {
-    "users": {
-      "$uid": {
-        ".read": "auth != null",
-        ".write": "auth != null && auth.uid == $uid"
-      }
-    },
-    "presence": {
-      "$uid": {
-        ".read": "auth != null",
-        ".write": "auth != null && auth.uid == $uid"
-      }
-    },
-    "groupChats": {
-      "$room": {
-        "messages": {
-          ".read": "auth != null",
-          ".write": "auth != null"
-        }
-      }
-    },
-    "privateChats": {
-      "$roomId": {
-        "messages": {
-          ".read": "auth != null",
-          ".write": "auth != null"
-        }
-      }
-    },
     "voiceCalls": {
       "$callId": {
         ".read": "auth != null && (data.child('from').val() == auth.uid || data.child('to').val() == auth.uid)",
         ".write": "auth != null && (data.child('from').val() == auth.uid || data.child('to').val() == auth.uid || !data.exists())",
         ".validate": "newData.hasChildren(['from', 'to', 'type', 'status', 'createdAt'])"
       }
+    },
+    "groupChats": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+    "chats": {
+      ".read": "auth != null", 
+      ".write": "auth != null"
+    },
+    "users": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+    "privateChats": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+    "privateChatsList": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+    "userUnreadCounts": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid"
+      }
+    },
+    "userLastRead": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid"
+      }
+    },
+    "settings": {
+      ".read": "auth != null",
+      ".write": false
+    },
+    "announcements": {
+      ".read": "auth != null", 
+      ".write": false
     }
   }
 }
