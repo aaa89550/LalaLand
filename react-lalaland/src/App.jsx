@@ -5,7 +5,7 @@ import { useAuthStore } from './store/authStore'
 import { auth, database } from './config/firebase'
 import { onAuthStateChanged } from 'firebase/auth'
 import { ref, get, remove } from 'firebase/database'
-import { initNotifications } from './utils/notificationManager'
+import { notificationManager } from './utils/notificationManager'
 import { debugDatabase } from './utils/debugFirebase'
 
 // 頁面組件
@@ -21,8 +21,12 @@ function App() {
   const { user, setUser, loading, setLoading } = useAuthStore()
 
   useEffect(() => {
-    // 初始化通知系統
-    initNotifications()
+    // Service Worker 註冊（簡化版）
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js')
+        .then(() => console.log('📱 Service Worker 註冊成功'))
+        .catch(error => console.log('📱 Service Worker 註冊失敗:', error))
+    }
     
     // 監聽 Firebase 認證狀態
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {

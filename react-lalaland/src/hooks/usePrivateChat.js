@@ -79,15 +79,20 @@ export const usePrivateChat = (recipientId) => {
                 const senderName = message.user || '匿名用戶'
                 console.log(`🔔 收到來自 ${senderName} 的新私訊:`, message.text)
                 
-                // 顯示桌面通知
-                notificationManager.showPrivateMessageNotification(
+                // 顯示通知
+                notificationManager.showMessageNotification(
                   senderName,
                   message.text,
-                  () => {
-                    // 點擊通知時聚焦到窗口
-                    window.focus()
-                  }
+                  'private'
                 )
+                
+                // 播放提示音
+                notificationManager.playNotificationSound()
+                
+                // 顯示內部通知
+                if (window.showNotification) {
+                  window.showNotification(`💬 ${senderName}: ${message.text}`, 'info', 6000)
+                }
                 
                 // 手機震動
                 notificationManager.vibrate([200, 100, 200])

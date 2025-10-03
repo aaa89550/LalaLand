@@ -1,39 +1,28 @@
 import React, { useState, useEffect } from 'react'
-import { X, Bell, BellOff, User, Camera } from 'lucide-react'
+import { X, Bell, BellOff, User, Camera, Volume2, VolumeX } from 'lucide-react'
 import { useAuthStore } from '../../store/authStore'
-import { notificationManager, requestNotificationPermission } from '../../utils/notificationManager'
 import toast from 'react-hot-toast'
 
 const SettingsModal = ({ isOpen, onClose }) => {
   const { user, setUser } = useAuthStore()
-  const [notificationsEnabled, setNotificationsEnabled] = useState(false)
   const [nickname, setNickname] = useState(user?.nickname || '')
   const [avatar, setAvatar] = useState(user?.avatar || '')
   const [tempNickname, setTempNickname] = useState(nickname)
+  
+  // 內部通知設定
+  const [soundEnabled, setSoundEnabled] = useState(
+    localStorage.getItem('notificationSound') !== 'false'
+  )
+  const [desktopNotificationEnabled, setDesktopNotificationEnabled] = useState(
+    localStorage.getItem('desktopNotification') !== 'false'
+  )
 
   useEffect(() => {
-    const checkNotificationStatus = async () => {
-      if (!isOpen) return;
-      
-      // 檢查瀏覽器通知權限
-      const permission = 'Notification' in window ? Notification.permission : 'default';
-      
-      if (permission === 'granted' && 'serviceWorker' in navigator) {
-        try {
-          const reg = await navigator.serviceWorker.ready;
-          const sub = await reg.pushManager.getSubscription();
-          setNotificationsEnabled(!!sub);
-        } catch (error) {
-          console.warn('檢查推播訂閱失敗:', error);
-          setNotificationsEnabled(false);
-        }
-      } else {
-        setNotificationsEnabled(false);
-      }
-    };
-    
-    checkNotificationStatus();
-  }, [isOpen])
+    if (isOpen) {
+      setTempNickname(user?.nickname || '')
+      setAvatar(user?.avatar || '')
+    }
+  }, [isOpen, user])
 
   if (!isOpen) return null
 
@@ -61,61 +50,46 @@ const SettingsModal = ({ isOpen, onClose }) => {
     }
   }
 
-  const toggleNotifications = async () => {
+  // 切換聲音通知
+  const toggleSoundNotification = () => {
+    const newSoundEnabled = !soundEnabled
+    setSoundEnabled(newSoundEnabled)
+    localStorage.setItem('notificationSound', newSoundEnabled.toString())
+    toast.success(newSoundEnabled ? '🔊 提示音已開啟' : '🔇 提示音已關閉')
+  }
+
+  // 切換桌面通知
+  const toggleDesktopNotification = async () => {
     try {
-      if (!notificationsEnabled) {
-        // 啟用推播通知
+      if (!desktopNotificationEnabled) {
+        // 啟用桌面通知，需要請求權限
         if (!('Notification' in window)) {
-          toast.error('❌ 此瀏覽器不支援通知');
-          return;
-        }
-        
-        if (location.protocol !== 'https:' && location.hostname !== 'localhost') {
-          toast.error('❌ 通知/推播需要 HTTPS');
-          return;
+          toast.error('❌ 此瀏覽器不支援通知')
+          return
         }
 
-        // 請求權限
-        const permission = await Notification.requestPermission();
+        const permission = await Notification.requestPermission()
         if (permission !== 'granted') {
-          toast.error('❌ 通知權限被拒絕');
-          return;
+          toast.error('❌ 通知權限被拒絕')
+          return
         }
 
-        // 訂閱推播
-        if ('serviceWorker' in navigator) {
-          const reg = await navigator.serviceWorker.ready;
-          
-          // 檢查是否已有訂閱
-          const existingSub = await reg.pushManager.getSubscription();
-          if (!existingSub) {
-            // 暫時跳過 VAPID 訂閱，因為需要真實的公鑰
-            console.log('通知權限已授予，但跳過推播訂閱（需要 VAPID 配置）');
-          }
-        }
+        setDesktopNotificationEnabled(true)
+        localStorage.setItem('desktopNotification', 'true')
+        toast.success('🔔 桌面通知已啟用')
         
-        setNotificationsEnabled(true);
-        toast.success('🔔 通知已啟用！');
+        // 顯示測試通知
+        if (window.showNotification) {
+          window.showNotification('桌面通知已啟用！', 'success')
+        }
       } else {
-        // 停用推播通知
-        if ('serviceWorker' in navigator) {
-          try {
-            const reg = await navigator.serviceWorker.ready;
-            const sub = await reg.pushManager.getSubscription();
-            if (sub) {
-              await sub.unsubscribe();
-            }
-          } catch (error) {
-            console.warn('取消推播訂閱失敗:', error);
-          }
-        }
-        
-        setNotificationsEnabled(false);
-        toast.success('🔕 通知已關閉');
+        setDesktopNotificationEnabled(false)
+        localStorage.setItem('desktopNotification', 'false')
+        toast.success('🔕 桌面通知已關閉')
       }
     } catch (error) {
-      console.error('切換通知設定失敗:', error);
-      toast.error('❌ 通知設定失敗');
+      console.error('切換桌面通知設定失敗:', error)
+      toast.error('❌ 桌面通知設定失敗')
     }
   }
 
@@ -183,27 +157,55 @@ const SettingsModal = ({ isOpen, onClose }) => {
           <div>
             <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">通知設定</h3>
             
+            {/* 提示音設定 */}
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                {soundEnabled ? (
+                  <Volume2 className="w-5 h-5 text-green-500" />
+                ) : (
+                  <VolumeX className="w-5 h-5 text-gray-400" />
+                )}
+                <div>
+                  <p className="font-medium text-gray-900 dark:text-white">提示音</p>
+                  <p className="text-sm text-gray-500">收到新訊息時播放提示音</p>
+                </div>
+              </div>
+              <button
+                onClick={toggleSoundNotification}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                  soundEnabled ? 'bg-blue-500' : 'bg-gray-300'
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    soundEnabled ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+            </div>
+
+            {/* 桌面通知設定 */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                {notificationsEnabled ? (
+                {desktopNotificationEnabled ? (
                   <Bell className="w-5 h-5 text-green-500" />
                 ) : (
                   <BellOff className="w-5 h-5 text-gray-400" />
                 )}
                 <div>
-                  <p className="font-medium text-gray-900 dark:text-white">推送通知</p>
-                  <p className="text-sm text-gray-500">接收新訊息通知</p>
+                  <p className="font-medium text-gray-900 dark:text-white">桌面通知</p>
+                  <p className="text-sm text-gray-500">在瀏覽器中顯示通知泡泡</p>
                 </div>
               </div>
               <button
-                onClick={toggleNotifications}
+                onClick={toggleDesktopNotification}
                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
-                  notificationsEnabled ? 'bg-blue-500' : 'bg-gray-300'
+                  desktopNotificationEnabled ? 'bg-blue-500' : 'bg-gray-300'
                 }`}
               >
                 <span
                   className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                    notificationsEnabled ? 'translate-x-6' : 'translate-x-1'
+                    desktopNotificationEnabled ? 'translate-x-6' : 'translate-x-1'
                   }`}
                 />
               </button>

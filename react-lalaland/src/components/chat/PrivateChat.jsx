@@ -4,7 +4,9 @@ import { useChatStore } from '../../store/chatStore'
 import { useAuthStore } from '../../store/authStore'
 import { usePrivateChat } from '../../hooks/usePrivateChat'
 import { usePrivateChatsList } from '../../hooks/usePrivateChatsList'
+import { useUnreadMessages } from '../../hooks/useUnreadMessages'
 import MessageBubble from './MessageBubble'
+import UnreadBadge from '../UnreadBadge'
 import toast from 'react-hot-toast'
 
 const PrivateChat = () => {
@@ -24,6 +26,9 @@ const PrivateChat = () => {
   
   // 使用私聊 hook 來載入歷史訊息
   const { sendPrivateMessage } = usePrivateChat(currentPrivateChat?.recipientId)
+  
+  // 使用未讀訊息 hook
+  const { getUnreadCount, markAsRead } = useUnreadMessages()
   
   // 調試日誌 (簡化版)
   console.log('💬 PrivateChat 狀態:', {
@@ -185,14 +190,21 @@ const PrivateChat = () => {
             {privateChatsList.map((chat) => (
               <div
                 key={chat.id}
-                onClick={() => setCurrentPrivateChat(chat)}
-                className="flex items-center gap-3 p-4 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer transition-colors"
+                onClick={() => {
+                  setCurrentPrivateChat(chat)
+                  // 標記為已讀
+                  markAsRead(chat.id)
+                }}
+                className="flex items-center gap-3 p-4 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer transition-colors relative"
               >
-                <img 
-                  src={chat.avatar || `https://ui-avatars.com/api/?name=${chat.nickname}&background=56c596&color=fff`}
-                  alt={chat.nickname}
-                  className="w-12 h-12 rounded-full"
-                />
+                <div className="relative">
+                  <img 
+                    src={chat.avatar || `https://ui-avatars.com/api/?name=${chat.nickname}&background=56c596&color=fff`}
+                    alt={chat.nickname}
+                    className="w-12 h-12 rounded-full"
+                  />
+                  <UnreadBadge count={getUnreadCount(chat.id)} className="absolute -top-1 -right-1" />
+                </div>
                 <div className="flex-1">
                   <h3 className="font-medium text-gray-800 dark:text-gray-200">
                     {chat.nickname}

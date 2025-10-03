@@ -16,6 +16,8 @@ import { useAuthStore } from '../../store/authStore'
 import SettingsModal from './SettingsModal'
 import { useChatStore } from '../../store/chatStore'
 import { cleanupStaleUsers } from '../../utils/cleanupUsers'
+import { useUnreadMessages } from '../../hooks/useUnreadMessages'
+import UnreadBadge from '../UnreadBadge'
 import toast from 'react-hot-toast'
 
 const Sidebar = () => {
@@ -31,6 +33,7 @@ const Sidebar = () => {
   } = useChatStore()
   
   const [showSettings, setShowSettings] = useState(false)
+  const { totalUnread } = useUnreadMessages()
 
   const handleLogout = async () => {
     try {
@@ -134,10 +137,11 @@ const Sidebar = () => {
                     setCurrentRoom('private')
                     setSidebarOpen(false)
                   }}
-                  className={`sidebar-item w-full ${currentRoom === 'private' ? 'active' : ''}`}
+                  className={`sidebar-item w-full ${currentRoom === 'private' ? 'active' : ''} relative`}
                 >
                   <MessageCircle className="w-5 h-5" />
                   <span className="font-medium">私人訊息</span>
+                  <UnreadBadge count={totalUnread} />
                 </button>
               </div>
             </div>

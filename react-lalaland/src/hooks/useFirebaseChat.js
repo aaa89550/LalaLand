@@ -95,19 +95,20 @@ export const useFirebaseChat = (roomId) => {
                 
                 console.log(`🔔 收到來自 ${senderName} 的新群組訊息 (${roomName}):`, message.text)
                 
-                // 顯示桌面通知
-                notificationManager.showGroupMessageNotification(
-                  senderName,
-                  roomName,
+                // 顯示通知
+                notificationManager.showMessageNotification(
+                  `${senderName} (${roomName})`,
                   message.text,
-                  () => {
-                    // 點擊通知時聚焦到窗口
-                    window.focus()
-                  }
+                  'group'
                 )
                 
-                // 手機震動 (較短的震動，避免群組訊息太吵)
-                notificationManager.vibrate([100])
+                // 播放提示音
+                notificationManager.playNotificationSound()
+                
+                // 顯示內部通知
+                if (window.showNotification) {
+                  window.showNotification(`🏠 ${senderName} (${roomName}): ${message.text}`, 'info', 6000)
+                }
                 
                 // 播放通知音效 (群組訊息音效較輕)
                 if (Math.random() < 0.3) { // 只有 30% 機率播放音效，避免太頻繁

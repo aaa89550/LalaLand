@@ -1,118 +1,135 @@
-// NotificationSystem.jsx
-import React, { useEffect, useState } from 'react';
+// NotificationSystem.jsx - 簡化的內部通知系統
+import React, { useState, useEffect, useCallback } from 'react';
 
-// 臨時使用測試用的 VAPID 公鑰，實際部署時需要替換
-const VAPID_PUBLIC_KEY = process.env.REACT_APP_VAPID_PUBLIC_KEY || 'BMqVJWe1KqP8Rd3hNwT4Fg7D6Y8zV9VcX1p2e1f3g4h5i6j7k8l9m0n1o2p3q4r5s6t7u8v9w0x1y2z3a4b5c6d7e8f9g0h1i2j3k4l5m6n7o8p9q0r1s2t3u4v5w6x7y8z9';
-
-function urlBase64ToUint8Array(base64String) {
-  const padding = '='.repeat((4 - base64String.length % 4) % 4);
-  const b64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
-  const raw = atob(b64);
-  const arr = new Uint8Array(raw.length);
-  for (let i = 0; i < raw.length; ++i) arr[i] = raw.charCodeAt(i);
-  return arr;
-}
+let notificationId = 0;
 
 export default function NotificationSystem() {
-  const [isEnabled, setIsEnabled] = useState(false);
-  const [permission, setPermission] = useState(
-    typeof Notification !== 'undefined' ? Notification.permission : 'default'
+  const [notifications, setNotifications] = useState([]);
+  const [soundEnabled, setSoundEnabled] = useState(
+    localStorage.getItem('notificationSound') !== 'false'
   );
 
-  useEffect(() => {
-    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
-    navigator.serviceWorker.register('/sw.js'); // 確保 /sw.js 存在且可被抓到
+  // 新增通知的方法
+  const addNotification = useCallback((message, type = 'info', duration = 5000) => {
+    const id = ++notificationId;
+    const notification = {
+      id,
+      message,
+      type, // 'info', 'success', 'warning', 'error'
+      timestamp: Date.now()
+    };
+
+    setNotifications(prev => [...prev, notification]);
+
+    // 播放提示音
+    if (soundEnabled && type !== 'info') {
+      playNotificationSound();
+    }
+
+    // 自動移除通知
+    if (duration > 0) {
+      setTimeout(() => {
+        removeNotification(id);
+      }, duration);
+    }
+
+    return id;
+  }, [soundEnabled]);
+
+  // 移除通知
+  const removeNotification = useCallback((id) => {
+    setNotifications(prev => prev.filter(n => n.id !== id));
   }, []);
 
-  const enable = async () => {
+  // 播放提示音
+  const playNotificationSound = () => {
     try {
-      if (!('Notification' in window)) {
-        alert('此瀏覽器不支援通知');
-        return;
-      }
+      // 創建簡單的提示音
+      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
       
-      if (location.protocol !== 'https:' && location.hostname !== 'localhost') {
-        alert('通知/推播需要 HTTPS');
-        return;
-      }
-
-      // 1) 要在使用者手勢中請求權限
-      const perm = await Notification.requestPermission();
-      setPermission(perm);
-      if (perm !== 'granted') {
-        alert('需要通知權限才能啟用推播通知');
-        return;
-      }
-
-      // 2) 訂閱 Push
-      const reg = await navigator.serviceWorker.ready;
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
       
-      // 檢查是否已有訂閱
-      const existingSub = await reg.pushManager.getSubscription();
-      if (existingSub) {
-        setIsEnabled(true);
-        console.log('已存在推播訂閱');
-        return;
-      }
+      oscillator.frequency.value = 800;
+      oscillator.type = 'sine';
       
-      const sub = await reg.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
-      });
-
-      // 3) 傳到後端儲存（如果有後端服務的話）
-      try {
-        await fetch('/api/push/subscribe', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(sub),
-        });
-        console.log('推播訂閱已保存到後端');
-      } catch (error) {
-        console.warn('無法保存訂閱到後端，但本地推播仍然啟用:', error);
-      }
-
-      setIsEnabled(true);
-      console.log('推播通知已啟用');
+      gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+      
+      oscillator.start();
+      oscillator.stop(audioContext.currentTime + 0.3);
     } catch (error) {
-      console.error('啟用推播失敗:', error);
-      alert('啟用推播失敗，請稍後再試');
+      console.log('無法播放提示音:', error);
     }
   };
 
-  const disable = async () => {
-    const reg = await navigator.serviceWorker.ready;
-    const sub = await reg.pushManager.getSubscription();
-    if (sub) {
-      await fetch('/api/push/unsubscribe', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(await sub.toJSON()),
-      });
-      await sub.unsubscribe();
-    }
-    setIsEnabled(false);
+  // 切換聲音設定
+  const toggleSound = () => {
+    const newSoundEnabled = !soundEnabled;
+    setSoundEnabled(newSoundEnabled);
+    localStorage.setItem('notificationSound', newSoundEnabled.toString());
   };
 
-  // 分頁在前景時的「即時站內提醒」(非推播) 可直接用 Notification 或 UI 紅點
-  const testInPage = async () => {
-    if (document.visibilityState === 'visible') {
-      // 站內提示（自家 UI、Toast、聲音等）
-      alert('站內通知：You have a new private message!');
-    } else if (permission === 'granted') {
-      // 分頁仍活著時的 Notification（非背景推播）
-      new Notification('New Message', { body: 'You have a new private message!' });
-    }
+  // 將 addNotification 方法掛載到全域，供其他元件使用
+  useEffect(() => {
+    window.showNotification = addNotification;
+    return () => {
+      delete window.showNotification;
+    };
+  }, [addNotification]);
+
+  const getNotificationStyle = (type) => {
+    const baseStyle = "mb-2 p-3 rounded-lg shadow-lg transform transition-all duration-300 ease-in-out";
+    const typeStyles = {
+      info: "bg-blue-500 text-white",
+      success: "bg-green-500 text-white", 
+      warning: "bg-yellow-500 text-black",
+      error: "bg-red-500 text-white"
+    };
+    return `${baseStyle} ${typeStyles[type] || typeStyles.info}`;
   };
 
   return (
-    <div>
-      {isEnabled ? (
-        <button onClick={disable}>停用推播</button>
-      ) : (
-        <button onClick={enable}>啟用推播</button>
-      )}
-      <button onClick={testInPage}>測試站內提醒/通知</button>
-    </div>
+    <>
+      {/* 通知氣泡容器 - 固定在右上角 */}
+      <div className="fixed top-4 right-4 z-50 max-w-sm w-full">
+        {notifications.map(notification => (
+          <div
+            key={notification.id}
+            className={getNotificationStyle(notification.type)}
+            onClick={() => removeNotification(notification.id)}
+          >
+            <div className="flex justify-between items-start">
+              <p className="flex-1 text-sm font-medium">
+                {notification.message}
+              </p>
+              <button
+                className="ml-2 text-lg leading-none opacity-70 hover:opacity-100"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  removeNotification(notification.id);
+                }}
+              >
+                ×
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* 聲音設定控制 - 可以在設定選單中使用 */}
+      <div className="notification-settings" style={{ display: 'none' }}>
+        <label className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            checked={soundEnabled}
+            onChange={toggleSound}
+          />
+          <span>啟用通知提示音</span>
+        </label>
+      </div>
+    </>
   );
 }
