@@ -4,6 +4,130 @@ class NotificationManager {
     this.permission = null
     this.isSupported = 'Notification' in window
     this.isEnabled = false
+    this.listeners = new Set() // 狀態變化監聽器
+    this.storageKey = 'lalaland_notification_settings'
+    this.serviceWorkerRegistration = null
+    this.pushSubscription = null
+    
+    // 從 localStorage 恢復設定
+    this.loadSettings()
+    
+    // 註冊 Service Worker
+    this.registerServiceWorker()
+  }
+
+  // 載入已保存的設定
+  loadSettings() {
+    try {
+      const saved = localStorage.getItem(this.storageKey)
+      if (saved) {
+        const settings = JSON.parse(saved)
+        this.isEnabled = settings.isEnabled !== false // 預設啟用
+      } else {
+        this.isEnabled = true // 預設啟用
+      }
+    } catch (error) {
+      console.warn('🔔 載入通知設定失敗，使用預設值:', error)
+      this.isEnabled = true
+    }
+  }
+
+  // 保存設定到 localStorage
+  saveSettings() {
+    try {
+      const settings = {
+        isEnabled: this.isEnabled,
+        timestamp: Date.now()
+      }
+      localStorage.setItem(this.storageKey, JSON.stringify(settings))
+    } catch (error) {
+      console.warn('🔔 保存通知設定失敗:', error)
+    }
+  }
+
+  // 添加狀態變化監聽器
+  addListener(callback) {
+    this.listeners.add(callback)
+    // 立即回調當前狀態
+    callback(this.getStatus())
+    
+    return () => {
+      this.listeners.delete(callback)
+    }
+  }
+
+  // 通知所有監聽器狀態變化
+  notifyListeners() {
+    const status = this.getStatus()
+    this.listeners.forEach(callback => {
+      try {
+        callback(status)
+      } catch (error) {
+        console.error('🔔 通知監聽器回調錯誤:', error)
+      }
+    })
+  }
+
+  // 註冊 Service Worker
+  async registerServiceWorker() {
+    if ('serviceWorker' in navigator) {
+      try {
+        const registration = await navigator.serviceWorker.register('/sw.js')
+        this.serviceWorkerRegistration = registration
+        console.log('✅ Service Worker 註冊成功')
+        
+        // 嘗試訂閱推播通知
+        await this.subscribeToPush()
+      } catch (error) {
+        console.warn('⚠️ Service Worker 註冊失敗:', error)
+      }
+    }
+  }
+
+  // 訂閱推播通知
+  async subscribeToPush() {
+    if (!this.serviceWorkerRegistration || !('PushManager' in window)) {
+      console.warn('⚠️ 不支援推播通知')
+      return false
+    }
+
+    try {
+      // 檢查是否已有訂閱
+      let subscription = await this.serviceWorkerRegistration.pushManager.getSubscription()
+      
+      if (!subscription) {
+        // 創建新的訂閱 (這裡需要 VAPID 公鑰，實際部署時需要配置)
+        const publicVapidKey = 'YOUR_VAPID_PUBLIC_KEY' // 實際部署時需要替換
+        
+        subscription = await this.serviceWorkerRegistration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: this.urlBase64ToUint8Array(publicVapidKey)
+        })
+      }
+
+      this.pushSubscription = subscription
+      console.log('✅ 推播通知訂閱成功')
+      return true
+    } catch (error) {
+      console.warn('⚠️ 推播通知訂閱失敗:', error)
+      return false
+    }
+  }
+
+  // 將 VAPID 公鑰轉換為 Uint8Array
+  urlBase64ToUint8Array(base64String) {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4)
+    const base64 = (base64String + padding)
+      .replace(/-/g, '+')
+      .replace(/_/g, '/')
+
+    const rawData = window.atob(base64)
+    const outputArray = new Uint8Array(rawData.length)
+
+    for (let i = 0; i < rawData.length; ++i) {
+      outputArray[i] = rawData.charCodeAt(i)
+    }
+    return outputArray
   }
 
   // 初始化通知系統
@@ -17,17 +141,23 @@ class NotificationManager {
     this.permission = Notification.permission
 
     if (this.permission === 'granted') {
-      this.isEnabled = true
       console.log('✅ 通知權限已獲得')
+      // 嘗試訂閱推播通知
+      await this.subscribeToPush()
+      this.notifyListeners()
       return true
     }
 
     if (this.permission === 'denied') {
       console.warn('❌ 通知權限被拒絕')
+      this.isEnabled = false
+      this.saveSettings()
+      this.notifyListeners()
       return false
     }
 
     // 權限狀態為 'default'，需要請求權限
+    this.notifyListeners()
     return await this.requestPermission()
   }
 
@@ -38,17 +168,73 @@ class NotificationManager {
       this.permission = permission
       
       if (permission === 'granted') {
-        this.isEnabled = true
         console.log('✅ 用戶授予了通知權限')
+        // 嘗試訂閱推播通知
+        await this.subscribeToPush()
+        this.saveSettings()
+        this.notifyListeners()
         return true
       } else {
         console.log('❌ 用戶拒絕了通知權限')
+        this.isEnabled = false
+        this.saveSettings()
+        this.notifyListeners()
         return false
       }
     } catch (error) {
       console.error('🚨 請求通知權限時出錯:', error)
+      this.notifyListeners()
       return false
     }
+  }
+
+  // 切換通知開關
+  async toggleEnabled() {
+    if (!this.isSupported) {
+      console.warn('🔔 此瀏覽器不支援桌面通知')
+      return false
+    }
+
+    if (this.isEnabled) {
+      // 關閉通知
+      this.isEnabled = false
+      this.saveSettings()
+      this.notifyListeners()
+      return true
+    } else {
+      // 開啟通知 - 需要檢查權限
+      if (this.permission === 'granted') {
+        this.isEnabled = true
+        this.saveSettings()
+        this.notifyListeners()
+        return true
+      } else {
+        // 需要請求權限
+        const granted = await this.requestPermission()
+        if (granted) {
+          this.isEnabled = true
+        }
+        return granted
+      }
+    }
+  }
+
+  // 設定通知開關狀態
+  setEnabled(enabled) {
+    if (!this.isSupported) {
+      console.warn('🔔 此瀏覽器不支援桌面通知')
+      return false
+    }
+
+    const oldEnabled = this.isEnabled
+    this.isEnabled = enabled
+
+    if (oldEnabled !== enabled) {
+      this.saveSettings()
+      this.notifyListeners()
+    }
+
+    return true
   }
 
   // 顯示桌面通知
@@ -149,13 +335,22 @@ class NotificationManager {
     }
   }
 
-  // 獲取權限狀態
-  getPermissionStatus() {
+  // 獲取完整狀態
+  getStatus() {
     return {
       supported: this.isSupported,
       permission: this.permission,
-      enabled: this.isEnabled
+      enabled: this.isEnabled,
+      canNotify: this.isSupported && this.permission === 'granted' && this.isEnabled,
+      serviceWorkerReady: !!this.serviceWorkerRegistration,
+      pushSupported: 'PushManager' in window,
+      pushSubscribed: !!this.pushSubscription
     }
+  }
+
+  // 獲取權限狀態 (向後相容)
+  getPermissionStatus() {
+    return this.getStatus()
   }
 }
 
