@@ -22,9 +22,11 @@ class NotificationManager {
       const saved = localStorage.getItem(this.storageKey)
       if (saved) {
         const settings = JSON.parse(saved)
-        this.isEnabled = settings.isEnabled !== false // 預設啟用
+        this.isEnabled = settings.isEnabled === true // 明確檢查 true
+        console.log('🔔 載入已保存的通知設定:', this.isEnabled)
       } else {
         this.isEnabled = true // 預設啟用
+        console.log('🔔 使用預設通知設定: 啟用')
       }
     } catch (error) {
       console.warn('🔔 載入通知設定失敗，使用預設值:', error)
@@ -139,9 +141,16 @@ class NotificationManager {
 
     // 檢查當前權限狀態
     this.permission = Notification.permission
+    console.log('🔔 初始化通知系統，權限狀態:', this.permission, 'isEnabled:', this.isEnabled);
 
     if (this.permission === 'granted') {
       console.log('✅ 通知權限已獲得')
+      // 如果權限已授予但通知被關閉，保持用戶的選擇
+      // 如果用戶之前沒有明確關閉，則預設啟用
+      if (this.isEnabled !== false) {
+        this.isEnabled = true
+        this.saveSettings()
+      }
       // 嘗試訂閱推播通知
       await this.subscribeToPush()
       this.notifyListeners()
@@ -157,8 +166,9 @@ class NotificationManager {
     }
 
     // 權限狀態為 'default'，需要請求權限
+    console.log('⏳ 權限狀態為 default，等待用戶操作')
     this.notifyListeners()
-    return await this.requestPermission()
+    return false
   }
 
   // 請求通知權限
@@ -239,8 +249,25 @@ class NotificationManager {
 
   // 顯示桌面通知
   showNotification(title, options = {}) {
-    if (!this.isEnabled || !this.isSupported) {
-      console.log('🔕 通知未啟用或不支援')
+    console.log('🔔 showNotification 被調用:', { 
+      title, 
+      isEnabled: this.isEnabled, 
+      isSupported: this.isSupported,
+      permission: this.permission 
+    });
+
+    if (!this.isSupported) {
+      console.warn('🔕 瀏覽器不支援通知')
+      return null
+    }
+
+    if (!this.isEnabled) {
+      console.warn('🔕 通知未啟用')
+      return null
+    }
+
+    if (this.permission !== 'granted') {
+      console.warn('🔕 通知權限未授予，當前狀態:', this.permission)
       return null
     }
 
@@ -255,7 +282,9 @@ class NotificationManager {
     }
 
     try {
+      console.log('✅ 嘗試創建通知:', title, defaultOptions);
       const notification = new Notification(title, defaultOptions)
+      console.log('📬 通知創建成功:', notification);
       
       // 點擊通知時聚焦到窗口
       notification.onclick = () => {

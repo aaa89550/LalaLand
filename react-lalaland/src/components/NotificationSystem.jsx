@@ -35,15 +35,30 @@ const NotificationSystem = () => {
   };
 
   const handleTestNotification = () => {
+    console.log('🧪 測試通知按鈕被點擊');
+    console.log('🔔 通知狀態:', notificationStatus);
+    
     if (notificationStatus.canNotify) {
-      notificationManager.showNotification(
+      console.log('✅ 嘗試顯示測試通知');
+      const result = notificationManager.showNotification(
         '🧪 測試通知', 
         {
           body: '這是一個測試通知，如果您看到這則訊息，表示通知功能正常運作！',
           icon: '/icon-512.png'
         }
       );
+      console.log('📬 通知結果:', result);
+      
+      if (!result) {
+        alert('通知顯示失敗，請檢查瀏覽器控制台查看錯誤訊息。');
+      }
     } else {
+      console.log('❌ 無法顯示通知，狀態:', {
+        supported: notificationStatus.supported,
+        permission: notificationStatus.permission,
+        enabled: notificationStatus.enabled,
+        canNotify: notificationStatus.canNotify
+      });
       alert('請先開啟通知權限才能測試通知功能。');
     }
   };
