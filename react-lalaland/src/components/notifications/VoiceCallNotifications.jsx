@@ -10,6 +10,13 @@ const VoiceCallNotifications = () => {
   const [incomingCall, setIncomingCall] = useState(null)
   const [showIncomingCall, setShowIncomingCall] = useState(false)
 
+  // 組件初始化日誌
+  console.log('🚀 VoiceCallNotifications 組件初始化:', {
+    hasUser: !!user,
+    userUid: user?.uid,
+    userName: user?.nickname
+  })
+
   useEffect(() => {
     if (!user?.uid) {
       console.log('⚠️ 用戶未登錄，無法監聽來電')
@@ -23,11 +30,15 @@ const VoiceCallNotifications = () => {
     const voiceCallsRef = ref(database, `voiceCalls`)
     
     const unsubscribe = onValue(voiceCallsRef, (snapshot) => {
-      console.log('📡 Firebase 監聽回調觸發')
+      console.log('📡 Firebase 監聽回調觸發 - 用戶:', user.uid)
       
       if (snapshot.exists()) {
         const calls = snapshot.val()
         console.log('📞 所有通話記錄:', calls)
+        console.log('📞 檢查發給我的通話:', Object.keys(calls).filter(callId => {
+          const call = calls[callId]
+          return call.to === user.uid
+        }))
         
         // 查找發給當前用戶的通話邀請
         Object.entries(calls).forEach(([callId, callData]) => {
@@ -74,8 +85,17 @@ const VoiceCallNotifications = () => {
       }
     })
 
+    // 測試監聽是否正常
+    setTimeout(() => {
+      console.log('🧪 5秒後測試監聽狀態:', {
+        用戶: user.uid,
+        監聽器: !!unsubscribe,
+        數據庫: !!database
+      })
+    }, 5000)
+
     return () => {
-      console.log('🔕 停止監聽語音通話通知')
+      console.log('🔕 停止監聽語音通話通知 - 用戶:', user.uid)
       unsubscribe()
     }
   }, [user?.uid])
