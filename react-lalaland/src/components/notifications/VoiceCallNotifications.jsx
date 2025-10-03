@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { ref, onValue, remove, push, query, orderByChild, equalTo } from 'firebase/database'
+import { ref, onValue, remove, push, set, query, orderByChild, equalTo } from 'firebase/database'
 import { database } from '../../config/firebase'
 import { useAuthStore } from '../../store/authStore'
 import VoiceCall from '../chat/VoiceCall'
@@ -15,27 +15,27 @@ const VoiceCallNotifications = () => {
 
     console.log('🔔 開始監聽語音通話通知:', user.uid)
 
-    // 監聽通知
-    const notificationsRef = ref(database, `notifications/${user.uid}`)
+    // 監聽語音通話邀請
+    const voiceCallsRef = ref(database, `voiceCalls`)
     
-    const unsubscribe = onValue(notificationsRef, (snapshot) => {
+    const unsubscribe = onValue(voiceCallsRef, (snapshot) => {
       if (snapshot.exists()) {
-        const notifications = snapshot.val()
+        const calls = snapshot.val()
         
-        // 查找未讀的來電通知
-        Object.entries(notifications).forEach(([notificationId, notification]) => {
+        // 查找發給當前用戶的通話邀請
+        Object.entries(calls).forEach(([callId, callData]) => {
           if (
-            notification.type === 'incoming_call' && 
-            !notification.read &&
-            notification.from !== user.uid
+            callData.to === user.uid && 
+            callData.status === 'calling' &&
+            callData.from !== user.uid
           ) {
-            console.log('📞 收到來電通知:', notification)
+            console.log('📞 收到來電通知:', callData)
             
             // 顯示來電界面
             setIncomingCall({
-              ...notification,
-              notificationId,
-              callId: notification.id
+              ...callData,
+              callId,
+              notificationId: callId
             })
             setShowIncomingCall(true)
             
@@ -43,10 +43,10 @@ const VoiceCallNotifications = () => {
             playCallRingtone()
             
             // 顯示瀏覽器通知
-            showBrowserNotification(notification)
+            showBrowserNotification(callData)
             
-            // 標記為已讀
-            markNotificationAsRead(notificationId)
+            // 標記通話為已見
+            markCallAsReceived(callId)
           }
         })
       }
@@ -100,14 +100,14 @@ const VoiceCallNotifications = () => {
     }
   }
 
-  // 標記通知為已讀
-  const markNotificationAsRead = async (notificationId) => {
+  // 標記通話為已接收
+  const markCallAsReceived = async (callId) => {
     try {
-      const notificationRef = ref(database, `notifications/${user.uid}/${notificationId}`)
-      await remove(notificationRef)
-      console.log('📋 通知已清除:', notificationId)
+      const callRef = ref(database, `voiceCalls/${callId}/status`)
+      await set(callRef, 'ringing')
+      console.log('📋 通話狀態已更新為響鈴:', callId)
     } catch (error) {
-      console.error('清除通知失敗:', error)
+      console.error('更新通話狀態失敗:', error)
     }
   }
 
@@ -115,20 +115,14 @@ const VoiceCallNotifications = () => {
   const handleRejectCall = async () => {
     if (incomingCall) {
       try {
-        // 發送拒接通知給對方
-        const rejectNotificationRef = ref(database, `notifications/${incomingCall.from}`)
-        await push(rejectNotificationRef, {
-          type: 'call_rejected',
-          from: user.uid,
-          fromName: user.nickname || user.displayName || '匿名用戶',
-          originalCallId: incomingCall.callId,
-          timestamp: Date.now(),
-          read: false
-        })
+        // 更新通話狀態為已拒接
+        const callRef = ref(database, `voiceCalls/${incomingCall.callId}/status`)
+        await set(callRef, 'rejected')
         
         toast.info(`已拒接 ${incomingCall.fromName} 的通話`)
+        console.log('📞 通話已拒接:', incomingCall.callId)
       } catch (error) {
-        console.error('發送拒接通知失敗:', error)
+        console.error('更新拒接狀態失敗:', error)
       }
     }
     
@@ -140,20 +134,14 @@ const VoiceCallNotifications = () => {
   const handleAnswerCall = async () => {
     if (incomingCall) {
       try {
-        // 發送接聽通知給對方
-        const answerNotificationRef = ref(database, `notifications/${incomingCall.from}`)
-        await push(answerNotificationRef, {
-          type: 'call_answered',
-          from: user.uid,
-          fromName: user.nickname || user.displayName || '匿名用戶',
-          originalCallId: incomingCall.callId,
-          timestamp: Date.now(),
-          read: false
-        })
+        // 更新通話狀態為已接聽
+        const callRef = ref(database, `voiceCalls/${incomingCall.callId}/status`)
+        await set(callRef, 'answered')
         
         toast.success(`正在與 ${incomingCall.fromName} 建立通話...`)
+        console.log('📞 通話已接聽:', incomingCall.callId)
       } catch (error) {
-        console.error('發送接聽通知失敗:', error)
+        console.error('更新接聽狀態失敗:', error)
       }
     }
   }

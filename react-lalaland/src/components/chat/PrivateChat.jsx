@@ -9,7 +9,7 @@ import { uploadImage, createImagePreview } from '../../utils/imageUtils'
 import MessageBubble from './MessageBubble'
 import UnreadBadge from '../UnreadBadge'
 import VoiceCall from './VoiceCall'
-import { ref, push } from 'firebase/database'
+import { ref, push, set } from 'firebase/database'
 import { database } from '../../config/firebase'
 import toast from 'react-hot-toast'
 
@@ -122,23 +122,46 @@ const PrivateChat = () => {
   }
 
   const handleVoiceCall = async () => {
+    // 檢查必要條件
+    if (!user || !user.uid) {
+      toast.error('用戶未登錄，無法發起通話')
+      return
+    }
+
+    if (!currentPrivateChat || !currentPrivateChat.recipientId) {
+      toast.error('無法獲取對方信息，請重新選擇聊天對象')
+      return
+    }
+
     try {
+      console.log('🚀 開始發起語音通話...')
+      console.log('發起人:', user.uid, user.nickname)
+      console.log('接收人:', currentPrivateChat.recipientId, currentPrivateChat.nickname)
+
       setShowVoiceCall(true)
-      toast.success(`正在呼叫 ${currentPrivateChat.nickname}...`)
+      toast.loading(`正在呼叫 ${currentPrivateChat.nickname}...`)
       
-      // 發送語音通話通知給對方
-      await sendVoiceCallNotification(currentPrivateChat.recipientId, {
+      // 簡化的通知數據
+      const callData = {
         type: 'incoming_call',
         from: user.uid,
         fromName: user.nickname || user.displayName || '匿名用戶',
-        fromAvatar: user.avatar,
-        timestamp: Date.now()
-      })
+        fromAvatar: user.avatar || null,
+        timestamp: Date.now(),
+        callId: `call_${user.uid}_${currentPrivateChat.recipientId}_${Date.now()}`
+      }
+
+      // 只發送 Firebase 通知，先不發送私聊訊息
+      await sendVoiceCallNotification(currentPrivateChat.recipientId, callData)
       
-      console.log('📞 語音通話邀請已發送給:', currentPrivateChat.nickname)
+      toast.dismiss()
+      toast.success(`通話邀請已發送給 ${currentPrivateChat.nickname}`)
+      console.log('✅ 語音通話邀請發送成功')
+      
     } catch (error) {
-      console.error('發送語音通話邀請失敗:', error)
-      toast.error('無法發起通話，請稍後再試')
+      console.error('❌ 發送語音通話邀請失敗:', error)
+      toast.dismiss()
+      toast.error(`發起通話失敗: ${error.message || '未知錯誤'}`)
       setShowVoiceCall(false)
     }
   }
@@ -150,28 +173,52 @@ const PrivateChat = () => {
   // 發送語音通話通知
   const sendVoiceCallNotification = async (recipientId, notificationData) => {
     try {
-      const notificationRef = ref(database, `notifications/${recipientId}`)
+      console.log('📡 準備發送通知到:', recipientId)
       
-      const notification = {
+      // 檢查 Firebase 連接
+      if (!database) {
+        throw new Error('Firebase 數據庫未初始化')
+      }
+
+      // 使用 voiceCalls 路徑代替 notifications，並使用 set 代替 push
+      const callId = notificationData.callId || `call_${Date.now()}`
+      const callRef = ref(database, `voiceCalls/${callId}`)
+      
+      const callData = {
         ...notificationData,
-        id: `call_${Date.now()}`,
-        read: false,
+        id: callId,
+        to: recipientId,
+        status: 'calling',
         createdAt: Date.now()
       }
 
-      await push(notificationRef, notification)
-      console.log('📢 通知已發送:', notification)
+      console.log('📤 發送通話邀請:', callData)
+      // 使用 set 代替 push，減少權限問題
+      await set(callRef, callData)
+      console.log('✅ 語音通話邀請發送成功:', callId)
       
-      // 同時發送系統訊息到私聊
-      await sendPrivateMessage({
-        text: `📞 ${user.nickname || '用戶'} 向您發起了語音通話`,
-        type: 'system',
-        callData: notificationData
-      })
+      // 可選：發送系統訊息（如果私聊功能正常）
+      try {
+        if (sendPrivateMessage) {
+          await sendPrivateMessage({
+            text: `📞 ${user.nickname || '用戶'} 向您發起了語音通話`,
+            type: 'system'
+          })
+          console.log('✅ 系統訊息發送成功')
+        }
+      } catch (msgError) {
+        console.warn('⚠️ 系統訊息發送失敗，但通知已送達:', msgError.message)
+        // 不拋出錯誤，因為主要通知已經成功
+      }
       
     } catch (error) {
-      console.error('發送通知失敗:', error)
-      throw error
+      console.error('❌ 發送通知失敗:', error)
+      console.error('錯誤詳情:', {
+        code: error.code,
+        message: error.message,
+        stack: error.stack
+      })
+      throw new Error(`通知發送失敗: ${error.message}`)
     }
   }
 
@@ -206,8 +253,9 @@ const PrivateChat = () => {
             {/* 語音通話按鈕 */}
             <button
               onClick={handleVoiceCall}
-              className="p-3 rounded-lg bg-green-500 hover:bg-green-600 text-white transition-colors"
+              className="p-3 rounded-lg bg-green-500 hover:bg-green-600 text-white transition-colors disabled:opacity-50"
               title="語音通話"
+              disabled={!user || !currentPrivateChat}
             >
               <Phone className="w-5 h-5" />
             </button>
