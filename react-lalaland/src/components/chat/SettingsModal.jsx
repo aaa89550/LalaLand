@@ -12,9 +12,27 @@ const SettingsModal = ({ isOpen, onClose }) => {
   const [tempNickname, setTempNickname] = useState(nickname)
 
   useEffect(() => {
-    // 檢查通知權限狀態
-    const { enabled } = notificationManager.getPermissionStatus()
-    setNotificationsEnabled(enabled)
+    const checkNotificationStatus = async () => {
+      if (!isOpen) return;
+      
+      // 檢查瀏覽器通知權限
+      const permission = 'Notification' in window ? Notification.permission : 'default';
+      
+      if (permission === 'granted' && 'serviceWorker' in navigator) {
+        try {
+          const reg = await navigator.serviceWorker.ready;
+          const sub = await reg.pushManager.getSubscription();
+          setNotificationsEnabled(!!sub);
+        } catch (error) {
+          console.warn('檢查推播訂閱失敗:', error);
+          setNotificationsEnabled(false);
+        }
+      } else {
+        setNotificationsEnabled(false);
+      }
+    };
+    
+    checkNotificationStatus();
   }, [isOpen])
 
   if (!isOpen) return null
@@ -44,21 +62,60 @@ const SettingsModal = ({ isOpen, onClose }) => {
   }
 
   const toggleNotifications = async () => {
-    if (!notificationsEnabled) {
-      // 請求通知權限
-      const granted = await requestNotificationPermission()
-      if (granted) {
-        setNotificationsEnabled(true)
-        toast.success('🔔 通知已啟用！')
+    try {
+      if (!notificationsEnabled) {
+        // 啟用推播通知
+        if (!('Notification' in window)) {
+          toast.error('❌ 此瀏覽器不支援通知');
+          return;
+        }
+        
+        if (location.protocol !== 'https:' && location.hostname !== 'localhost') {
+          toast.error('❌ 通知/推播需要 HTTPS');
+          return;
+        }
+
+        // 請求權限
+        const permission = await Notification.requestPermission();
+        if (permission !== 'granted') {
+          toast.error('❌ 通知權限被拒絕');
+          return;
+        }
+
+        // 訂閱推播
+        if ('serviceWorker' in navigator) {
+          const reg = await navigator.serviceWorker.ready;
+          
+          // 檢查是否已有訂閱
+          const existingSub = await reg.pushManager.getSubscription();
+          if (!existingSub) {
+            // 暫時跳過 VAPID 訂閱，因為需要真實的公鑰
+            console.log('通知權限已授予，但跳過推播訂閱（需要 VAPID 配置）');
+          }
+        }
+        
+        setNotificationsEnabled(true);
+        toast.success('🔔 通知已啟用！');
       } else {
-        toast.error('❌ 通知權限被拒絕')
+        // 停用推播通知
+        if ('serviceWorker' in navigator) {
+          try {
+            const reg = await navigator.serviceWorker.ready;
+            const sub = await reg.pushManager.getSubscription();
+            if (sub) {
+              await sub.unsubscribe();
+            }
+          } catch (error) {
+            console.warn('取消推播訂閱失敗:', error);
+          }
+        }
+        
+        setNotificationsEnabled(false);
+        toast.success('🔕 通知已關閉');
       }
-    } else {
-      // 無法程式化禁用通知，提示用戶手動設定
-      toast('🔕 請在瀏覽器設定中禁用通知', {
-        duration: 4000,
-        icon: '⚠️'
-      })
+    } catch (error) {
+      console.error('切換通知設定失敗:', error);
+      toast.error('❌ 通知設定失敗');
     }
   }
 

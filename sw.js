@@ -53,14 +53,26 @@ self.addEventListener('fetch', event => {
 self.addEventListener('push', event => {
   console.log('📩 Service Worker: 收到推播通知', event)
   
+  let data = {};
+  try { 
+    data = event.data ? event.data.json() : {}; 
+  } catch (error) {
+    console.warn('無法解析推播數據:', error);
+  }
+  
+  const title = data.title || 'LalaLand 聊天室';
+  const body = data.body || '您有新的訊息';
+  const url = data.url || '/';
+  
   const options = {
-    body: event.data ? event.data.text() : '您有新的訊息',
+    body: body,
     icon: '/icon-512.png',
     badge: '/icon-512.png',
     vibrate: [100, 50, 100],
     data: {
+      url: url,
       dateOfArrival: Date.now(),
-      primaryKey: '2'
+      primaryKey: data.primaryKey || '1'
     },
     actions: [
       {
@@ -77,7 +89,7 @@ self.addEventListener('push', event => {
   }
 
   event.waitUntil(
-    self.registration.showNotification('LalaLand 聊天室', options)
+    self.registration.showNotification(title, options)
   )
 })
 
@@ -86,20 +98,37 @@ self.addEventListener('notificationclick', event => {
   console.log('🔔 Service Worker: 通知被點擊', event)
   
   event.notification.close()
+  
+  const targetUrl = event.notification.data?.url || '/';
 
-  if (event.action === 'explore') {
+  if (event.action === 'explore' || !event.action) {
     // 開啟或聚焦到應用程式
     event.waitUntil(
-      clients.matchAll()
-        .then(clients => {
-          if (clients.length > 0) {
-            // 聚焦到現有的分頁
-            return clients[0].focus()
-          } else {
-            // 開啟新分頁
-            return clients.openWindow('/')
+      (async () => {
+        const allClients = await clients.matchAll({ 
+          type: 'window', 
+          includeUncontrolled: true 
+        });
+        
+        // 嘗試找到已存在的分頁
+        const found = allClients.find(client => {
+          try {
+            const clientUrl = new URL(client.url);
+            const targetUrlObj = new URL(targetUrl, self.location.origin);
+            return clientUrl.pathname === targetUrlObj.pathname;
+          } catch (error) {
+            return false;
           }
-        })
+        });
+        
+        if (found) {
+          // 聚焦到現有的分頁
+          return found.focus();
+        } else {
+          // 開啟新分頁
+          return clients.openWindow(targetUrl);
+        }
+      })()
     )
   } else if (event.action === 'close') {
     // 關閉通知
@@ -119,3 +148,5 @@ function doBackgroundSync() {
   // 實作後台同步邏輯
   return Promise.resolve()
 }
+
+
