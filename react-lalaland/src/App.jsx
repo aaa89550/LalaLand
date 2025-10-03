@@ -18,6 +18,7 @@ import SplashScreen from './components/SplashScreen'
 import ErrorBoundary from './components/ErrorBoundary'
 import NotificationSystem from './components/NotificationSystem'
 import PWAInstallPrompt from './components/PWAInstallPrompt'
+import VoiceCallNotifications from './components/notifications/VoiceCallNotifications'
 import { pwaManager } from './utils/pwaManager'
 
 // 開發環境下載入除錯工具
@@ -161,6 +162,7 @@ function App() {
           />
           <NotificationSystem />
           <PWAInstallPrompt user={user} />
+          <VoiceCallNotifications />
         </div>
       </BrowserRouter>
     </ErrorBoundary>

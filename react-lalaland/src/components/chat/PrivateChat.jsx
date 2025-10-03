@@ -9,6 +9,8 @@ import { uploadImage, createImagePreview } from '../../utils/imageUtils'
 import MessageBubble from './MessageBubble'
 import UnreadBadge from '../UnreadBadge'
 import VoiceCall from './VoiceCall'
+import { ref, push } from 'firebase/database'
+import { database } from '../../config/firebase'
 import toast from 'react-hot-toast'
 
 const PrivateChat = () => {
@@ -119,13 +121,58 @@ const PrivateChat = () => {
     }
   }
 
-  const handleVoiceCall = () => {
-    setShowVoiceCall(true)
-    toast.success(`正在呼叫 ${currentPrivateChat.nickname}...`)
+  const handleVoiceCall = async () => {
+    try {
+      setShowVoiceCall(true)
+      toast.success(`正在呼叫 ${currentPrivateChat.nickname}...`)
+      
+      // 發送語音通話通知給對方
+      await sendVoiceCallNotification(currentPrivateChat.recipientId, {
+        type: 'incoming_call',
+        from: user.uid,
+        fromName: user.nickname || user.displayName || '匿名用戶',
+        fromAvatar: user.avatar,
+        timestamp: Date.now()
+      })
+      
+      console.log('📞 語音通話邀請已發送給:', currentPrivateChat.nickname)
+    } catch (error) {
+      console.error('發送語音通話邀請失敗:', error)
+      toast.error('無法發起通話，請稍後再試')
+      setShowVoiceCall(false)
+    }
   }
 
   const handleCloseVoiceCall = () => {
     setShowVoiceCall(false)
+  }
+
+  // 發送語音通話通知
+  const sendVoiceCallNotification = async (recipientId, notificationData) => {
+    try {
+      const notificationRef = ref(database, `notifications/${recipientId}`)
+      
+      const notification = {
+        ...notificationData,
+        id: `call_${Date.now()}`,
+        read: false,
+        createdAt: Date.now()
+      }
+
+      await push(notificationRef, notification)
+      console.log('📢 通知已發送:', notification)
+      
+      // 同時發送系統訊息到私聊
+      await sendPrivateMessage({
+        text: `📞 ${user.nickname || '用戶'} 向您發起了語音通話`,
+        type: 'system',
+        callData: notificationData
+      })
+      
+    } catch (error) {
+      console.error('發送通知失敗:', error)
+      throw error
+    }
   }
 
   // 如果有選擇特定私聊，顯示聊天界面
@@ -236,7 +283,7 @@ const PrivateChat = () => {
                 onChange={(e) => setInputMessage(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
                 placeholder={`傳訊息給 ${currentPrivateChat.nickname}...`}
-                className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 
+                className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 
                            focus:ring-2 focus:ring-sea-blue/20 focus:border-sea-blue 
                            bg-white dark:bg-dark-card dark:text-dark-text outline-none"
               />
@@ -246,14 +293,14 @@ const PrivateChat = () => {
             <button 
               onClick={handleSendMessage}
               disabled={(!inputMessage.trim() && !imagePreview) || uploadingImage}
-              className="p-3 bg-sea-blue hover:bg-sea-dark text-white rounded-lg 
+              className="px-3 py-2 bg-sea-blue hover:bg-sea-dark text-white rounded-lg 
                        disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               title={uploadingImage ? '上傳中...' : '發送'}
             >
               {uploadingImage ? (
-                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
               ) : (
-                <Send className="w-5 h-5" />
+                <Send className="w-4 h-4" />
               )}
             </button>
 

@@ -7,7 +7,9 @@ const VoiceCall = ({
   onClose, 
   recipientName, 
   recipientId,
-  isIncoming = false 
+  isIncoming = false,
+  onAnswer = null,
+  onReject = null
 }) => {
   const [isCallActive, setIsCallActive] = useState(false)
   const [isCallConnected, setIsCallConnected] = useState(false)
@@ -154,6 +156,11 @@ const VoiceCall = ({
     try {
       await initializeWebRTC()
       toast.success('通話已接聽')
+      
+      // 執行外部接聽回調
+      if (onAnswer) {
+        await onAnswer()
+      }
     } catch (error) {
       console.error('接聽失敗:', error)
       toast.error('接聽失敗')
@@ -282,7 +289,13 @@ const VoiceCall = ({
               
               {/* 拒接按鈕 */}
               <button
-                onClick={endCall}
+                onClick={() => {
+                  if (onReject) {
+                    onReject()
+                  } else {
+                    endCall()
+                  }
+                }}
                 className="p-4 bg-red-500 hover:bg-red-600 text-white rounded-full transition-colors"
                 title="拒接"
               >
