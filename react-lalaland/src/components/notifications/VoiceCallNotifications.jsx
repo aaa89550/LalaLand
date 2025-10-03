@@ -11,32 +11,52 @@ const VoiceCallNotifications = () => {
   const [showIncomingCall, setShowIncomingCall] = useState(false)
 
   useEffect(() => {
-    if (!user?.uid) return
+    if (!user?.uid) {
+      console.log('⚠️ 用戶未登錄，無法監聽來電')
+      return
+    }
 
     console.log('🔔 開始監聽語音通話通知:', user.uid)
+    console.log('🌿 當前狀態 - showIncomingCall:', showIncomingCall, 'incomingCall:', !!incomingCall)
 
     // 監聽語音通話邀請
     const voiceCallsRef = ref(database, `voiceCalls`)
     
     const unsubscribe = onValue(voiceCallsRef, (snapshot) => {
+      console.log('📡 Firebase 監聽回調觸發')
+      
       if (snapshot.exists()) {
         const calls = snapshot.val()
+        console.log('📞 所有通話記錄:', calls)
         
         // 查找發給當前用戶的通話邀請
         Object.entries(calls).forEach(([callId, callData]) => {
+          console.log(`🔍 檢查通話 ${callId}:`, {
+            to: callData.to,
+            currentUser: user.uid,
+            status: callData.status,
+            from: callData.from,
+            isForMe: callData.to === user.uid,
+            isCalling: callData.status === 'calling',
+            notFromMe: callData.from !== user.uid
+          })
+          
           if (
             callData.to === user.uid && 
             callData.status === 'calling' &&
             callData.from !== user.uid
           ) {
-            console.log('📞 收到來電通知:', callData)
+            console.log('✅ 正在處理來電:', callData)
             
             // 顯示來電界面
-            setIncomingCall({
+            const callInfo = {
               ...callData,
               callId,
               notificationId: callId
-            })
+            }
+            
+            console.log('📦 設定來電狀態:', callInfo)
+            setIncomingCall(callInfo)
             setShowIncomingCall(true)
             
             // 播放提示音（如果瀏覽器支援）
@@ -49,6 +69,8 @@ const VoiceCallNotifications = () => {
             markCallAsReceived(callId)
           }
         })
+      } else {
+        console.log('📞 無通話記錄')
       }
     })
 
@@ -146,19 +168,36 @@ const VoiceCallNotifications = () => {
     }
   }
 
+  // 調試日誌
+  console.log('📺 VoiceCallNotifications 渲染狀態:', {
+    showIncomingCall,
+    hasIncomingCall: !!incomingCall,
+    incomingCallDetails: incomingCall ? {
+      fromName: incomingCall.fromName,
+      callId: incomingCall.callId
+    } : null
+  })
+
   return (
     <>
       {/* 來電通知界面 */}
-      {showIncomingCall && incomingCall && (
-        <VoiceCall
-          isVisible={showIncomingCall}
-          onClose={handleRejectCall}
-          recipientName={incomingCall.fromName}
-          recipientId={incomingCall.from}
-          isIncoming={true}
-          onAnswer={handleAnswerCall}
-          onReject={handleRejectCall}
-        />
+      {showIncomingCall && incomingCall ? (
+        <div className="fixed inset-0 z-[9999]">
+          <VoiceCall
+            isVisible={true}
+            onClose={handleRejectCall}
+            recipientName={incomingCall.fromName || '未知用戶'}
+            recipientId={incomingCall.from}
+            isIncoming={true}
+            onAnswer={handleAnswerCall}
+            onReject={handleRejectCall}
+          />
+        </div>
+      ) : (
+        <div className="hidden">
+          {/* Debug: 無來電 */}
+          {console.log('🚫 無來電顯示')}
+        </div>
       )}
     </>
   )

@@ -209,10 +209,23 @@ const VoiceCall = ({
     }
   }, [isVisible])
 
-  if (!isVisible) return null
+  // 調試日誌
+  console.log('🎬 VoiceCall 渲染狀態:', {
+    isVisible,
+    recipientName,
+    isIncoming,
+    isCallActive,
+    isCallConnected
+  })
 
+  if (!isVisible) {
+    console.log('❌ VoiceCall 隱藏中')
+    return null
+  }
+
+  console.log('✅ VoiceCall 顯示中')
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9999] flex items-center justify-center">
       <div className="bg-white dark:bg-dark-card rounded-2xl p-8 max-w-sm w-full mx-4 shadow-2xl">
         {/* 用戶頭像和名稱 */}
         <div className="text-center mb-6">
