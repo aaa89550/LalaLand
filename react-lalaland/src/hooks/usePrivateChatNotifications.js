@@ -135,15 +135,16 @@ export const usePrivateChatNotifications = () => {
           incrementUnread(lastMsg.from)
 
           // 顯示通知（所有平台都要，統一由此處理）
-          notificationManager.showMessageNotification(senderName, preview, 'private')
+          // 1. 內部氣泡通知（所有平台都要）
           if (window.showNotification) {
             window.showNotification(`💬 ${senderName}: ${preview}`, 'info', 6000)
           }
           
-          // 桌面額外播放提示音
-          if (isDesktop()) {
-            notificationManager.playNotificationSound()
-          }
+          // 2. 桌面推播通知（有權限時才顯示）
+          notificationManager.showNotification(`💬 ${senderName}`, preview)
+          
+          // 3. 播放提示音（所有平台都要）
+          notificationManager.playNotificationSound()
         })
 
         listenersRef.current[chatId] = unsubscribe
