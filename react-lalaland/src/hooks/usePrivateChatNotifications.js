@@ -14,6 +14,14 @@ export const usePrivateChatNotifications = () => {
   const listenersRef = useRef({})
   const lastMessageTimestampsRef = useRef({})
 
+  // 判斷是否為桌面裝置
+  const isDesktop = () => {
+    if (typeof window === 'undefined') return true
+    const ua = window.navigator.userAgent
+    // 常見手機/平板 UA 關鍵字
+    return !(/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua))
+  }
+
   useEffect(() => {
     if (!user?.uid) return
 
@@ -124,9 +132,13 @@ export const usePrivateChatNotifications = () => {
           })
 
           // 顯示通知（桌面 + 內部）
-          notificationManager.showMessageNotification(senderName, preview, 'private')
-          if (window.showNotification) {
-            window.showNotification(`💬 ${senderName}: ${preview}`, 'info', 6000)
+          if (isDesktop()) {
+            notificationManager.showMessageNotification(senderName, preview, 'private')
+            if (window.showNotification) {
+              window.showNotification(`💬 ${senderName}: ${preview}`, 'info', 6000)
+            }
+          } else {
+            console.log('📱 手機板不顯示通知')
           }
 
           // 增加未讀
