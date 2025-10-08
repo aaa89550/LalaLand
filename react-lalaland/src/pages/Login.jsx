@@ -8,7 +8,7 @@ import {
 import { ref, set } from 'firebase/database'
 
 import { auth, database } from '../config/firebase'
-import { Eye, EyeOff, Mail, Lock, User, ArrowLeft } from 'lucide-react'
+import { Eye, EyeOff, Mail, Lock, ArrowLeft } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 const Login = () => {
@@ -20,8 +20,7 @@ const Login = () => {
   const [formData, setFormData] = useState({
     email: '',
     password: '',
-    confirmPassword: '',
-    nickname: ''
+    confirmPassword: ''
   })
 
   const handleInputChange = (e) => {
@@ -100,8 +99,7 @@ const Login = () => {
 
     try {
       console.log('🔄 開始註冊流程...', { 
-        email: formData.email,
-        nickname: formData.nickname 
+        email: formData.email
       })
       
       // 步驟1: 創建 Firebase 帳號
@@ -114,9 +112,9 @@ const Login = () => {
       console.log('✅ Firebase 帳號創建成功:', userCredential.user.uid)
       
       try {
-        // 步驟2: 更新用戶資料
+        // 步驟2: 更新用戶資料（使用預設暱稱）
         await updateProfile(userCredential.user, {
-          displayName: formData.nickname || '新用戶'
+          displayName: '新用戶'
         })
         
         console.log('✅ 用戶 Profile 更新成功')
@@ -125,13 +123,14 @@ const Login = () => {
       }
 
       try {
-        // 步驟3: 儲存到 Firebase Realtime Database
+        // 步驟3: 儲存到 Firebase Realtime Database（使用預設暱稱）
         await set(ref(database, `users/${userCredential.user.uid}`), {
-          nickname: formData.nickname || '新用戶',
+          nickname: '新用戶',
           email: formData.email,
           avatar: null,
           joinedAt: Date.now(),
-          isOnline: true
+          isOnline: true,
+          isFirstLogin: true // 標記為首次登入，用於顯示歡迎視窗
         })
         
         console.log('✅ 用戶資料儲存到資料庫成功')
@@ -224,26 +223,6 @@ const Login = () => {
 
           {/* 表單 */}
           <form onSubmit={mode === 'login' ? handleLogin : handleRegister}>
-              {mode === 'register' && (
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    暱稱
-                  </label>
-                  <div className="relative">
-                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                    <input
-                      type="text"
-                      name="nickname"
-                      value={formData.nickname}
-                      onChange={handleInputChange}
-                      className="input-field pl-10"
-                      placeholder="輸入你的暱稱"
-                      required
-                    />
-                  </div>
-                </div>
-              )}
-
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   電子郵件

@@ -194,7 +194,8 @@ const Sidebar = () => {
 
               <button 
                 onClick={() => setShowSettings(true)}
-                className="sidebar-item w-full"
+                className="sidebar-item w-full transition-all duration-300"
+                data-settings-button
               >
                 <Settings className="w-5 h-5" />
                 <span>設定</span>
