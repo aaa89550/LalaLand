@@ -126,13 +126,30 @@ const PWAInstallPrompt = ({ user = null }) => {
       console.log('1. 瀏覽器不支援 PWA 安裝');
       console.log('2. 應用程式已經安裝');
       console.log('3. beforeinstallprompt 事件未觸發');
-      console.log('4. 在開發環境中（localhost）可能不會觸發');
+      console.log('4. Service Worker 未正確註冊');
+      console.log('5. manifest.json 有問題');
+      console.log('6. 不在 HTTPS 環境下（除了 localhost）');
       
-      // 在開發環境提供替代方案
-      if (window.location.hostname === 'localhost') {
-        console.log('🛠️ 開發環境：提供手動安裝說明');
-        alert('開發環境提示：\n\n在生產環境中，此按鈕會觸發瀏覽器原生的 PWA 安裝提示。\n\n手動安裝方式：\n1. 在 Chrome 中：點擊網址列右側的安裝圖示\n2. 在 Edge 中：點擊選單 > 應用程式 > 將此網站安裝為應用程式');
+      // 執行診斷
+      if (window.checkPWAStatus) {
+        console.log('� 執行 PWA 狀態診斷...');
+        window.checkPWAStatus();
       }
+      
+      // 提供手動安裝說明
+      let message = 'PWA 安裝提示未準備就緒。\n\n';
+      
+      if (window.location.protocol === 'https:' || window.location.hostname === 'localhost') {
+        message += '手動安裝方式：\n';
+        message += '1. Chrome：點擊網址列右側的安裝圖示 📱\n';
+        message += '2. Edge：選單 > 應用程式 > 安裝此網站\n';
+        message += '3. Safari (iOS)：分享 > 加入主畫面\n\n';
+        message += '或等待幾秒鐘讓瀏覽器準備安裝提示。';
+      } else {
+        message += '⚠️ 需要 HTTPS 協議才能安裝 PWA';
+      }
+      
+      alert(message);
       return;
     }
 
@@ -169,6 +186,35 @@ const PWAInstallPrompt = ({ user = null }) => {
     setShowInstallPrompt(true);
   };
 
+  // 測試功能：檢查安裝條件
+  const checkInstallability = async () => {
+    console.log('🔍 檢查 PWA 安裝條件...');
+    
+    const checks = {
+      https: window.location.protocol === 'https:' || window.location.hostname === 'localhost',
+      manifest: !!document.querySelector('link[rel="manifest"]'),
+      serviceWorker: 'serviceWorker' in navigator,
+      swRegistered: false,
+      deferredPrompt: !!deferredPrompt
+    };
+    
+    if (checks.serviceWorker) {
+      try {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        checks.swRegistered = registrations.length > 0;
+      } catch (error) {
+        console.error('❌ 檢查 Service Worker 失敗:', error);
+      }
+    }
+    
+    console.log('📋 PWA 安裝條件檢查結果:', checks);
+    
+    const allConditionsMet = Object.values(checks).every(Boolean);
+    console.log(allConditionsMet ? '✅ 所有條件滿足' : '❌ 部分條件不滿足');
+    
+    return checks;
+  };
+
   // 暴露到全域供測試使用
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -181,6 +227,24 @@ const PWAInstallPrompt = ({ user = null }) => {
         deferredPrompt: !!deferredPrompt,
         isIOS
       };
+      
+      // 添加調試功能
+      window.checkPWAStatus = () => {
+        console.log('🔍 PWA 狀態檢查:', {
+          protocol: window.location.protocol,
+          hostname: window.location.hostname,
+          isHTTPS: window.location.protocol === 'https:',
+          isLocalhost: window.location.hostname === 'localhost',
+          hasServiceWorker: 'serviceWorker' in navigator,
+          swRegistrations: navigator.serviceWorker ? navigator.serviceWorker.getRegistrations() : 'N/A',
+          hasManifest: !!document.querySelector('link[rel="manifest"]'),
+          deferredPrompt: !!deferredPrompt,
+          isStandalone: window.matchMedia('(display-mode: standalone)').matches,
+          userAgent: navigator.userAgent
+        });
+      };
+      
+      window.checkInstallability = checkInstallability;
     }
   }, [user, isInstalled, isStandalone, showInstallPrompt, deferredPrompt, isIOS]);
 
