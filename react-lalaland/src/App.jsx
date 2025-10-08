@@ -145,7 +145,7 @@ function App() {
         <div className="min-h-screen">
           <Routes>
             <Route path="/" element={user ? <Chat /> : <Landing />} />
-            <Route path="/login" element={user ? <Chat /> : <Login />} />
+            <Route path="/login" element={(user && !user.isAnonymous) ? <Chat /> : <Login />} />
             <Route path="/chat" element={user ? <Chat /> : <Login />} />
             <Route path="/debug" element={<Debug />} />
           </Routes>

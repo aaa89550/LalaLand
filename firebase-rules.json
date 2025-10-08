@@ -1,11 +1,11 @@
 {
   "rules": {
     "groupChats": {
-      ".read": "auth != null",
+      ".read": true,
       ".write": "auth != null"
     },
     "chats": {
-      ".read": "auth != null", 
+      ".read": true, 
       ".write": "auth != null"
     },
     "users": {

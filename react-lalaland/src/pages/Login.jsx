@@ -8,11 +8,14 @@ import {
 import { ref, set } from 'firebase/database'
 
 import { auth, database } from '../config/firebase'
-import { Eye, EyeOff, Mail, Lock, ArrowLeft } from 'lucide-react'
+import { useAuthStore } from '../store/authStore'
+import { Eye, EyeOff, Mail, Lock, ArrowLeft, UserPlus } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 const Login = () => {
   const navigate = useNavigate()
+  const { user, isAnonymousUser } = useAuthStore()
+  const isAnonymous = isAnonymousUser()
   const [mode, setMode] = useState('login') // 'login', 'register'
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -191,10 +194,23 @@ const Login = () => {
               alt="LalaLand" 
               className="w-16 h-16 mx-auto mb-4"
             />
-                        <h2 className="text-2xl font-bold text-gray-900 mb-2 text-center">
+            <h2 className="text-2xl font-bold text-gray-900 mb-2 text-center">
               {mode === 'login' && '歡迎回來'}
               {mode === 'register' && '建立帳號'}
             </h2>
+            
+            {/* 匿名用戶升級提示 */}
+            {isAnonymous && (
+              <div className="mt-4 p-4 bg-gradient-to-r from-amber-50 to-amber-100 border border-amber-200 rounded-lg">
+                <div className="flex items-center justify-center gap-2 mb-2">
+                  <UserPlus className="w-5 h-5 text-amber-600" />
+                  <span className="font-medium text-amber-800">升級你的帳號</span>
+                </div>
+                <p className="text-sm text-amber-700">
+                  你目前是匿名訪客，註冊後可以發送訊息、使用私訊、上傳圖片等完整功能
+                </p>
+              </div>
+            )}
           </div>
 
           {/* 模式切換 */}
