@@ -31,15 +31,24 @@ const Chat = () => {
     // 為新用戶創建範例資料和檢查是否需要顯示歡迎視窗
     const initializeUser = async () => {
       if (user) {
+        console.log('🔍 Chat 頁面初始化用戶:', {
+          uid: user.uid,
+          nickname: user.nickname,
+          isAnonymous: user.isAnonymous
+        })
+        
         createSampleData(user)
         
         // 檢查是否為首次登入
         try {
           const userRef = ref(database, `users/${user.uid}`)
+          console.log('📡 正在檢查用戶資料:', `users/${user.uid}`)
+          
           const userSnapshot = await get(userRef)
           
           if (userSnapshot.exists()) {
             const userData = userSnapshot.val()
+            console.log('📋 用戶資料:', userData)
             
             // 如果是首次登入，顯示歡迎視窗
             if (userData.isFirstLogin) {
@@ -50,11 +59,18 @@ const Chat = () => {
               await update(userRef, {
                 isFirstLogin: false
               })
+              console.log('✅ 已標記為非首次登入')
+            } else {
+              console.log('ℹ️ 非首次登入用戶，不顯示歡迎視窗')
             }
+          } else {
+            console.log('⚠️ 用戶資料不存在於資料庫中')
           }
         } catch (error) {
           console.error('❌ 檢查首次登入狀態失敗:', error)
         }
+      } else {
+        console.log('⚠️ 用戶未登入，跳過初始化')
       }
     }
     

@@ -26,7 +26,7 @@ const PWAInstallPrompt = ({ user = null }) => {
       console.log('💻 PWA 安裝提示事件觸發');
       e.preventDefault();
       setDeferredPrompt(e);
-      setShowInstallPrompt(true);
+      // 不要立即顯示，等用戶登入後再顯示
     };
 
     // 監聽 PWA 安裝完成事件
@@ -38,12 +38,20 @@ const PWAInstallPrompt = ({ user = null }) => {
     };
 
     detectDevice();
+    
+    console.log('🔍 PWA 安裝提示初始化:', {
+      isIOSDevice: /ipad|iphone|ipod/.test(window.navigator.userAgent.toLowerCase()),
+      isStandaloneMode: window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches,
+      hostname: window.location.hostname
+    });
 
     // 登入後顯示安裝提示
     const showPromptTimer = setTimeout(() => {
       if (!isInstalled && !isStandalone) {
         console.log('💡 顯示 PWA 安裝提示（登入後推薦）');
         setShowInstallPrompt(true);
+      } else {
+        console.log('ℹ️ PWA 已安裝或在獨立模式，不顯示安裝提示');
       }
     }, 3000); // 3秒後顯示，給用戶適應時間
 
@@ -99,14 +107,32 @@ const PWAInstallPrompt = ({ user = null }) => {
 
   // 處理安裝點擊
   const handleInstallClick = async () => {
+    console.log('🖱️ 安裝按鈕被點擊', {
+      isIOS,
+      deferredPrompt: !!deferredPrompt,
+      isInstalled,
+      isStandalone
+    });
+
     if (isIOS) {
       // iOS 設備顯示安裝說明
+      console.log('📱 iOS 設備，顯示安裝說明');
       setShowIOSInstructions(true);
       return;
     }
 
     if (!deferredPrompt) {
-      console.log('⚠️ 無法觸發安裝提示，可能瀏覽器不支援或已安裝');
+      console.log('⚠️ 無法觸發安裝提示，可能原因:');
+      console.log('1. 瀏覽器不支援 PWA 安裝');
+      console.log('2. 應用程式已經安裝');
+      console.log('3. beforeinstallprompt 事件未觸發');
+      console.log('4. 在開發環境中（localhost）可能不會觸發');
+      
+      // 在開發環境提供替代方案
+      if (window.location.hostname === 'localhost') {
+        console.log('🛠️ 開發環境：提供手動安裝說明');
+        alert('開發環境提示：\n\n在生產環境中，此按鈕會觸發瀏覽器原生的 PWA 安裝提示。\n\n手動安裝方式：\n1. 在 Chrome 中：點擊網址列右側的安裝圖示\n2. 在 Edge 中：點擊選單 > 應用程式 > 將此網站安裝為應用程式');
+      }
       return;
     }
 
