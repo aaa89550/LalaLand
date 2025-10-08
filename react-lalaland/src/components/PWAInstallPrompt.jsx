@@ -7,6 +7,7 @@ const PWAInstallPrompt = ({ user = null }) => {
   const [isInstalled, setIsInstalled] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
   const [isStandalone, setIsStandalone] = useState(false);
+  const [showIOSInstructions, setShowIOSInstructions] = useState(false);
 
   useEffect(() => {
     // 檢測設備類型
@@ -38,13 +39,13 @@ const PWAInstallPrompt = ({ user = null }) => {
 
     detectDevice();
 
-    // 立即顯示安裝提示（登入後推薦安裝）
+    // 登入後顯示安裝提示
     const showPromptTimer = setTimeout(() => {
       if (!isInstalled && !isStandalone) {
         console.log('💡 顯示 PWA 安裝提示（登入後推薦）');
         setShowInstallPrompt(true);
       }
-    }, 2000); // 2秒後顯示，讓用戶有時間適應
+    }, 3000); // 3秒後顯示，給用戶適應時間
 
     // 添加事件監聽器
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
@@ -82,13 +83,13 @@ const PWAInstallPrompt = ({ user = null }) => {
           const hoursSinceLastDismiss = (Date.now() - dismissedTime) / (1000 * 60 * 60);
           console.log('⏰ 距離上次關閉:', hoursSinceLastDismiss.toFixed(1), '小時');
           
-          if (hoursSinceLastDismiss < 0.5) { // 改為 30 分鐘，方便測試
+          if (hoursSinceLastDismiss < 1) { // 1小時內不重複顯示
             console.log('⏰ 最近已顯示過安裝提示，暫不重複顯示');
             return;
           }
         }
         
-        console.log('💡 強制顯示 PWA 安裝提示');
+        console.log('💡 用戶登入後顯示 PWA 安裝提示');
         setShowInstallPrompt(true);
       }, 2000); // 改為 2 秒，更快顯示
 
@@ -98,7 +99,16 @@ const PWAInstallPrompt = ({ user = null }) => {
 
   // 處理安裝點擊
   const handleInstallClick = async () => {
-    if (!deferredPrompt) return;
+    if (isIOS) {
+      // iOS 設備顯示安裝說明
+      setShowIOSInstructions(true);
+      return;
+    }
+
+    if (!deferredPrompt) {
+      console.log('⚠️ 無法觸發安裝提示，可能瀏覽器不支援或已安裝');
+      return;
+    }
 
     try {
       console.log('🚀 開始 PWA 安裝流程');
@@ -185,75 +195,137 @@ const PWAInstallPrompt = ({ user = null }) => {
   if (!shouldShow) return null;
 
   return (
-    <div className="fixed bottom-4 left-4 right-4 z-50 mx-auto max-w-sm">
-      <div className="bg-white dark:bg-dark-card rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 p-4 animate-slide-up">
-        <div className="flex items-start gap-3">
-          {/* 圖示 */}
-          <div className="flex-shrink-0">
-            <div className="w-12 h-12 bg-gradient-to-r from-primary-500 to-secondary-500 rounded-lg flex items-center justify-center">
-              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
-              </svg>
+    <>
+      {/* PWA 安裝提示 */}
+      <div className="fixed bottom-4 left-4 right-4 z-50 mx-auto max-w-sm">
+        <div className="bg-white dark:bg-dark-card rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 p-4 animate-slide-up">
+          <div className="flex items-start gap-3">
+            {/* 圖示 */}
+            <div className="flex-shrink-0">
+              <div className="w-12 h-12 bg-gradient-to-r from-sea-blue to-sea-blue-dark rounded-lg flex items-center justify-center">
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                </svg>
+              </div>
             </div>
-          </div>
 
-          {/* 內容 */}
-          <div className="flex-1 min-w-0">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-1">
-              {user ? `歡迎 ${user.displayName || '朋友'}！` : '安裝 LalaLand 應用程式'}
-            </h3>
-            
-            {user ? (
+            {/* 內容 */}
+            <div className="flex-1 min-w-0">
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-1">
+                {user ? `歡迎 ${user.displayName || user.nickname || '朋友'}！` : '安裝 LalaLand 應用程式'}
+              </h3>
+              
               <p className="text-xs text-gray-600 dark:text-gray-300 mb-3">
                 {isIOS ? 
                   '安裝到主畫面以獲得更好的聊天體驗和通知功能' : 
                   '將 LalaLand 安裝為應用程式，享受更流暢的聊天體驗'
                 }
               </p>
-            ) : isIOS ? (
-              <p className="text-xs text-gray-600 dark:text-gray-300 mb-3">
-                在 Safari 中點選 <span className="font-semibold">分享按鈕</span>，然後選擇 
-                <span className="font-semibold">「加入主畫面」</span> 以獲得更好的通知體驗
-              </p>
-            ) : (
-              <p className="text-xs text-gray-600 dark:text-gray-300 mb-3">
-                安裝為應用程式，享受更快的載入速度和更可靠的通知功能
-              </p>
-            )}
 
-            {/* 按鈕 */}
-            <div className="flex gap-2">
-              {!isIOS && (
+              {/* 按鈕 */}
+              <div className="flex gap-2">
                 <button
                   onClick={handleInstallClick}
-                  className="flex-1 bg-primary-600 text-white text-xs font-medium py-2 px-3 rounded-md hover:bg-primary-700 transition-colors"
-                  disabled={!deferredPrompt}
+                  className="flex-1 bg-gradient-to-r from-sea-blue to-sea-blue-dark text-white text-xs font-medium py-2 px-3 rounded-md hover:opacity-90 transition-opacity"
+                  disabled={!deferredPrompt && !isIOS}
                 >
-                  立即安裝
+                  {isIOS ? '查看安裝步驟' : '立即安裝'}
                 </button>
-              )}
-              
-              <button
-                onClick={handleDismiss}
-                className="flex-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs font-medium py-2 px-3 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-              >
-                稍後再說
-              </button>
+                
+                <button
+                  onClick={handleDismiss}
+                  className="flex-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs font-medium py-2 px-3 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                >
+                  稍後再說
+                </button>
+              </div>
             </div>
-          </div>
 
-          {/* 關閉按鈕 */}
-          <button
-            onClick={handleDismiss}
-            className="flex-shrink-0 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
+            {/* 關閉按鈕 */}
+            <button
+              onClick={handleDismiss}
+              className="flex-shrink-0 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
         </div>
       </div>
-    </div>
+
+      {/* iOS 安裝說明模態框 */}
+      {showIOSInstructions && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-dark-card rounded-2xl p-6 max-w-sm w-full mx-4 shadow-2xl relative">
+            {/* 關閉按鈕 */}
+            <button
+              onClick={() => setShowIOSInstructions(false)}
+              className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+
+            {/* 內容 */}
+            <div className="text-center mb-6">
+              <div className="w-16 h-16 bg-gradient-to-br from-sea-blue to-sea-blue-dark rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                </svg>
+              </div>
+              
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+                在 iPhone/iPad 上安裝
+              </h2>
+            </div>
+
+            {/* 安裝步驟 */}
+            <div className="space-y-4 mb-6">
+              <div className="flex items-start space-x-3">
+                <div className="flex-shrink-0 w-6 h-6 bg-sea-blue text-white rounded-full flex items-center justify-center text-sm font-bold">
+                  1
+                </div>
+                <div className="text-sm text-gray-600 dark:text-gray-300">
+                  點擊瀏覽器底部的 <strong>分享按鈕</strong> (
+                  <svg className="w-4 h-4 inline mx-1" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M15 8a3 3 0 10-2.977-2.63l-4.94 2.47a3 3 0 100 4.319l4.94 2.47a3 3 0 10.895-1.789l-4.94-2.47a3.027 3.027 0 000-.74l4.94-2.47C13.456 7.68 14.19 8 15 8z"/>
+                  </svg>
+                  )
+                </div>
+              </div>
+
+              <div className="flex items-start space-x-3">
+                <div className="flex-shrink-0 w-6 h-6 bg-sea-blue text-white rounded-full flex items-center justify-center text-sm font-bold">
+                  2
+                </div>
+                <div className="text-sm text-gray-600 dark:text-gray-300">
+                  選擇 <strong>「加入主畫面」</strong>
+                </div>
+              </div>
+
+              <div className="flex items-start space-x-3">
+                <div className="flex-shrink-0 w-6 h-6 bg-sea-blue text-white rounded-full flex items-center justify-center text-sm font-bold">
+                  3
+                </div>
+                <div className="text-sm text-gray-600 dark:text-gray-300">
+                  點擊 <strong>「加入」</strong> 完成安裝
+                </div>
+              </div>
+            </div>
+
+            {/* 關閉按鈕 */}
+            <button
+              onClick={() => setShowIOSInstructions(false)}
+              className="w-full bg-gradient-to-r from-sea-blue to-sea-blue-dark text-white py-3 px-4 rounded-lg font-medium hover:opacity-90 transition-opacity"
+            >
+              我知道了
+            </button>
+          </div>
+        </div>
+      )}
+    </>
   );
 };
 
