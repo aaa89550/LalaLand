@@ -216,11 +216,25 @@ const VoiceCallNotifications = () => {
     }
   }
 
+  // 額外的渲染調試
+  console.log('🎭 VoiceCallNotifications 渲染決策:', {
+    showIncomingCall,
+    hasIncomingCall: !!incomingCall,
+    willRenderVoiceCall: !!(showIncomingCall && incomingCall),
+    incomingCallFromName: incomingCall?.fromName
+  })
+
   return (
     <>
       {/* 來電通知界面 */}
       {showIncomingCall && incomingCall ? (
         <div className="fixed inset-0 z-[9999]">
+          {console.log('✅ 正在渲染 VoiceCall 組件，props:', {
+            isVisible: true,
+            recipientName: incomingCall.fromName || '未知用戶',
+            recipientId: incomingCall.from,
+            isIncoming: true
+          })}
           <VoiceCall
             isVisible={true}
             onClose={handleRejectCall}
@@ -234,7 +248,10 @@ const VoiceCallNotifications = () => {
       ) : (
         <div className="hidden">
           {/* Debug: 無來電 */}
-          {console.log('🚫 無來電顯示')}
+          {console.log('🚫 無來電顯示，條件:', {
+            showIncomingCall,
+            hasIncomingCall: !!incomingCall
+          })}
         </div>
       )}
     </>

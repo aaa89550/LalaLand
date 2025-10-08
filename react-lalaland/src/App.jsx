@@ -162,7 +162,8 @@ function App() {
           />
           <NotificationSystem />
           <PWAInstallPrompt user={user} />
-          <VoiceCallNotifications />
+          {/* 暫時隱藏語音通話通知功能 */}
+          {/* <VoiceCallNotifications /> */}
         </div>
       </BrowserRouter>
     </ErrorBoundary>

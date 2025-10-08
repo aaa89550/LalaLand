@@ -263,15 +263,17 @@ const PrivateChat = () => {
               </div>
             </div>
             
-            {/* 語音通話按鈕 */}
-            <button
-              onClick={handleVoiceCall}
-              className="p-3 rounded-lg bg-green-500 hover:bg-green-600 text-white transition-colors disabled:opacity-50"
-              title="語音通話"
-              disabled={!user || !currentPrivateChat}
-            >
-              <Phone className="w-5 h-5" />
-            </button>
+            {/* 語音通話按鈕 - 暫時隱藏 */}
+            {false && (
+              <button
+                onClick={handleVoiceCall}
+                className="p-3 rounded-lg bg-green-500 hover:bg-green-600 text-white transition-colors disabled:opacity-50"
+                title="語音通話"
+                disabled={!user || !currentPrivateChat}
+              >
+                <Phone className="w-5 h-5" />
+              </button>
+            )}
           </div>
         </div>
 
