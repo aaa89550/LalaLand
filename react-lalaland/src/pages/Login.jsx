@@ -142,7 +142,7 @@ const Login = () => {
       await new Promise(resolve => setTimeout(resolve, 500))
       
       console.log('🎉 準備顯示成功通知...')
-      toast.success('註冊成功！歡迎加入 LalaLand！')
+      toast.success('註冊成功！歡迎加入 LalaLand！請至設定更新頭貼與暱稱。')
       console.log('✅ 註冊流程完成，準備導航到聊天室')
       
       // 使用 replace 而不是 push，避免用戶回到註冊頁面
