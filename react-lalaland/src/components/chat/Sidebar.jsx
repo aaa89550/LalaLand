@@ -9,6 +9,7 @@ import {
   Moon,
   Sun
 } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import { signOut } from 'firebase/auth'
 import { auth, database } from '../../config/firebase'
 import { ref, remove } from 'firebase/database'
@@ -21,7 +22,7 @@ import UnreadBadge from '../UnreadBadge'
 import toast from 'react-hot-toast'
 
 const Sidebar = () => {
-  const { user } = useAuthStore()
+  const { user, isAnonymousUser } = useAuthStore()
   const { 
     currentRoom, 
     setCurrentRoom, 
@@ -31,6 +32,8 @@ const Sidebar = () => {
     toggleDarkMode,
     onlineUsers 
   } = useChatStore()
+  const navigate = useNavigate()
+  const isAnonymous = isAnonymousUser()
   
   const [showSettings, setShowSettings] = useState(false)
   const { totalUnread } = useUnreadMessages()
@@ -111,6 +114,25 @@ const Sidebar = () => {
             <div className="text-sm text-gray-600 dark:text-gray-400">
               在線成員: {Object.keys(onlineUsers).length} 人
             </div>
+
+            {/* 匿名用戶註冊提示 */}
+            {isAnonymous && (
+              <div className="mt-4 p-4 bg-gradient-to-r from-sea-light to-accent-orange rounded-lg border border-sea-blue/20">
+                <div className="flex items-center gap-2 mb-2">
+                  <UserPlus className="w-5 h-5 text-sea-blue" />
+                  <span className="font-medium text-sea-dark">升級你的體驗</span>
+                </div>
+                <p className="text-xs text-sea-dark/80 mb-3">
+                  註冊帳號解鎖完整功能：發送訊息、私訊、上傳圖片等
+                </p>
+                <button
+                  onClick={() => navigate('/login')}
+                  className="w-full px-3 py-2 bg-sea-blue hover:bg-sea-dark text-white text-sm font-medium rounded-lg transition-colors"
+                >
+                  立即註冊/登入
+                </button>
+              </div>
+            )}
           </div>
 
           {/* 聊天室列表 */}

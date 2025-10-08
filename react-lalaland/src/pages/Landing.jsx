@@ -1,9 +1,12 @@
 import React from 'react'
 import { useNavigate } from 'react-router-dom'
 import { MessageCircle, Heart, Users, Lock } from 'lucide-react'
+import { useAuthStore } from '../store/authStore'
+import toast from 'react-hot-toast'
 
 const Landing = () => {
   const navigate = useNavigate()
+  const { createAnonymousUser } = useAuthStore()
 
   const features = [
     {
@@ -77,7 +80,15 @@ const Landing = () => {
               開始聊天
             </button>
             <button 
-              onClick={() => navigate('/login')}
+              onClick={() => {
+                try {
+                  createAnonymousUser()
+                  toast.success('歡迎匿名體驗 LalaLand！你可以查看聊天記錄，但需要註冊才能發送訊息。')
+                  navigate('/chat')
+                } catch (error) {
+                  toast.error('匿名體驗啟動失敗')
+                }
+              }}
               className="btn-secondary text-lg px-8 py-4"
             >
               匿名體驗
