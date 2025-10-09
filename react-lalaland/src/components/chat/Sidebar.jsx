@@ -19,6 +19,7 @@ import { useChatStore } from '../../store/chatStore'
 import { cleanupStaleUsers } from '../../utils/cleanupUsers'
 import { useUnreadMessages } from '../../hooks/useUnreadMessages'
 import UnreadBadge from '../UnreadBadge'
+import AgeVerificationModal from '../common/AgeVerificationModal'
 import toast from 'react-hot-toast'
 
 const Sidebar = () => {
@@ -36,6 +37,7 @@ const Sidebar = () => {
   const isAnonymous = isAnonymousUser()
   
   const [showSettings, setShowSettings] = useState(false)
+  const [showAgeVerification, setShowAgeVerification] = useState(false)
   const { totalUnread } = useUnreadMessages()
 
   const handleLogout = async () => {
@@ -144,8 +146,13 @@ const Sidebar = () => {
                   <button
                     key={room.id}
                     onClick={() => {
-                      setCurrentRoom(room.id)
-                      setSidebarOpen(false)
+                      // 如果是約炮區，需要年齡驗證
+                      if (room.id === 'sex') {
+                        setShowAgeVerification(true)
+                      } else {
+                        setCurrentRoom(room.id)
+                        setSidebarOpen(false)
+                      }
                     }}
                     className={`sidebar-item w-full ${currentRoom === room.id ? 'active' : ''}`}
                   >
@@ -239,6 +246,29 @@ const Sidebar = () => {
       <SettingsModal 
         isOpen={showSettings} 
         onClose={() => setShowSettings(false)} 
+      />
+
+      {/* 年齡驗證彈窗 */}
+      <AgeVerificationModal
+        isOpen={showAgeVerification}
+        onConfirm={() => {
+          // 已滿18歲，進入約炮區
+          setCurrentRoom('sex')
+          setSidebarOpen(false)
+          setShowAgeVerification(false)
+          toast.success('歡迎進入約炮區！請遵守社群規範。')
+        }}
+        onReject={() => {
+          // 未滿18歲，跳轉到閒聊區
+          setCurrentRoom('chat')
+          setSidebarOpen(false)
+          setShowAgeVerification(false)
+          toast.error('未滿18歲無法進入約炮區，已自動跳轉至閒聊區。')
+        }}
+        onClose={() => {
+          // 關閉彈窗，保持在原來的房間
+          setShowAgeVerification(false)
+        }}
       />
     </>
   )
