@@ -148,7 +148,16 @@ const Sidebar = () => {
                     onClick={() => {
                       // 如果是約炮區，需要年齡驗證
                       if (room.id === 'sex') {
-                        setShowAgeVerification(true)
+                        // 檢查是否已經驗證過年齡
+                        const ageVerified = sessionStorage.getItem('ageVerified')
+                        if (ageVerified) {
+                          // 已驗證，直接進入
+                          setCurrentRoom(room.id)
+                          setSidebarOpen(false)
+                        } else {
+                          // 未驗證，顯示驗證彈窗
+                          setShowAgeVerification(true)
+                        }
                       } else {
                         setCurrentRoom(room.id)
                         setSidebarOpen(false)

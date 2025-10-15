@@ -17,7 +17,6 @@ import { uploadImage, createImagePreview } from '../../utils/imageUtils'
 import MessageBubble from './MessageBubble'
 import EmojiPicker from './EmojiPicker'
 import VotePoll from './VotePoll'
-import AgeVerificationModal from '../common/AgeVerificationModal'
 import toast from 'react-hot-toast'
 
 const GroupChat = ({ roomId }) => {
@@ -29,7 +28,6 @@ const GroupChat = ({ roomId }) => {
   const [inputMessage, setInputMessage] = useState('')
   const [showEmojiPicker, setShowEmojiPicker] = useState(false)
   const [showVotePoll, setShowVotePoll] = useState(false)
-  const [showAgeVerification, setShowAgeVerification] = useState(false)
   const [imagePreview, setImagePreview] = useState(null)
   const [uploadingImage, setUploadingImage] = useState(false)
   const [replyTo, setReplyTo] = useState(null)
@@ -52,16 +50,7 @@ const GroupChat = ({ roomId }) => {
     return () => clearTimeout(timeoutId)
   }, [messages])
 
-  // 年齡驗證 - 檢查是否進入約炮區
-  useEffect(() => {
-    if (roomId === 'sex') {
-      // 檢查是否已經驗證過年齡（使用 sessionStorage，每次會話都需要重新驗證）
-      const ageVerified = sessionStorage.getItem('ageVerified')
-      if (!ageVerified) {
-        setShowAgeVerification(true)
-      }
-    }
-  }, [roomId])
+  // 年齡驗證邏輯已移至 Sidebar，這裡不再需要
 
   // 使用在線用戶 hook
   useOnlineUsers()
@@ -348,28 +337,7 @@ const GroupChat = ({ roomId }) => {
           />
         )}
 
-        {/* 年齡驗證彈窗 - 約炮區專用 */}
-        <AgeVerificationModal
-          isOpen={showAgeVerification}
-          onConfirm={() => {
-            // 已滿18歲，允許進入約炮區並記住驗證結果
-            sessionStorage.setItem('ageVerified', 'true')
-            setShowAgeVerification(false)
-            toast.success('歡迎進入約炮區！請遵守社群規範。')
-          }}
-          onReject={() => {
-            // 未滿18歲，跳轉到閒聊區
-            setCurrentRoom('chat')
-            setShowAgeVerification(false)
-            toast.error('未滿18歲無法進入約炮區，已自動跳轉至閒聊區。')
-          }}
-          onClose={() => {
-            // 關閉彈窗但不同意驗證，跳轉到閒聊區
-            setCurrentRoom('chat')
-            setShowAgeVerification(false)
-            toast.info('已跳轉至閒聊區。')
-          }}
-        />
+        {/* 年齡驗證已移至 Sidebar 統一處理 */}
       </div>
     </div>
   )
