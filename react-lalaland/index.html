@@ -45,6 +45,9 @@
     <!-- Android PWA Support -->
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="application-name" content="LalaLand" />
+    <meta name="format-detection" content="telephone=no" />
+    <meta name="msapplication-tap-highlight" content="no" />
+    <meta name="mobile-web-app-status-bar-style" content="black-translucent" />
     
     <!-- PWA Icons -->
     <link rel="apple-touch-icon" href="/icon-512.png?v=2" />
@@ -58,9 +61,49 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Android PWA 防拖曳樣式 -->
+    <style>
+      /* 基礎防拖曳保護 */
+      * {
+        -webkit-user-select: none;
+        -webkit-user-drag: none;
+        -webkit-app-region: no-drag;
+        user-select: none;
+      }
+      
+      /* 允許輸入框選取文字 */
+      input, textarea, select, [contenteditable] {
+        -webkit-user-select: text !important;
+        user-select: text !important;
+      }
+      
+      /* 優化觸摸體驗 */
+      body {
+        -webkit-touch-callout: none;
+        -webkit-text-size-adjust: none;
+        touch-action: manipulation;
+        overscroll-behavior: none;
+      }
+      
+      /* 防止圖片被拖曳 */
+      img {
+        -webkit-user-drag: none;
+        pointer-events: none;
+      }
+      
+      /* 保持互動元素可用 */
+      button, a, [role="button"], input, textarea, select {
+        pointer-events: auto;
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>
+    
+    <!-- Android PWA 拖曳修復腳本 -->
+    <script src="/android-pwa-fix.js"></script>
+    
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
