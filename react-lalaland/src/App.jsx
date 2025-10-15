@@ -50,11 +50,23 @@ function App() {
 
     initializeFCM()
 
-    // Service Worker 註冊（簡化版）
+    // Service Worker 註冊（增強版）
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js')
-        .then(() => console.log('📱 Service Worker 註冊成功'))
-        .catch(error => console.log('📱 Service Worker 註冊失敗:', error))
+        .then(registration => {
+          console.log('📱 Service Worker 註冊成功:', registration.scope)
+          
+          // 檢查是否有更新
+          registration.addEventListener('updatefound', () => {
+            console.log('🔄 Service Worker 更新中...')
+          })
+        })
+        .catch(error => {
+          console.error('📱 Service Worker 註冊失敗:', error)
+          // 即使 SW 註冊失敗，應用程式仍應該能正常運行
+        })
+    } else {
+      console.warn('📱 此瀏覽器不支援 Service Worker')
     }
     
     // 監聽 Firebase 認證狀態

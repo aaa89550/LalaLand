@@ -1,9 +1,8 @@
 // Service Worker for LalaLand PWA
-const CACHE_NAME = 'lalaland-v2-logo-update';
+const CACHE_NAME = 'lalaland-v3-android-fix';
 const urlsToCache = [
   '/',
-  '/static/js/bundle.js',
-  '/static/css/main.css',
+  '/index.html',
   '/manifest.json',
   '/icon-512.png'
 ];

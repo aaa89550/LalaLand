@@ -1,22 +1,32 @@
 // 簡化的 Service Worker - 僅用於 PWA 基本功能
-const CACHE_NAME = 'lalaland-v7-logo-update'
+const CACHE_NAME = 'lalaland-v8-android-fix'
 const urlsToCache = [
   '/',
   '/index.html',
-  '/assets/index-BfHqRL13.css',
-  '/assets/index-C4a3AT_8.js',
   '/icon-512.png',
-  '/manifest.json',
-  '/firebase-messaging-sw.js'
+  '/manifest.json'
 ]
 
 // 安裝 Service Worker
 self.addEventListener('install', event => {
+  console.log('🔧 Service Worker: 開始安裝')
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => {
         console.log('📦 Service Worker: 快取基本檔案')
-        return cache.addAll(urlsToCache.filter(url => url !== '/'))
+        // 只快取確實存在的檔案
+        return cache.addAll([
+          '/index.html',
+          '/manifest.json'
+        ].concat(
+          // 圖示檔案單獨處理，避免 404 錯誤
+          urlsToCache.includes('/icon-512.png') ? ['/icon-512.png'] : []
+        ))
+      })
+      .catch(error => {
+        console.error('❌ Service Worker: 快取失敗', error)
+        // 即使快取失敗也繼續安裝
+        return Promise.resolve()
       })
   )
   self.skipWaiting()
