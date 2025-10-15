@@ -5,7 +5,7 @@ const SplashScreen = () => {
     <div className="fixed inset-0 bg-gradient-to-br from-earth-beige to-white flex items-center justify-center z-50">
       <div className="text-center">
         <img 
-          src="/icon-512.png" 
+          src="/icon-512.png?v=2" 
           alt="LalaLand" 
           className="w-32 h-32 mx-auto mb-6 animate-float"
         />

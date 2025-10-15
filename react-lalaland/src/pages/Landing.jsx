@@ -38,7 +38,7 @@ const Landing = () => {
         <div className="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
           <div className="flex items-center gap-3">
             <img 
-              src="/icon-512.png" 
+              src="/icon-512.png?v=2" 
               alt="LalaLand" 
               className="w-10 h-10 rounded-lg"
             />
@@ -57,7 +57,7 @@ const Landing = () => {
       <main className="flex-1 flex flex-col items-center justify-center px-4 py-12">
         <div className="text-center max-w-4xl mx-auto">
           <img 
-            src="/icon-512.png" 
+            src="/icon-512.png?v=2" 
             alt="LalaLand Logo" 
             className="w-32 h-32 mx-auto mb-8 animate-float"
           />

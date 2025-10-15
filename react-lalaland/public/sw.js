@@ -1,5 +1,5 @@
 // Service Worker for LalaLand PWA
-const CACHE_NAME = 'lalaland-v1';
+const CACHE_NAME = 'lalaland-v2-logo-update';
 const urlsToCache = [
   '/',
   '/static/js/bundle.js',

@@ -1,5 +1,5 @@
 // 簡化的 Service Worker - 僅用於 PWA 基本功能
-const CACHE_NAME = 'lalaland-v6-fcm-fix'
+const CACHE_NAME = 'lalaland-v7-logo-update'
 const urlsToCache = [
   '/',
   '/index.html',
