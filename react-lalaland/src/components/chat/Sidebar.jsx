@@ -15,6 +15,7 @@ import { auth, database } from '../../config/firebase'
 import { ref, remove } from 'firebase/database'
 import { useAuthStore } from '../../store/authStore'
 import SettingsModal from './SettingsModal'
+import AgeVerificationModal from '../common/AgeVerificationModal'
 import { useChatStore } from '../../store/chatStore'
 import { cleanupStaleUsers } from '../../utils/cleanupUsers'
 import { useUnreadMessages } from '../../hooks/useUnreadMessages'
@@ -36,6 +37,7 @@ const Sidebar = () => {
   const isAnonymous = isAnonymousUser()
   
   const [showSettings, setShowSettings] = useState(false)
+  const [showAgeVerification, setShowAgeVerification] = useState(false)
   const { totalUnread } = useUnreadMessages()
 
   const handleLogout = async () => {
@@ -64,6 +66,42 @@ const Sidebar = () => {
     } catch (error) {
       toast.error('清理失敗', { id: 'cleanup' })
     }
+  }
+
+  const handleRoomClick = (roomId) => {
+    if (roomId === 'sex') {
+      // 檢查年齡驗證
+      const ageVerified = sessionStorage.getItem('ageVerified')
+      if (!ageVerified) {
+        setShowAgeVerification(true)
+        return
+      }
+    }
+    
+    setCurrentRoom(roomId)
+    setSidebarOpen(false)
+  }
+
+  const handleAgeVerified = () => {
+    sessionStorage.setItem('ageVerified', 'true')
+    setShowAgeVerification(false)
+    setCurrentRoom('sex')
+    setSidebarOpen(false)
+    toast.success('歡迎進入約炮區！請遵守社區守則。')
+  }
+
+  const handleAgeRejected = () => {
+    setShowAgeVerification(false)
+    setCurrentRoom('chat')
+    setSidebarOpen(false)
+    toast.error('未滿18歲無法進入約炮區，已自動跳轉至閒聊區。')
+  }
+
+  const handleAgeModalClosed = () => {
+    setShowAgeVerification(false)
+    setCurrentRoom('chat')
+    setSidebarOpen(false)
+    toast.info('已跳轉至閒聊區。')
   }
 
   const chatRooms = [
@@ -143,10 +181,7 @@ const Sidebar = () => {
                 {chatRooms.map((room) => (
                   <button
                     key={room.id}
-                    onClick={() => {
-                      setCurrentRoom(room.id)
-                      setSidebarOpen(false)
-                    }}
+                    onClick={() => handleRoomClick(room.id)}
                     className={`sidebar-item w-full ${currentRoom === room.id ? 'active' : ''}`}
                   >
                     <room.icon className="w-5 h-5" />
@@ -239,6 +274,14 @@ const Sidebar = () => {
       <SettingsModal 
         isOpen={showSettings} 
         onClose={() => setShowSettings(false)} 
+      />
+      
+      {/* 年齡驗證彈窗 */}
+      <AgeVerificationModal
+        isOpen={showAgeVerification}
+        onConfirm={handleAgeVerified}
+        onReject={handleAgeRejected}
+        onClose={handleAgeModalClosed}
       />
     </>
   )
