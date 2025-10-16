@@ -1,9 +1,13 @@
 // Service Worker for LalaLand PWA
-const CACHE_NAME = 'lalaland-v2';
+const CACHE_NAME = 'lalaland-v3';
 const urlsToCache = [
   '/',
   '/manifest.json',
-  '/icon-512.png'
+  '/icon-512.png',
+  '/icon-192.png',
+  '/icon-maskable-512.png',
+  '/icon-maskable-192.png',
+  '/splash-icon-1024.png'
 ];
 
 // 安裝事件 - 緩存資源
