@@ -3,9 +3,27 @@ import { create } from 'zustand'
 export const useAuthStore = create((set, get) => ({
   user: null,
   loading: true,
+  loadingStartTime: Date.now(), // 記錄載入開始時間
   
   setUser: (user) => set({ user }),
-  setLoading: (loading) => set({ loading }),
+  setLoading: (loading) => {
+    if (!loading) {
+      // 確保最少載入 2 秒鐘，讓用戶看到 SplashScreen
+      const minLoadingTime = 2000 // 2秒
+      const elapsedTime = Date.now() - get().loadingStartTime
+      const remainingTime = Math.max(0, minLoadingTime - elapsedTime)
+      
+      if (remainingTime > 0) {
+        setTimeout(() => {
+          set({ loading: false })
+        }, remainingTime)
+      } else {
+        set({ loading: false })
+      }
+    } else {
+      set({ loading, loadingStartTime: Date.now() })
+    }
+  },
   
   logout: () => set({ user: null }),
   
