@@ -151,10 +151,19 @@
         -webkit-overflow-scrolling: touch !important;
       }
       
-      /* 防止圖片被拖曳 */
+      /* 防止圖片被拖曳，但保留點擊功能 */
       img {
         -webkit-user-drag: none !important;
-        pointer-events: none !important;
+      }
+      
+      /* 頭像圖片需要保持可點擊 */
+      .avatar img, 
+      .user-avatar img, 
+      .profile-avatar img,
+      [class*="avatar"] img,
+      [data-testid="avatar"] img,
+      .cursor-pointer img {
+        pointer-events: auto !important;
       }
       
       /* 允許按鈕點擊 */
@@ -164,6 +173,11 @@
       
       /* 允許輸入框交互 */
       input, textarea, select {
+        pointer-events: auto !important;
+      }
+      
+      /* 允許可點擊元素 */
+      [onclick], [data-onclick], .clickable, .cursor-pointer {
         pointer-events: auto !important;
       }
     `;

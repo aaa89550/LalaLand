@@ -576,8 +576,9 @@ const PrivateChat = () => {
                 <div className="relative">
                   <img 
                     src={chat.avatar || `https://ui-avatars.com/api/?name=${chat.nickname}&background=56c596&color=fff`}
-                    alt={chat.nickname}
-                    className="w-12 h-12 rounded-full"
+                    alt={`${chat.nickname}的頭像`}
+                    className="w-12 h-12 rounded-full avatar-image"
+                    style={{ pointerEvents: 'auto' }}
                   />
                   <UnreadBadge count={getUnreadCount(chat.recipientId)} className="absolute -top-1 -right-1" />
                 </div>

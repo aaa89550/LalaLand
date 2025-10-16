@@ -194,14 +194,15 @@ const MessageBubble = ({ message, isOwn, onReply }) => {
         {/* 頭像 - 顯示所有用戶的頭像 */}
         <img 
           src={senderInfo.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(senderInfo.nickname || '匿名')}&background=56c596&color=fff`}
-          alt={senderInfo.nickname || '匿名用戶'}
-          className={`w-8 h-8 rounded-full flex-shrink-0 mt-1 ${
+          alt={`${senderInfo.nickname || '匿名用戶'}的頭像`}
+          className={`w-8 h-8 rounded-full flex-shrink-0 mt-1 avatar-image ${
             senderInfo.uid !== user?.uid 
               ? 'cursor-pointer hover:ring-2 hover:ring-sea-blue/50 transition-all duration-200' 
               : ''
           }`}
           onClick={senderInfo.uid !== user?.uid ? handleAvatarClick : undefined}
           title={senderInfo.uid !== user?.uid ? `點擊與 ${senderInfo.nickname} 私聊` : ''}
+          style={{ pointerEvents: senderInfo.uid !== user?.uid ? 'auto' : 'none' }}
         />
 
         {/* 訊息內容 */}
