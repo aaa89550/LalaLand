@@ -44,8 +44,12 @@ export const useFirebaseChat = (roomId) => {
     // 清空現有訊息
     clearMessages()
 
-    // 設定訊息監聽器
-    const messagesRef = ref(database, `groupChats/${roomId}/messages`)
+    // 設定訊息監聽器 - 限制載入最近50條訊息
+    const messagesRef = query(
+      ref(database, `groupChats/${roomId}/messages`),
+      orderByChild('timestamp'),
+      limitToLast(50)
+    )
     
     const unsubscribe = onValue(messagesRef, (snapshot) => {
       try {

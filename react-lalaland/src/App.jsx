@@ -21,24 +21,9 @@ import PWAInstallPrompt from './components/PWAInstallPrompt'
 import VoiceCallNotifications from './components/notifications/VoiceCallNotifications'
 import { pwaManager } from './utils/pwaManager'
 
-// 全域錯誤處理
-window.addEventListener('error', (event) => {
-  console.error('🚨 全域錯誤:', event.error)
-  // 防止錯誤導致應用程式完全崩潰
-  event.preventDefault()
-})
-
-window.addEventListener('unhandledrejection', (event) => {
-  console.error('🚨 未處理的 Promise 拒絕:', event.reason)
-  // 防止未處理的 Promise 拒絕導致崩潰
-  event.preventDefault()
-})
-
 // 開發環境下載入除錯工具
 if (import.meta.env.DEV) {
-  import('./debug-notifications.js').catch(error => {
-    console.warn('除錯工具載入失敗:', error)
-  })
+  import('./debug-notifications.js')
   
   // 圖片壓縮測試工具
   import('./utils/testImageCompression.js').then(module => {
@@ -46,14 +31,6 @@ if (import.meta.env.DEV) {
     console.log('🔧 測試指令: window.testImageCompression() 或 window.testMultipleImageFormats()')
   }).catch(error => {
     console.warn('測試工具載入失敗:', error)
-  })
-  
-  // PWA 健康檢查工具
-  import('./utils/pwaHealthChecker.js').then(() => {
-    console.log('🔍 PWA 健康檢查工具已載入')
-    console.log('🔧 檢查指令: window.checkPWAHealth()')
-  }).catch(error => {
-    console.warn('PWA 健康檢查工具載入失敗:', error)
   })
 }
 
@@ -73,35 +50,11 @@ function App() {
 
     initializeFCM()
 
-    // Service Worker 註冊（防崩潰版）
+    // Service Worker 註冊（簡化版）
     if ('serviceWorker' in navigator) {
-      // 使用 setTimeout 延遲註冊，避免阻塞主線程
-      setTimeout(() => {
-        navigator.serviceWorker.register('/sw.js')
-          .then(registration => {
-            console.log('📱 Service Worker 註冊成功:', registration.scope)
-            
-            // 檢查是否有更新
-            registration.addEventListener('updatefound', () => {
-              console.log('🔄 Service Worker 更新中...')
-              const newWorker = registration.installing
-              if (newWorker) {
-                newWorker.addEventListener('statechange', () => {
-                  if (newWorker.state === 'installed') {
-                    console.log('✅ Service Worker 更新完成')
-                  }
-                })
-              }
-            })
-          })
-          .catch(error => {
-            console.error('📱 Service Worker 註冊失敗:', error)
-            // 即使 SW 註冊失敗，應用程式仍應該能正常運行
-            // 不拋出錯誤，避免影響應用程式啟動
-          })
-      }, 1000) // 延遲 1 秒註冊
-    } else {
-      console.warn('📱 此瀏覽器不支援 Service Worker')
+      navigator.serviceWorker.register('/sw.js')
+        .then(() => console.log('📱 Service Worker 註冊成功'))
+        .catch(error => console.log('📱 Service Worker 註冊失敗:', error))
     }
     
     // 監聽 Firebase 認證狀態

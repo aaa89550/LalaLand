@@ -21,7 +21,7 @@ import toast from 'react-hot-toast'
 
 const GroupChat = ({ roomId }) => {
   const { user, isAnonymousUser } = useAuthStore()
-  const { messages, setCurrentRoom } = useChatStore()
+  const { messages } = useChatStore()
   const { sendMessage } = useFirebaseChat(roomId)
   const navigate = useNavigate()
   const isAnonymous = isAnonymousUser()
@@ -31,6 +31,7 @@ const GroupChat = ({ roomId }) => {
   const [imagePreview, setImagePreview] = useState(null)
   const [uploadingImage, setUploadingImage] = useState(false)
   const [replyTo, setReplyTo] = useState(null)
+  const [isSending, setIsSending] = useState(false)
   const messagesEndRef = useRef(null)
   const fileInputRef = useRef(null)
 
@@ -49,8 +50,6 @@ const GroupChat = ({ roomId }) => {
     const timeoutId = setTimeout(scrollToBottom, 100)
     return () => clearTimeout(timeoutId)
   }, [messages])
-
-  // 年齡驗證邏輯已移至 Sidebar，這裡不再需要
 
   // 使用在線用戶 hook
   useOnlineUsers()
@@ -73,6 +72,9 @@ const GroupChat = ({ roomId }) => {
     e.preventDefault()
     
     if (!inputMessage.trim() && !imagePreview) return
+    if (isSending) return // 防止重複發送
+
+    setIsSending(true) // 開始發送狀態
 
     try {
       let imageUrl = null
@@ -104,6 +106,7 @@ const GroupChat = ({ roomId }) => {
       toast.error('發送失敗: ' + error.message)
     } finally {
       setUploadingImage(false)
+      setIsSending(false) // 結束發送狀態
     }
   }
 
@@ -143,9 +146,21 @@ const GroupChat = ({ roomId }) => {
     <div className="flex flex-col h-screen pt-16 md:pt-0">
       {/* 聊天室標題和提示 */}
       <div className="bg-white/70 dark:bg-dark-card/70 backdrop-blur-sm border-b border-gray-200 dark:border-gray-700 p-4">
-        <h2 className="text-xl font-semibold text-gray-800 dark:text-dark-text mb-1">
-          {roomInfo[roomId]?.name || '聊天室'}
-        </h2>
+        <div className="flex items-center gap-3 mb-1">
+          {/* 桌面版顯示 LOGO */}
+          <div className="hidden md:flex items-center gap-2">
+            <img 
+              src="/icon-512.png" 
+              alt="LalaLand" 
+              className="w-8 h-8 rounded-lg"
+            />
+            <span className="text-lg font-bold text-sea-blue">LalaLand</span>
+            <div className="w-px h-6 bg-gray-300 dark:bg-gray-600 mx-2"></div>
+          </div>
+          <h2 className="text-xl font-semibold text-gray-800 dark:text-dark-text">
+            {roomInfo[roomId]?.name || '聊天室'}
+          </h2>
+        </div>
         {roomInfo[roomId]?.tip && (
           <p className="text-sm text-gray-600 dark:text-gray-400">
             {roomInfo[roomId].tip}
@@ -288,11 +303,11 @@ const GroupChat = ({ roomId }) => {
             {/* 發送按鈕 */}
             <button
               type="submit"
-              disabled={(!inputMessage.trim() && !imagePreview) || uploadingImage}
+              disabled={(!inputMessage.trim() && !imagePreview) || uploadingImage || isSending}
               className="p-3 bg-sea-blue hover:bg-sea-dark text-white rounded-lg 
                        disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              {uploadingImage ? (
+              {uploadingImage || isSending ? (
                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
               ) : (
                 <Send className="w-5 h-5" />
@@ -336,8 +351,6 @@ const GroupChat = ({ roomId }) => {
             onClose={() => setShowVotePoll(false)}
           />
         )}
-
-        {/* 年齡驗證已移至 Sidebar 統一處理 */}
       </div>
     </div>
   )

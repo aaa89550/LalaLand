@@ -3,8 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { 
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword,
-  updateProfile,
-  sendPasswordResetEmail
+  updateProfile
 } from 'firebase/auth'
 import { ref, set } from 'firebase/database'
 
@@ -17,7 +16,7 @@ const Login = () => {
   const navigate = useNavigate()
   const { user, isAnonymousUser } = useAuthStore()
   const isAnonymous = isAnonymousUser()
-  const [mode, setMode] = useState('login') // 'login', 'register', 'forgot'
+  const [mode, setMode] = useState('login') // 'login', 'register'
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   
@@ -173,41 +172,7 @@ const Login = () => {
     }
   }
 
-  const handleForgotPassword = async (e) => {
-    e.preventDefault()
-    setLoading(true)
 
-    try {
-      console.log('🔄 開始密碼重設流程...', { email: formData.email })
-      
-      await sendPasswordResetEmail(auth, formData.email)
-      
-      console.log('✅ 密碼重設郵件已發送')
-      toast.success('密碼重設郵件已發送到你的信箱，請檢查郵件並依照指示重設密碼')
-      
-      // 切換回登入模式
-      setMode('login')
-    } catch (error) {
-      console.error('❌ 密碼重設過程發生錯誤:', error)
-      console.error('錯誤代碼:', error.code)
-      console.error('錯誤訊息:', error.message)
-      
-      let errorMessage = '密碼重設失敗，請稍後再試'
-      
-      // 根據錯誤類型提供更具體的錯誤訊息
-      if (error.code === 'auth/user-not-found') {
-        errorMessage = '找不到此電子郵件的帳號'
-      } else if (error.code === 'auth/invalid-email') {
-        errorMessage = '電子郵件格式不正確'
-      } else if (error.code === 'auth/too-many-requests') {
-        errorMessage = '請求過於頻繁，請稍後再試'
-      }
-      
-      toast.error(errorMessage)
-    } finally {
-      setLoading(false)
-    }
-  }
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 py-8">
@@ -225,18 +190,17 @@ const Login = () => {
         <div className="card">
           <div className="text-center mb-8">
             <img 
-              src="/icon-512.png?v=2" 
+              src="/icon-512.png" 
               alt="LalaLand" 
               className="w-16 h-16 mx-auto mb-4"
             />
             <h2 className="text-2xl font-bold text-gray-900 mb-2 text-center">
               {mode === 'login' && '歡迎回來'}
               {mode === 'register' && '建立帳號'}
-              {mode === 'forgot' && '重設密碼'}
             </h2>
             
             {/* 匿名用戶升級提示 */}
-            {isAnonymous && mode !== 'forgot' && (
+            {isAnonymous && (
               <div className="mt-4 p-4 bg-gradient-to-r from-amber-50 to-amber-100 border border-amber-200 rounded-lg">
                 <div className="flex items-center justify-center gap-2 mb-2">
                   <UserPlus className="w-5 h-5 text-amber-600" />
@@ -247,45 +211,34 @@ const Login = () => {
                 </p>
               </div>
             )}
-
-            {/* 忘記密碼說明 */}
-            {mode === 'forgot' && (
-              <div className="mt-4 p-4 bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-200 rounded-lg">
-                <p className="text-sm text-blue-700 text-center">
-                  請輸入你的電子郵件地址，我們將發送密碼重設連結到你的信箱
-                </p>
-              </div>
-            )}
           </div>
 
-          {/* 模式切換 - 忘記密碼模式時不顯示 */}
-          {mode !== 'forgot' && (
-            <div className="flex bg-gray-100 rounded-lg p-1 mb-6">
-              <button
-                className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
-                  mode === 'login' 
-                    ? 'bg-white text-sea-blue shadow-sm' 
-                    : 'text-gray-600 hover:text-gray-800'
-                }`}
-                onClick={() => setMode('login')}
-              >
-                登入
-              </button>
-              <button
-                className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
-                  mode === 'register' 
-                    ? 'bg-white text-sea-blue shadow-sm' 
-                    : 'text-gray-600 hover:text-gray-800'
-                }`}
-                onClick={() => setMode('register')}
-              >
-                註冊
-              </button>
-            </div>
-          )}
+          {/* 模式切換 */}
+          <div className="flex bg-gray-100 rounded-lg p-1 mb-6">
+            <button
+              className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+                mode === 'login' 
+                  ? 'bg-white text-sea-blue shadow-sm' 
+                  : 'text-gray-600 hover:text-gray-800'
+              }`}
+              onClick={() => setMode('login')}
+            >
+              登入
+            </button>
+            <button
+              className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+                mode === 'register' 
+                  ? 'bg-white text-sea-blue shadow-sm' 
+                  : 'text-gray-600 hover:text-gray-800'
+              }`}
+              onClick={() => setMode('register')}
+            >
+              註冊
+            </button>
+          </div>
 
           {/* 表單 */}
-          <form onSubmit={mode === 'login' ? handleLogin : mode === 'register' ? handleRegister : handleForgotPassword}>
+          <form onSubmit={mode === 'login' ? handleLogin : handleRegister}>
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   電子郵件
@@ -304,33 +257,30 @@ const Login = () => {
                 </div>
               </div>
 
-              {/* 密碼欄位 - 忘記密碼模式時隱藏 */}
-              {mode !== 'forgot' && (
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    密碼
-                  </label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                    <input
-                      type={showPassword ? 'text' : 'password'}
-                      name="password"
-                      value={formData.password}
-                      onChange={handleInputChange}
-                      className="input-field pl-10 pr-10"
-                      placeholder="輸入密碼"
-                      required
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                    >
-                      {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                    </button>
-                  </div>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  密碼
+                </label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    name="password"
+                    value={formData.password}
+                    onChange={handleInputChange}
+                    className="input-field pl-10 pr-10"
+                    placeholder="輸入密碼"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
                 </div>
-              )}
+              </div>
 
               {mode === 'register' && (
                 <div className="mb-6">
@@ -357,32 +307,9 @@ const Login = () => {
                 disabled={loading}
                 className="btn-primary w-full text-center disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {loading ? '處理中...' : mode === 'login' ? '登入' : mode === 'register' ? '註冊' : '發送重設郵件'}
+                {loading ? '處理中...' : mode === 'login' ? '登入' : '註冊'}
               </button>
             </form>
-
-            {/* 忘記密碼 / 返回登入連結 */}
-            <div className="mt-4 text-center">
-              {mode === 'login' && (
-                <button
-                  type="button"
-                  onClick={() => setMode('forgot')}
-                  className="text-sm text-sea-blue hover:underline"
-                >
-                  忘記密碼？
-                </button>
-              )}
-              
-              {mode === 'forgot' && (
-                <button
-                  type="button"
-                  onClick={() => setMode('login')}
-                  className="text-sm text-sea-blue hover:underline"
-                >
-                  返回登入
-                </button>
-              )}
-            </div>
         </div>
       </div>
     </div>

@@ -437,13 +437,25 @@ const PrivateChat = () => {
         {/* 標題 */}
         <div className="bg-white/70 dark:bg-dark-card/70 backdrop-blur-sm border-b border-gray-200 dark:border-gray-700 p-4">
           <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-xl font-semibold text-gray-800 dark:text-dark-text mb-1">
-                私人訊息
-              </h2>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                匿名模式無法使用私訊功能
-              </p>
+            <div className="flex items-center gap-3">
+              {/* 桌面版顯示 LOGO */}
+              <div className="hidden md:flex items-center gap-2">
+                <img 
+                  src="/icon-512.png" 
+                  alt="LalaLand" 
+                  className="w-8 h-8 rounded-lg"
+                />
+                <span className="text-lg font-bold text-sea-blue">LalaLand</span>
+                <div className="w-px h-6 bg-gray-300 dark:bg-gray-600 mx-2"></div>
+              </div>
+              <div>
+                <h2 className="text-xl font-semibold text-gray-800 dark:text-dark-text mb-1">
+                  私人訊息
+                </h2>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  匿名模式無法使用私訊功能
+                </p>
+              </div>
             </div>
           </div>
         </div>
@@ -497,13 +509,25 @@ const PrivateChat = () => {
       {/* 標題 */}
       <div className="bg-white/70 dark:bg-dark-card/70 backdrop-blur-sm border-b border-gray-200 dark:border-gray-700 p-4">
         <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-xl font-semibold text-gray-800 dark:text-dark-text mb-1">
-              私人訊息 ({privateChatsList.length})
-            </h2>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              點選對話開始私訊
-            </p>
+          <div className="flex items-center gap-3">
+            {/* 桌面版顯示 LOGO */}
+            <div className="hidden md:flex items-center gap-2">
+              <img 
+                src="/icon-512.png" 
+                alt="LalaLand" 
+                className="w-8 h-8 rounded-lg"
+              />
+              <span className="text-lg font-bold text-sea-blue">LalaLand</span>
+              <div className="w-px h-6 bg-gray-300 dark:bg-gray-600 mx-2"></div>
+            </div>
+            <div>
+              <h2 className="text-xl font-semibold text-gray-800 dark:text-dark-text mb-1">
+                私人訊息 ({privateChatsList.length})
+              </h2>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                點選對話開始私訊
+              </p>
+            </div>
           </div>
           <div className="flex gap-2">
             <button 
