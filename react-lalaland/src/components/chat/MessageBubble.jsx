@@ -223,11 +223,11 @@ const MessageBubble = ({ message, isOwn, onReply, onScrollToMessage }) => {
           {/* 回覆的訊息預覽 */}
           {message.replyTo && (
             <div 
-              className={`mb-2 cursor-pointer hover:opacity-80 transition-opacity ${isOwn ? 'self-end' : 'self-start'}`}
+              className={`mb-2 cursor-pointer hover:opacity-80 transition-opacity w-full ${isOwn ? 'flex justify-end' : 'flex justify-start'}`}
               onClick={handleReplyClick}
             >
               <div className={`
-                text-xs p-2 rounded-lg border-l-4 max-w-xs
+                text-xs p-2 rounded-lg border-l-4 max-w-[80%] sm:max-w-xs
                 ${isOwn 
                   ? 'bg-sea-light/20 border-sea-light text-sea-dark' 
                   : 'bg-gray-100 dark:bg-gray-700 border-sea-blue dark:border-green-400 text-gray-600 dark:text-gray-300'

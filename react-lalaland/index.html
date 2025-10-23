@@ -86,15 +86,27 @@
         overscroll-behavior: none;
       }
       
-      /* 防止圖片被拖曳 */
+      /* 防止圖片被拖曳，但保留頭像點擊功能 */
       img {
         -webkit-user-drag: none;
-        pointer-events: none;
+      }
+      
+      /* 頭像圖片需要保持可點擊 */
+      .cursor-pointer img,
+      img[title*="點擊"],
+      img[alt*="頭像"],
+      img.cursor-pointer {
+        pointer-events: auto !important;
       }
       
       /* 保持互動元素可用 */
       button, a, [role="button"], input, textarea, select {
         pointer-events: auto;
+      }
+      
+      /* 確保可點擊元素正常工作 */
+      .cursor-pointer, [onclick] {
+        pointer-events: auto !important;
       }
     </style>
   </head>
