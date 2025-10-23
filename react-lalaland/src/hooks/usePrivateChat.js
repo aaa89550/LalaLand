@@ -209,8 +209,17 @@ export const usePrivateChat = (recipientId) => {
     }
 
     try {
-      console.log(`📤 發送私人訊息到 ${chatId}:`, message)
-      await push(messagesRef, message)
+      // Remove undefined fields (Firebase Realtime DB doesn't accept undefined inside objects)
+      const cleanMessage = JSON.parse(JSON.stringify(message))
+      if (JSON.stringify(message) !== JSON.stringify(cleanMessage)) {
+        console.debug('usePrivateChat: removed undefined fields from message before push', {
+          original: message,
+          cleaned: cleanMessage
+        })
+      }
+
+      console.log(`📤 發送私人訊息到 ${chatId}:`, cleanMessage)
+      await push(messagesRef, cleanMessage)
     } catch (error) {
       console.error(`❌ 發送私人訊息失敗 (${chatId}):`, error)
       throw error

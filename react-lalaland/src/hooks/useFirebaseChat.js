@@ -184,7 +184,17 @@ export const useFirebaseChat = (roomId) => {
     }
 
     try {
-      await push(messagesRef, message)
+      // Firebase Realtime Database rejects objects that contain undefined values.
+      // Use JSON serialization to remove any undefined properties before pushing.
+      const cleanMessage = JSON.parse(JSON.stringify(message))
+      if (JSON.stringify(message) !== JSON.stringify(cleanMessage)) {
+        console.debug('useFirebaseChat: removed undefined fields from message before push', {
+          original: message,
+          cleaned: cleanMessage
+        })
+      }
+
+      await push(messagesRef, cleanMessage)
     } catch (error) {
       console.error('發送訊息失敗:', error)
       throw error

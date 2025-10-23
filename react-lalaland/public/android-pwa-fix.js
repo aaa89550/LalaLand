@@ -22,36 +22,23 @@
   if (isAndroid && isPWA) {
     console.log('🛡️ 啟用 Android PWA 拖曳保護');
     
-    // 檢查元素是否為互動式（輸入、按鈕、連結或帶有 onclick/role 的元素）
-    const isInteractive = (el) => {
-      if (!el) return false
-      try {
-        const tag = el.tagName && el.tagName.toLowerCase()
-        if (['input', 'textarea', 'select', 'button', 'a'].includes(tag)) return true
-        // contenteditable 或 role=button
-        if (el.closest && el.closest('button, input, textarea, select, a, [role="button"], [contenteditable]')) return true
-        // 有 onclick 屬性或可點擊的 class
-        if (el.hasAttribute && (el.hasAttribute('onclick') || el.getAttribute('role') === 'button')) return true
-      } catch (err) {
-        // 忽略錯誤，視為非互動元素
-      }
-      return false
-    }
-
-    // 防止拖曳事件（但保留互動元素的拖曳/點擊）
+    // 防止拖曳事件
     const preventDrag = (e) => {
-      if (isInteractive(e.target)) return // 不攔截互動式元素
-      e.preventDefault()
-      e.stopPropagation()
-      return false
+      e.preventDefault();
+      e.stopPropagation();
+      return false;
     };
     
-    // 防止選取事件（保留輸入與其他互動元素）
+    // 防止選取事件（除了輸入框）
     const preventSelect = (e) => {
-      if (isInteractive(e.target)) return
-      e.preventDefault()
-      e.stopPropagation()
-      return false
+      const tagName = e.target.tagName.toLowerCase();
+      const inputTags = ['input', 'textarea', 'select'];
+      
+      if (!inputTags.includes(tagName)) {
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
+      }
     };
     
     // 添加拖曳保護事件監聽器
@@ -71,50 +58,48 @@
     let touchStartY = 0;
     
     document.addEventListener('touchstart', (e) => {
-      const now = Date.now()
-      lastTouchTime = now
-      touchStartY = e.touches[0].clientY
-
-      // 若目標為互動元素，跳過攔截
-      if (isInteractive(e.target)) return
-
+      const now = Date.now();
+      lastTouchTime = now;
+      touchStartY = e.touches[0].clientY;
+      
       // 防止多點觸控導致的問題
       if (e.touches.length > 1) {
-        e.preventDefault()
-        return false
+        e.preventDefault();
+        return false;
       }
     }, { passive: false });
     
     document.addEventListener('touchmove', (e) => {
-      // 若目標為互動元素，允許瀏覽器處理（避免阻擋按鈕/輸入點擊）
-      if (isInteractive(e.target)) return
-
-      const currentY = e.touches[0].clientY
-      const diff = touchStartY - currentY
-
+      const currentY = e.touches[0].clientY;
+      const diff = touchStartY - currentY;
+      
       // 防止下拉刷新和上拉關閉手勢
       if (Math.abs(diff) > 50) {
         // 在頁面頂部時防止下拉
         if (diff < 0 && window.scrollY <= 5) {
-          e.preventDefault()
-          return false
+          e.preventDefault();
+          return false;
         }
-
+        
         // 在頁面底部時防止上拉
-        const isAtBottom = (window.innerHeight + window.scrollY) >= (document.body.offsetHeight - 10)
+        const isAtBottom = (window.innerHeight + window.scrollY) >= (document.body.offsetHeight - 10);
         if (diff > 0 && isAtBottom) {
-          e.preventDefault()
-          return false
+          e.preventDefault();
+          return false;
         }
       }
     }, { passive: false });
     
     // 防止長按選單
     document.addEventListener('contextmenu', (e) => {
-      // 若在互動元素上，允許 contextmenu
-      if (isInteractive(e.target)) return
-      e.preventDefault()
-      return false
+      // 允許在輸入框中使用右鍵選單
+      const tagName = e.target.tagName.toLowerCase();
+      const inputTags = ['input', 'textarea'];
+      
+      if (!inputTags.includes(tagName)) {
+        e.preventDefault();
+        return false;
+      }
     }, { passive: false });
     
     // 防止意外的手勢識別
@@ -166,10 +151,19 @@
         -webkit-overflow-scrolling: touch !important;
       }
       
-      /* 防止圖片被拖曳 */
+      /* 防止圖片被拖曳，但保留點擊功能 */
       img {
         -webkit-user-drag: none !important;
-        pointer-events: none !important;
+      }
+      
+      /* 頭像圖片需要保持可點擊 */
+      .avatar img, 
+      .user-avatar img, 
+      .profile-avatar img,
+      [class*="avatar"] img,
+      [data-testid="avatar"] img,
+      .cursor-pointer img {
+        pointer-events: auto !important;
       }
       
       /* 允許按鈕點擊 */
@@ -179,6 +173,11 @@
       
       /* 允許輸入框交互 */
       input, textarea, select {
+        pointer-events: auto !important;
+      }
+      
+      /* 允許可點擊元素 */
+      [onclick], [data-onclick], .clickable, .cursor-pointer {
         pointer-events: auto !important;
       }
     `;
