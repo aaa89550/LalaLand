@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>強制更新 - LalaLand</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans TC', sans-serif;
+            background: linear-gradient(135deg, #2877b9 0%, #1e5a8b 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            text-align: center;
+        }
+        
+        .logo {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 20px;
+            border-radius: 20px;
+        }
+        
+        h1 {
+            color: #2877b9;
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+        
+        p {
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+        
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #2877b9;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .status {
+            background: #f0f9ff;
+            border-left: 4px solid #2877b9;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            text-align: left;
+        }
+        
+        .status-item {
+            padding: 5px 0;
+            color: #444;
+            font-size: 14px;
+        }
+        
+        .status-item.done::before {
+            content: '✓ ';
+            color: #10b981;
+            font-weight: bold;
+        }
+        
+        .btn {
+            background: #2877b9;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 20px;
+            width: 100%;
+        }
+        
+        .btn:hover {
+            background: #1e5a8b;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(40,119,185,0.3);
+        }
+        
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .warning {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            color: #856404;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <img src="./icon-512.png" alt="LalaLand" class="logo">
+        <h1>🔄 強制更新 LalaLand</h1>
+        <p>此工具將清除所有快取並強制重新載入應用程式</p>
+        
+        <div class="warning">
+            ⚠️ 注意：這將清除所有本地快取資料，但不會影響你的帳號資料
+        </div>
+        
+        <div class="status" id="status">
+            <div class="status-item" id="status-sw">正在檢查 Service Worker...</div>
+            <div class="status-item" id="status-cache">正在檢查快取...</div>
+            <div class="status-item" id="status-storage">正在檢查儲存空間...</div>
+        </div>
+        
+        <div class="spinner" id="spinner" style="display: none;"></div>
+        
+        <button class="btn" id="updateBtn" onclick="forceUpdate()">
+            開始強制更新
+        </button>
+        
+        <p style="margin-top: 20px; font-size: 12px; color: #999;">
+            更新完成後將自動跳轉到首頁
+        </p>
+    </div>
+
+    <script>
+        let updateInProgress = false;
+        
+        // 檢查狀態
+        async function checkStatus() {
+            // 檢查 Service Worker
+            if ('serviceWorker' in navigator) {
+                const registrations = await navigator.serviceWorker.getRegistrations();
+                document.getElementById('status-sw').innerHTML = 
+                    registrations.length > 0 
+                    ? `發現 ${registrations.length} 個 Service Worker` 
+                    : '✓ 沒有 Service Worker';
+                document.getElementById('status-sw').classList.toggle('done', registrations.length === 0);
+            } else {
+                document.getElementById('status-sw').innerHTML = '✓ 瀏覽器不支援 Service Worker';
+                document.getElementById('status-sw').classList.add('done');
+            }
+            
+            // 檢查快取
+            if ('caches' in window) {
+                const cacheNames = await caches.keys();
+                document.getElementById('status-cache').innerHTML = 
+                    cacheNames.length > 0 
+                    ? `發現 ${cacheNames.length} 個快取` 
+                    : '✓ 沒有快取';
+                document.getElementById('status-cache').classList.toggle('done', cacheNames.length === 0);
+            } else {
+                document.getElementById('status-cache').innerHTML = '✓ 瀏覽器不支援快取 API';
+                document.getElementById('status-cache').classList.add('done');
+            }
+            
+            // 檢查儲存空間
+            try {
+                const localStorageSize = JSON.stringify(localStorage).length;
+                document.getElementById('status-storage').innerHTML = 
+                    localStorageSize > 0 
+                    ? `LocalStorage 大小: ${(localStorageSize / 1024).toFixed(2)} KB` 
+                    : '✓ LocalStorage 為空';
+                document.getElementById('status-storage').classList.toggle('done', localStorageSize === 0);
+            } catch (e) {
+                document.getElementById('status-storage').innerHTML = '⚠️ 無法存取 LocalStorage';
+            }
+        }
+        
+        async function forceUpdate() {
+            if (updateInProgress) return;
+            
+            updateInProgress = true;
+            const btn = document.getElementById('updateBtn');
+            const spinner = document.getElementById('spinner');
+            
+            btn.disabled = true;
+            btn.textContent = '更新中...';
+            spinner.style.display = 'block';
+            
+            try {
+                // 1. 清除 Service Worker
+                if ('serviceWorker' in navigator) {
+                    const registrations = await navigator.serviceWorker.getRegistrations();
+                    for (let registration of registrations) {
+                        await registration.unregister();
+                    }
+                    document.getElementById('status-sw').innerHTML = '✓ Service Worker 已移除';
+                    document.getElementById('status-sw').classList.add('done');
+                }
+                
+                // 2. 清除所有快取
+                if ('caches' in window) {
+                    const cacheNames = await caches.keys();
+                    for (let name of cacheNames) {
+                        await caches.delete(name);
+                    }
+                    document.getElementById('status-cache').innerHTML = '✓ 快取已清除';
+                    document.getElementById('status-cache').classList.add('done');
+                }
+                
+                // 3. 清除 localStorage 和 sessionStorage
+                try {
+                    localStorage.clear();
+                    sessionStorage.clear();
+                    document.getElementById('status-storage').innerHTML = '✓ 儲存空間已清除';
+                    document.getElementById('status-storage').classList.add('done');
+                } catch (e) {
+                    console.log('清除儲存空間失敗:', e);
+                }
+                
+                // 4. 延遲後重新載入
+                btn.textContent = '✅ 更新完成！正在重新載入...';
+                
+                setTimeout(() => {
+                    window.location.href = '/?_t=' + Date.now();
+                }, 2000);
+                
+            } catch (error) {
+                console.error('更新失敗:', error);
+                btn.textContent = '更新失敗，請重試';
+                btn.disabled = false;
+                spinner.style.display = 'none';
+                updateInProgress = false;
+                
+                alert('更新失敗: ' + error.message + '\n\n請手動清除瀏覽器快取後重試。');
+            }
+        }
+        
+        // 頁面載入時檢查狀態
+        checkStatus();
+        
+        // 每5秒更新狀態
+        setInterval(checkStatus, 5000);
+    </script>
+</body>
+</html>
