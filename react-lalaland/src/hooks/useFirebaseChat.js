@@ -197,6 +197,14 @@ export const useFirebaseChat = (roomId) => {
       await push(messagesRef, cleanMessage)
     } catch (error) {
       console.error('發送訊息失敗:', error)
+      console.error('訊息內容詳情:', {
+        roomId,
+        messageDataInput: messageData,
+        finalMessage: message,
+        userUid: user?.uid,
+        errorCode: error.code,
+        errorMessage: error.message
+      })
       throw error
     }
   }

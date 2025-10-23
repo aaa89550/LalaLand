@@ -90,7 +90,7 @@ const GroupChat = ({ roomId }) => {
         type: 'text',
         content: inputMessage.trim(),
         image: imageUrl,
-        replyTo: replyTo || undefined
+        ...(replyTo && { replyTo })
       }
 
       await sendMessage(messageData)

@@ -100,7 +100,7 @@ const PrivateChat = () => {
         text: inputMessage.trim(),
         type: 'text',
         image: imageUrl,
-        replyTo: replyTo || undefined
+        ...(replyTo && { replyTo })
       })
       
       // 清空輸入

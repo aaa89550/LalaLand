@@ -222,6 +222,15 @@ export const usePrivateChat = (recipientId) => {
       await push(messagesRef, cleanMessage)
     } catch (error) {
       console.error(`❌ 發送私人訊息失敗 (${chatId}):`, error)
+      console.error('私訊內容詳情:', {
+        chatId,
+        recipientId,
+        messageDataInput: messageData,
+        finalMessage: message,
+        userUid: user?.uid,
+        errorCode: error.code,
+        errorMessage: error.message
+      })
       throw error
     }
   }
