@@ -3,7 +3,7 @@ import { Heart, MessageCircle, MoreHorizontal } from 'lucide-react'
 import { useChatStore } from '../../store/chatStore'
 import { useAuthStore } from '../../store/authStore'
 
-const MessageBubble = ({ message, isOwn, onReply }) => {
+const MessageBubble = ({ message, isOwn, onReply, onScrollToMessage }) => {
   const { setCurrentPrivateChat, setCurrentRoom } = useChatStore()
   const { user } = useAuthStore()
   const [showActions, setShowActions] = useState(false)
@@ -78,8 +78,16 @@ const MessageBubble = ({ message, isOwn, onReply }) => {
       }
     } catch (error) {
       console.error('回覆功能錯誤:', error)
-      // 顯示用戶友好的錯誤信息
       alert('回覆功能暫時無法使用，請稍後再試')
+    }
+  }
+
+  // 處理點擊回覆泡泡 - 跳轉到原始訊息
+  const handleReplyClick = (e) => {
+    e.stopPropagation()
+    if (onScrollToMessage && message.replyTo?.id) {
+      onScrollToMessage(message.replyTo.id)
+      console.log('🎯 跳轉到原始訊息:', message.replyTo.id)
     }
   }
 
@@ -211,6 +219,29 @@ const MessageBubble = ({ message, isOwn, onReply }) => {
             {senderInfo.nickname || '匿名用戶'}
             {isOwn && <span className="text-blue-500"> (你)</span>}
           </p>
+
+          {/* 回覆的訊息預覽 */}
+          {message.replyTo && (
+            <div 
+              className={`mb-2 cursor-pointer hover:opacity-80 transition-opacity ${isOwn ? 'self-end' : 'self-start'}`}
+              onClick={handleReplyClick}
+            >
+              <div className={`
+                text-xs p-2 rounded-lg border-l-4 max-w-xs
+                ${isOwn 
+                  ? 'bg-sea-light/20 border-sea-light text-sea-dark' 
+                  : 'bg-gray-100 dark:bg-gray-700 border-sea-blue dark:border-green-400 text-gray-600 dark:text-gray-300'
+                }
+              `}>
+                <div className="font-medium text-sea-blue dark:text-green-400 mb-1">
+                  回覆給 {message.replyTo.sender}
+                </div>
+                <div className="truncate">
+                  {message.replyTo.text || '訊息內容'}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* 訊息氣泡 */}
           <div 

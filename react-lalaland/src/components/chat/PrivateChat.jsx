@@ -32,8 +32,10 @@ const PrivateChat = () => {
   const [imagePreview, setImagePreview] = useState(null)
   const [uploadingImage, setUploadingImage] = useState(false)
   const [showVoiceCall, setShowVoiceCall] = useState(false)
+  const [replyTo, setReplyTo] = useState(null)
   const messagesEndRef = useRef(null)
   const fileInputRef = useRef(null)
+  const messageRefs = useRef({})
   
   // 使用私聊 hook 來載入歷史訊息
   const { sendPrivateMessage } = usePrivateChat(currentPrivateChat?.recipientId)
@@ -97,12 +99,14 @@ const PrivateChat = () => {
       await sendPrivateMessage({
         text: inputMessage.trim(),
         type: 'text',
-        image: imageUrl
+        image: imageUrl,
+        replyTo: replyTo || undefined
       })
       
       // 清空輸入
       setInputMessage('')
       setImagePreview(null)
+      setReplyTo(null)
       if (fileInputRef.current) {
         fileInputRef.current.value = ''
       }
@@ -115,6 +119,40 @@ const PrivateChat = () => {
       toast.error('發送失敗: ' + error.message)
     } finally {
       setUploadingImage(false)
+    }
+  }
+
+  // 處理回覆功能
+  const handleReply = (messageData) => {
+    setReplyTo(messageData)
+    console.log('💬 準備回覆私訊:', messageData)
+  }
+
+  // 取消回覆
+  const cancelReply = () => {
+    setReplyTo(null)
+    setInputMessage('')
+    console.log('❌ 取消回覆')
+  }
+
+  // 滾動到指定訊息並高亮
+  const scrollToMessage = (messageId) => {
+    const messageElement = messageRefs.current[messageId]
+    if (messageElement) {
+      messageElement.scrollIntoView({ 
+        behavior: 'smooth', 
+        block: 'center' 
+      })
+      
+      // 添加高亮效果
+      messageElement.classList.add('highlight-message')
+      setTimeout(() => {
+        messageElement.classList.remove('highlight-message')
+      }, 2000)
+      
+      console.log('🎯 已跳轉到私訊:', messageId)
+    } else {
+      console.warn('⚠️ 找不到指定的私訊元素:', messageId)
     }
   }
 
@@ -303,11 +341,19 @@ const PrivateChat = () => {
             </div>
           ) : (
             messages.map((message) => (
-              <MessageBubble 
+              <div 
                 key={message.id}
-                message={message} 
-                isOwn={message.sender?.uid === user?.uid || message.from === user?.uid}
-              />
+                ref={el => {
+                  if (el) messageRefs.current[message.id] = el
+                }}
+              >
+                <MessageBubble 
+                  message={message} 
+                  isOwn={message.sender?.uid === user?.uid || message.from === user?.uid}
+                  onReply={handleReply}
+                  onScrollToMessage={scrollToMessage}
+                />
+              </div>
             ))
           )}
           <div ref={messagesEndRef} />
@@ -335,6 +381,29 @@ const PrivateChat = () => {
               </button>
             </div>
             <p className="text-xs text-gray-500 mt-2">點擊 X 移除圖片</p>
+          </div>
+        )}
+
+        {/* 回覆預覽 */}
+        {replyTo && (
+          <div className="bg-blue-50 dark:bg-blue-900/20 border-t border-blue-200 dark:border-blue-700 p-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <MessageCircle className="w-4 h-4 text-blue-500" />
+                <span className="text-sm text-blue-600 dark:text-blue-400">
+                  回覆 {replyTo.sender}
+                </span>
+                <span className="text-sm text-gray-500 truncate max-w-xs">
+                  {replyTo.text}
+                </span>
+              </div>
+              <button 
+                onClick={cancelReply}
+                className="p-1 hover:bg-blue-200 dark:hover:bg-blue-800 rounded transition-colors"
+              >
+                <X className="w-4 h-4 text-blue-500" />
+              </button>
+            </div>
           </div>
         )}
 

@@ -177,3 +177,24 @@
 .animate-fade-in {
   animation: fadeIn 0.3s ease-out forwards;
 }
+
+/* 訊息高亮動畫 */
+@keyframes highlight {
+  0% {
+    background-color: rgba(59, 130, 246, 0.3);
+    transform: scale(1.02);
+  }
+  50% {
+    background-color: rgba(59, 130, 246, 0.2);
+    transform: scale(1.01);
+  }
+  100% {
+    background-color: transparent;
+    transform: scale(1);
+  }
+}
+
+.highlight-message {
+  animation: highlight 2s ease-out;
+  border-radius: 0.75rem;
+}

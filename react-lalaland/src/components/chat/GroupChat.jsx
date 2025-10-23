@@ -34,6 +34,7 @@ const GroupChat = ({ roomId }) => {
   const [isSending, setIsSending] = useState(false)
   const messagesEndRef = useRef(null)
   const fileInputRef = useRef(null)
+  const messageRefs = useRef({})
 
   // 自動滾動到底部 - 使用 setTimeout 避免版面問題
   useEffect(() => {
@@ -88,7 +89,8 @@ const GroupChat = ({ roomId }) => {
       const messageData = {
         type: 'text',
         content: inputMessage.trim(),
-        image: imageUrl
+        image: imageUrl,
+        replyTo: replyTo || undefined
       }
 
       await sendMessage(messageData)
@@ -97,6 +99,7 @@ const GroupChat = ({ roomId }) => {
       setInputMessage('')
       setImagePreview(null)
       setShowEmojiPicker(false)
+      setReplyTo(null)
       if (fileInputRef.current) {
         fileInputRef.current.value = ''
       }
@@ -130,13 +133,35 @@ const GroupChat = ({ roomId }) => {
   // 處理回覆功能
   const handleReply = (messageData) => {
     setReplyTo(messageData)
-    setInputMessage(`@${messageData.sender} `)
+    console.log('💬 準備回覆訊息:', messageData)
   }
 
   // 取消回覆
   const cancelReply = () => {
     setReplyTo(null)
     setInputMessage('')
+    console.log('❌ 取消回覆')
+  }
+
+  // 滾動到指定訊息並高亮
+  const scrollToMessage = (messageId) => {
+    const messageElement = messageRefs.current[messageId]
+    if (messageElement) {
+      messageElement.scrollIntoView({ 
+        behavior: 'smooth', 
+        block: 'center' 
+      })
+      
+      // 添加高亮效果
+      messageElement.classList.add('highlight-message')
+      setTimeout(() => {
+        messageElement.classList.remove('highlight-message')
+      }, 2000)
+      
+      console.log('🎯 已跳轉到訊息:', messageId)
+    } else {
+      console.warn('⚠️ 找不到指定的訊息元素:', messageId)
+    }
   }
 
   // Firebase hook 已經過濾了當前房間的訊息
@@ -178,12 +203,19 @@ const GroupChat = ({ roomId }) => {
           </div>
         ) : (
           roomMessages.map((message, index) => (
-            <MessageBubble 
+            <div 
               key={message.id}
-              message={message} 
-              isOwn={message.sender?.uid === user?.uid || message.from === user?.uid}
-              onReply={handleReply}
-            />
+              ref={el => {
+                if (el) messageRefs.current[message.id] = el
+              }}
+            >
+              <MessageBubble 
+                message={message} 
+                isOwn={message.sender?.uid === user?.uid || message.from === user?.uid}
+                onReply={handleReply}
+                onScrollToMessage={scrollToMessage}
+              />
+            </div>
           ))
         )}
         <div ref={messagesEndRef} />
