@@ -6,14 +6,11 @@ import { auth, database } from './config/firebase'
 import { onAuthStateChanged } from 'firebase/auth'
 import { ref, get, remove } from 'firebase/database'
 import { notificationManager } from './utils/notificationManager'
-import { fcmManager } from './utils/fcmManager'
-import { debugDatabase } from './utils/debugFirebase'
 
 // 頁面組件
 import Landing from './pages/Landing'
 import Login from './pages/Login'
 import Chat from './pages/Chat'
-import Debug from './pages/Debug'
 import SplashScreen from './components/SplashScreen'
 import ErrorBoundary from './components/ErrorBoundary'
 import NotificationSystem from './components/NotificationSystem'
@@ -21,40 +18,56 @@ import PWAInstallPrompt from './components/PWAInstallPrompt'
 import VoiceCallNotifications from './components/notifications/VoiceCallNotifications'
 import { pwaManager } from './utils/pwaManager'
 
-// 開發環境下載入除錯工具
-if (import.meta.env.DEV) {
-  import('./debug-notifications.js')
-  
-  // 圖片壓縮測試工具
-  import('./utils/testImageCompression.js').then(module => {
-    console.log('🧪 圖片壓縮測試工具已載入')
-    console.log('🔧 測試指令: window.testImageCompression() 或 window.testMultipleImageFormats()')
-  }).catch(error => {
-    console.warn('測試工具載入失敗:', error)
-  })
-}
+// 全域錯誤處理
+window.addEventListener('error', (event) => {
+  console.error('🚨 全域錯誤:', event.error)
+  // 防止錯誤導致應用程式完全崩潰
+  event.preventDefault()
+})
+
+window.addEventListener('unhandledrejection', (event) => {
+  console.error('🚨 未處理的 Promise 拒絕:', event.reason)
+  // 防止未處理的 Promise 拒絕導致崩潰
+  event.preventDefault()
+})
+
+// 調試工具已移除以提升載入速度
 
 function App() {
   const { user, setUser, loading, setLoading } = useAuthStore()
 
   useEffect(() => {
-    // 初始化 FCM
-    const initializeFCM = async () => {
-      try {
-        await fcmManager.initialize()
-        console.log('✅ FCM 系統已初始化')
-      } catch (error) {
-        console.error('❌ FCM 初始化失敗:', error)
-      }
-    }
+    // 移除FCM初始化以提升載入速度
 
-    initializeFCM()
-
-    // Service Worker 註冊（簡化版）
+    // Service Worker 註冊（防崩潰版）
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js')
-        .then(() => console.log('📱 Service Worker 註冊成功'))
-        .catch(error => console.log('📱 Service Worker 註冊失敗:', error))
+      // 使用 setTimeout 延遲註冊，避免阻塞主線程
+      setTimeout(() => {
+        navigator.serviceWorker.register('/sw.js')
+          .then(registration => {
+            console.log('📱 Service Worker 註冊成功:', registration.scope)
+            
+            // 檢查是否有更新
+            registration.addEventListener('updatefound', () => {
+              console.log('🔄 Service Worker 更新中...')
+              const newWorker = registration.installing
+              if (newWorker) {
+                newWorker.addEventListener('statechange', () => {
+                  if (newWorker.state === 'installed') {
+                    console.log('✅ Service Worker 更新完成')
+                  }
+                })
+              }
+            })
+          })
+          .catch(error => {
+            console.error('📱 Service Worker 註冊失敗:', error)
+            // 即使 SW 註冊失敗，應用程式仍應該能正常運行
+            // 不拋出錯誤，避免影響應用程式啟動
+          })
+      }, 1000) // 延遲 1 秒註冊
+    } else {
+      console.warn('📱 此瀏覽器不支援 Service Worker')
     }
     
     // 監聽 Firebase 認證狀態
@@ -87,16 +100,7 @@ function App() {
         
         console.log('✅ 用戶已登入:', firebaseUser.uid, '暱稱:', nickname)
         
-        // 自動請求通知權限
-        setTimeout(async () => {
-          console.log('🔔 自動請求通知權限...')
-          const token = await fcmManager.requestPermissionSilently(firebaseUser.uid)
-          if (token) {
-            console.log('✅ 通知權限已獲得，FCM Token:', token.substring(0, 20) + '...')
-          } else {
-            console.log('ℹ️ 通知權限未獲得或瀏覽器不支援 FCM')
-          }
-        }, 2000) // 延遲2秒後請求，讓用戶先適應頁面
+        // FCM功能已移除以提升載入速度
       } else {
         setUser(null)
       }
@@ -147,7 +151,6 @@ function App() {
             <Route path="/" element={user ? <Chat /> : <Landing />} />
             <Route path="/login" element={(user && !user.isAnonymous) ? <Chat /> : <Login />} />
             <Route path="/chat" element={user ? <Chat /> : <Login />} />
-            <Route path="/debug" element={<Debug />} />
           </Routes>
           <Toaster 
             position="top-center"

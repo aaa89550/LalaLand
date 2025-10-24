@@ -1,5 +1,5 @@
-import { useEffect, useRef } from 'react'
-import { ref, onValue, push } from 'firebase/database'
+import { useEffect, useRef, useState, useCallback } from 'react'
+import { ref, onValue, push, query, orderByChild, limitToLast, endBefore, get } from 'firebase/database'
 import { database } from '../config/firebase'
 import { useAuthStore } from '../store/authStore'
 import { useChatStore } from '../store/chatStore'
@@ -12,6 +12,12 @@ export const usePrivateChat = (recipientId) => {
   const { incrementUnread } = useUnreadMessages()
   const lastMessageCountRef = useRef(0)
   const hasLoadedOnceRef = useRef(false)
+  const [loading, setLoading] = useState(false)
+  const [hasMore, setHasMore] = useState(true)
+  const allMessagesRef = useRef([])
+  const oldestTimestampRef = useRef(null)
+  
+  const MESSAGES_PER_PAGE = 20
 
   // 判斷是否為桌面裝置
   const isDesktop = () => {
@@ -20,170 +26,219 @@ export const usePrivateChat = (recipientId) => {
     return !(/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua))
   }
 
-  useEffect(() => {
+  // 載入初始訊息
+  const loadInitialMessages = useCallback(async () => {
     console.log('🔍 usePrivateChat 參數檢查:')
     console.log('  - hasUser:', !!user)
     console.log('  - userUid:', user?.uid)
     console.log('  - recipientId:', recipientId)
-    console.log('  - recipientIdType:', typeof recipientId)
-    console.log('  - recipientIdValue:', String(recipientId))
     
     if (!user || !recipientId) {
       console.log('⚠️ usePrivateChat: 缺少必要參數')
-      console.log('  - user exists:', !!user)
-      console.log('  - recipientId:', recipientId)
       return
     }
 
     // 生成聊天室 ID (按 UID 字母順序排列)
     const chatIds = [user.uid, recipientId].sort()
     const chatId = `${chatIds[0]}_${chatIds[1]}`
-    const fullPath = `privateChats/${chatId}/messages`
     
-    console.log(`🚀 開始監聽私聊:`, {
-      userUid: user.uid,
-      recipientId,
-      chatId,
-      fullPath,
-      sortedIds: chatIds
-    })
-
-    // 清空現有訊息
+    console.log(`🚀 開始載入私聊 ${chatId} 的最新訊息...`)
+    
+    // 清空現有狀態
     clearMessages()
-    console.log('🧹 已清空現有訊息，準備載入私聊訊息')
-    
-    // 重置狀態
-    lastMessageCountRef.current = 0
+    allMessagesRef.current = []
+    oldestTimestampRef.current = null
+    setHasMore(true)
+    setLoading(true)
     hasLoadedOnceRef.current = false
 
-    // 設定私人訊息監聽器
+    try {
+      // 載入最近20條訊息
+      const messagesRef = query(
+        ref(database, `privateChats/${chatId}/messages`),
+        orderByChild('time'),
+        limitToLast(MESSAGES_PER_PAGE)
+      )
+      
+      const snapshot = await get(messagesRef)
+      const data = snapshot.val()
+      
+      if (data) {
+        const messages = Object.entries(data).map(([id, message]) => ({
+          id,
+          text: message.text,
+          user: message.user,
+          from: message.from,
+          avatar: message.avatar,
+          time: message.time,
+          timestamp: message.time || message.timestamp || Date.now()
+        }))
+        
+        // 按時間排序
+        messages.sort((a, b) => (a.time || a.timestamp || 0) - (b.time || b.timestamp || 0))
+        
+        allMessagesRef.current = messages
+        oldestTimestampRef.current = messages.length > 0 ? messages[0].time : null
+        
+        console.log(`✅ 載入了 ${messages.length} 條初始私訊`)
+        setMessages(messages)
+        
+        // 如果載入的訊息少於每頁數量，表示沒有更多了
+        if (messages.length < MESSAGES_PER_PAGE) {
+          setHasMore(false)
+        }
+      } else {
+        console.log(`📭 私聊 ${chatId} 沒有訊息`)
+        setHasMore(false)
+      }
+    } catch (error) {
+      console.error(`❌ 載入初始私訊失敗:`, error)
+    } finally {
+      setLoading(false)
+      hasLoadedOnceRef.current = true
+    }
+  }, [user, recipientId, clearMessages, setMessages])
+
+  useEffect(() => {
+    loadInitialMessages()
+  }, [loadInitialMessages])
+
+  // 設定新訊息監聽器
+  useEffect(() => {
+    if (!user || !recipientId) return
+
+    const chatIds = [user.uid, recipientId].sort()
+    const chatId = `${chatIds[0]}_${chatIds[1]}`
+    
+    console.log(`🔄 設定私聊 ${chatId} 的即時監聽器`)
+    
+    // 監聽所有訊息變化，但只處理新增的
     const messagesRef = ref(database, `privateChats/${chatId}/messages`)
     
     const unsubscribe = onValue(messagesRef, (snapshot) => {
-      try {
-        const data = snapshot.val()
-        console.log(`💌 私聊 ${chatId} 收到資料:`, data)
+      const data = snapshot.val()
+      if (!data) return
+
+      const allMessages = Object.entries(data).map(([id, message]) => ({
+        id,
+        text: message.text,
+        user: message.user,
+        from: message.from,
+        avatar: message.avatar,
+        time: message.time,
+        timestamp: message.time || message.timestamp || Date.now()
+      }))
+      
+      // 按時間排序
+      allMessages.sort((a, b) => (a.time || a.timestamp || 0) - (b.time || b.timestamp || 0))
+      
+      // 檢查是否有新訊息（比當前最新的還要新）
+      const currentMessages = allMessagesRef.current
+      if (currentMessages.length > 0 && hasLoadedOnceRef.current) {
+        const latestCurrentTime = currentMessages[currentMessages.length - 1].time
+        const newMessages = allMessages.filter(msg => msg.time > latestCurrentTime)
         
-        if (data) {
-          const messages = Object.entries(data).map(([id, message]) => ({
-            id,
-            text: message.text,
-            user: message.user,
-            from: message.from,
-            avatar: message.avatar,
-            time: message.time,
-            timestamp: message.time || message.timestamp || Date.now()
-          }))
+        if (newMessages.length > 0) {
+          console.log(`📨 收到 ${newMessages.length} 條新私訊`)
+          const updatedMessages = [...currentMessages, ...newMessages]
+          allMessagesRef.current = updatedMessages
+          setMessages(updatedMessages)
           
-          // 按時間排序
-          messages.sort((a, b) => (a.time || a.timestamp || 0) - (b.time || b.timestamp || 0))
-          
-          // 檢查是否有新訊息 (用於通知)
-          const currentMessageCount = messages.length
-          const previousMessageCount = lastMessageCountRef.current
-          const isFirstLoad = !hasLoadedOnceRef.current
-          
-          console.log(`📊 訊息計數檢查:`, {
-            currentMessageCount,
-            previousMessageCount,
-            isFirstLoad,
-            hasLoadedOnce: hasLoadedOnceRef.current,
-            shouldCheckForNewMessages: currentMessageCount > previousMessageCount && hasLoadedOnceRef.current
-          })
-          
-          // 只有在不是首次載入且有新訊息時才觸發通知
-          if (currentMessageCount > previousMessageCount && hasLoadedOnceRef.current) {
-            const newMessages = messages.slice(previousMessageCount)
-            
-            // 檢查新訊息是否來自其他用戶
-            console.log(`🆕 檢查 ${newMessages.length} 條新訊息:`)
-            newMessages.forEach((message, index) => {
-              console.log(`  訊息 ${index + 1}:`, {
-                from: message.from,
-                user: message.user,
-                text: message.text?.substring(0, 50) + '...',
-                currentUserUid: user.uid,
-                isFromOtherUser: message.from !== user.uid
-              })
+          // 處理通知邏輯
+          newMessages.forEach((message) => {
+            if (message.from !== user.uid) {
+              const isCurrentlyChattingWithSender = 
+                currentRoom === 'private' && 
+                currentPrivateChat && 
+                currentPrivateChat.recipientId === message.from
               
-              if (message.from !== user.uid) {
-                // 檢查用戶是否正在與這個發送者進行私人聊天
-                const isCurrentlyChattingWithSender = 
-                  currentRoom === 'private' && 
-                  currentPrivateChat && 
-                  currentPrivateChat.recipientId === message.from
-                
-                const senderName = message.user || '匿名用戶'
-                console.log(`🔍 檢查通知條件:`, {
-                  currentRoom,
-                  currentPrivateChat,
-                  currentPrivateChatRecipientId: currentPrivateChat?.recipientId,
-                  recipientId,
-                  messageFrom: message.from,
-                  isCurrentlyChattingWithSender,
-                  shouldShowNotification: !isCurrentlyChattingWithSender
-                })
-                
-                // 只有在用戶沒有正在與發送者聊天時才增加未讀數量
-                // 通知由 usePrivateChatNotifications 統一處理，避免重複
-                if (!isCurrentlyChattingWithSender) {
-                  console.log(`� usePrivateChat: 增加未讀數量 - 收到來自 ${senderName} 的新私訊`)
-                  
-                  // 增加未讀數量（通知由全域 hook 處理）
-                  console.log(`📈 準備調用 incrementUnread(${message.from})`)
-                  try {
-                    incrementUnread(message.from)
-                    console.log(`✅ incrementUnread 調用成功`)
-                  } catch (error) {
-                    console.error(`❌ incrementUnread 調用失敗:`, error)
-                  }
-                  
-                  console.log(`📢 通知將由 usePrivateChatNotifications 統一處理`)
-                } else {
-                  console.log(`🔇 ❌ 不顯示通知 - 用戶正在與 ${senderName} 聊天`, {
-                    reason: 'isCurrentlyChattingWithSender = true',
-                    currentRoom,
-                    currentPrivateChat: currentPrivateChat?.nickname,
-                    messageFromUser: senderName
-                  })
+              if (!isCurrentlyChattingWithSender) {
+                console.log(`📈 增加未讀數量 - 收到來自 ${message.user} 的新私訊`)
+                try {
+                  incrementUnread(message.from)
+                } catch (error) {
+                  console.error(`❌ incrementUnread 調用失敗:`, error)
                 }
-              } else {
-                console.log(`⏭️ 跳過自己的訊息: ${message.text?.substring(0, 30)}...`)
               }
-            })
-          }
-          
-          // 更新計數和標記
-          lastMessageCountRef.current = currentMessageCount
-          hasLoadedOnceRef.current = true
-          console.log(`✅ 私聊 ${chatId} 載入了 ${messages.length} 條訊息`)
-          setMessages(messages)
-        } else {
-          console.log(`📭 私聊 ${chatId} 沒有訊息`)
-          lastMessageCountRef.current = 0
-          hasLoadedOnceRef.current = true
-          setMessages([])
+            }
+          })
         }
-      } catch (error) {
-        console.error(`❌ 私聊 ${chatId} 載入訊息時出錯:`, error)
-        setMessages([])
       }
     }, (error) => {
       console.error(`❌ Firebase onValue 錯誤 (私聊 ${chatId}):`, error)
-      if (error.code === 'PERMISSION_DENIED') {
-        console.error('🚫 權限被拒絕 - 請檢查 Firebase 安全規則!')
-      }
     })
 
     return () => {
-      try {
-        console.log(`🛑 停止監聽私聊 ${chatId} 的訊息`)
-        unsubscribe()
-      } catch (error) {
-        console.error('Firebase unsubscribe error:', error)
-      }
+      console.log(`🛑 停止監聽私聊 ${chatId}`)
+      unsubscribe()
     }
-  }, [user, recipientId, setMessages, clearMessages])
+  }, [user, recipientId, currentRoom, currentPrivateChat, setMessages, incrementUnread])
+
+  // 載入更多歷史訊息
+  const loadMoreMessages = useCallback(async () => {
+    if (!user || !recipientId || loading || !hasMore || !oldestTimestampRef.current) {
+      console.log('⚠️ 無法載入更多私訊:', { loading, hasMore, oldestTime: oldestTimestampRef.current })
+      return
+    }
+
+    const chatIds = [user.uid, recipientId].sort()
+    const chatId = `${chatIds[0]}_${chatIds[1]}`
+    
+    console.log(`📜 載入更多私聊歷史訊息...`)
+    setLoading(true)
+
+    try {
+      // 載入比最舊訊息更早的訊息
+      const olderMessagesRef = query(
+        ref(database, `privateChats/${chatId}/messages`),
+        orderByChild('time'),
+        endBefore(oldestTimestampRef.current),
+        limitToLast(MESSAGES_PER_PAGE)
+      )
+      
+      const snapshot = await get(olderMessagesRef)
+      const data = snapshot.val()
+      
+      if (data) {
+        const olderMessages = Object.entries(data).map(([id, message]) => ({
+          id,
+          text: message.text,
+          user: message.user,
+          from: message.from,
+          avatar: message.avatar,
+          time: message.time,
+          timestamp: message.time || message.timestamp || Date.now()
+        }))
+        
+        // 按時間排序
+        olderMessages.sort((a, b) => (a.time || a.timestamp || 0) - (b.time || b.timestamp || 0))
+        
+        if (olderMessages.length > 0) {
+          // 合併到現有訊息前面
+          const updatedMessages = [...olderMessages, ...allMessagesRef.current]
+          allMessagesRef.current = updatedMessages
+          oldestTimestampRef.current = olderMessages[0].time
+          
+          console.log(`✅ 載入了 ${olderMessages.length} 條歷史私訊`)
+          setMessages(updatedMessages)
+          
+          // 如果載入的訊息少於每頁數量，表示沒有更多了
+          if (olderMessages.length < MESSAGES_PER_PAGE) {
+            setHasMore(false)
+          }
+        } else {
+          setHasMore(false)
+        }
+      } else {
+        console.log(`📭 沒有更多私聊歷史訊息`)
+        setHasMore(false)
+      }
+    } catch (error) {
+      console.error(`❌ 載入私聊歷史訊息失敗:`, error)
+    } finally {
+      setLoading(false)
+    }
+  }, [user, recipientId, loading, hasMore, setMessages])
 
   // 發送私人訊息函數
   const sendPrivateMessage = async (messageData) => {
@@ -206,6 +261,11 @@ export const usePrivateChat = (recipientId) => {
     if (messageData.image) {
       message.image = messageData.image
       console.log(`📷 私訊包含圖片: ${messageData.image}`)
+    }
+
+    // 如果有回覆，添加回覆資訊
+    if (messageData.replyTo) {
+      message.replyTo = messageData.replyTo
     }
 
     try {
@@ -235,5 +295,10 @@ export const usePrivateChat = (recipientId) => {
     }
   }
 
-  return { sendPrivateMessage }
+  return { 
+    sendPrivateMessage, 
+    loadMoreMessages, 
+    loading, 
+    hasMore 
+  }
 }

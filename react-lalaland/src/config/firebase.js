@@ -2,7 +2,6 @@ import { initializeApp } from 'firebase/app'
 import { getAuth, connectAuthEmulator } from 'firebase/auth'
 import { getDatabase, connectDatabaseEmulator } from 'firebase/database'
 import { getStorage, connectStorageEmulator } from 'firebase/storage'
-import { getMessaging } from 'firebase/messaging'
 
 const firebaseConfig = {
   apiKey: "AIzaSyD9-_GYLQabcC3SPMTOG9zj2CcaPqzfOrI",
@@ -24,7 +23,6 @@ let app = null
 export let auth = null
 export let database = null
 export let storage = null
-export let messaging = null
 
 const initializeFirebase = () => {
   try {
@@ -61,18 +59,7 @@ const initializeFirebase = () => {
       throw error
     }
 
-    // 初始化 FCM Messaging (可選)
-    try {
-      if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
-        messaging = getMessaging(app)
-        console.log('✅ Firebase Messaging 初始化成功')
-      } else {
-        console.log('ℹ️ Firebase Messaging 不支援此環境')
-      }
-    } catch (error) {
-      console.warn('⚠️ Firebase Messaging 初始化失敗:', error)
-      // Messaging 失敗不應影響其他功能
-    }
+    // FCM Messaging 功能已移除以提升載入速度
 
     firebaseInitialized = true
     console.log('🎉 Firebase 完全初始化成功')
